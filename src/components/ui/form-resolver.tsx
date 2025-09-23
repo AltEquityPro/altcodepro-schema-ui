@@ -90,8 +90,10 @@ function CardWrapper({ children }: { children: React.ReactNode }) {
 }
 interface FormResolverProps {
     element: FormElement;
+    defaultData?: Record<string, any>;
+    onFormSubmit?: (data: Record<string, any>) => void;
 }
-export function FormResolver({ element }: FormResolverProps) {
+export function FormResolver({ element, defaultData, onFormSubmit }: FormResolverProps) {
     const { state, t } = useAppState();
     const { runEventHandler } = useActionHandler({ runtime: {} as any });
 
@@ -332,7 +334,7 @@ export function FormResolver({ element }: FormResolverProps) {
     }, [element.formFields, t]);
 
 
-    const defaultValues = useMemo(() => {
+    const defaultValues = defaultData ? defaultData : useMemo(() => {
         const vals: AnyObj = {};
         for (const f of element.formFields) {
             if (f.fieldType !== FieldType.input) continue;
@@ -374,7 +376,11 @@ export function FormResolver({ element }: FormResolverProps) {
     });
 
     const onSubmit: SubmitHandler<FormValues> = (data) => {
-        runEventHandler(element.onSubmit, data as AnyObj);
+        if (onFormSubmit) {
+            onFormSubmit(data);
+        } else {
+            runEventHandler(element.onSubmit, data as AnyObj);
+        }
     };
 
     const renderField = (f: FormFieldType) => {

@@ -1,804 +1,598 @@
-"use client";
+import * as React from "react"
+import { useMemo, useState, useEffect } from "react"
+import { ColumnDef, SortingState, ColumnFiltersState, VisibilityState, RowSelectionState, PaginationState, Row, flexRender, getCoreRowModel, getExpandedRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table"
+import { useVirtualizer } from "@tanstack/react-virtual"
+import { ArrowUpDown, MoreHorizontal, ChevronDown, Edit, Trash, Eye, Table } from "lucide-react"
+import { Calendar } from "@/src/components/ui/calendar"
+import { DatagGridCol, DataGridElement, InputType } from "@/src/types"
+import { resolveBinding, deepResolveBindings, cn } from "@/src/lib/utils"
+import { useActionHandler } from "@/src/schema/Actions"
+import { useDataSources } from "@/src/schema/Datasource"
+import { useAppState } from "@/src/schema/StateContext"
+import { Checkbox } from "@/src/components/ui/checkbox"
+import { Dialog, DialogContent, DialogTitle } from "@/src/components/ui/dialog"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuCheckboxItem } from "@/src/components/ui/dropdown-menu"
+import { Popover, PopoverTrigger, PopoverContent } from "@/src/components/ui/popover"
+import { Progress } from "@/src/components/ui/progress"
+import { SelectTrigger, SelectValue, SelectContent, SelectItem, Select } from "@/src/components/ui/select"
+import { Switch } from "@/src/components/ui/switch"
+import { Label } from "recharts"
+import { Chart } from "./chart"
+import { DialogHeader } from "./dialog"
+import { FormResolver } from "./form-resolver"
+import { Input } from "./input"
+import { Skeleton } from "./skeleton"
+import { TableHeader, TableRow, TableHead, TableBody, TableCell } from "./table"
+import { Button } from "./button"
+import { Badge } from "./badge"
 
-import * as React from "react";
-import {
-    ColumnDef,
-    ColumnOrderState,
-    ColumnPinningState,
-    ColumnResizeMode,
-    SortingState,
-    VisibilityState,
-    getCoreRowModel,
-    getSortedRowModel,
-    getFilteredRowModel,
-    useReactTable,
-    RowSelectionState,
-    PaginationState,
-    flexRender,
-} from "@tanstack/react-table";
-import { useVirtualizer } from "@tanstack/react-virtual";
 
-import { cn, classesFromStyleProps, resolveBinding } from "@/src/lib/utils";
-import { useActionHandler } from "@/src/schema/Actions";
-import { useAppState } from "@/src/schema/StateContext";
-import type { AnyObj } from "@/src/types";
-import {
-    Table,
-    TableHeader,
-    TableBody,
-    TableRow,
-    TableHead,
-    TableCell,
-} from "@/src/components/ui/table";
-import { Button } from "@/src/components/ui/button";
-import { Checkbox } from "@/src/components/ui/checkbox";
-import { Input } from "@/src/components/ui/input";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-    DropdownMenuCheckboxItem,
-    DropdownMenuSeparator,
-    DropdownMenuLabel,
-} from "@/src/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader } from "@/src/components/ui/dialog";
-import { FormResolver } from "@/src/components/ui/form-resolver";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/src/components/ui/resizable";
-import { ChevronDown, ChevronRight, Settings2 } from "lucide-react";
-
-/* ------------------------------- Types ------------------------------- */
-
-export type GridColumnEditor =
-    | { type: "text" }
-    | { type: "number" }
-    | { type: "select"; options: Array<{ value: string; label: string } | AnyObj> }
-    | { type: "checkbox" }
-    | { type: "custom"; render: (args: { value: any; row: AnyObj; onChange: (v: any) => void }) => React.ReactNode };
-
-export interface GridColumn {
-    id: string;
-    header?: any; // binding or string
-    accessorKey?: string; // path in row
-    width?: number;
-    minSize?: number;
-    maxSize?: number;
-    enableSorting?: boolean;
-    enableHiding?: boolean;
-    enableResizing?: boolean;
-    enableEditing?: boolean;
-    filter?: { type: "text" | "number" | "select"; options?: Array<{ value: any; label: string } | AnyObj> };
-    render?: (row: AnyObj) => React.ReactNode;
-    editor?: GridColumnEditor;
-    cellClass?: AnyObj | string;
-    headerClass?: AnyObj | string;
+interface DataGridProps {
+    element: DataGridElement
+    runtime: any // From parent, for actions like navigate, etc.
 }
 
-export interface GridAction {
-    id: string;
-    label?: any; // binding or string
-    handler: AnyObj; // your EventHandler schema
-    selectionRequired?: boolean; // if true, only enabled when selection exists
-    confirm?: { title?: any; description?: any };
-}
+export function DataGrid({ element, runtime }: DataGridProps) {
+    const { state, setState, t } = useAppState()
+    const { runEventHandler } = useActionHandler({ globalConfig: runtime.globalConfig, screen: runtime.screen, runtime })
+    const dataSources = useDataSources({ dataSources: runtime.screen?.dataSources || [], globalConfig: runtime.globalConfig, screen: runtime.screen })
 
-export type EditMode = "inline" | "modal" | "form";
+    const [sorting, setSorting] = useState<SortingState>(resolveBinding(element.sorting, state, t) || [])
+    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(resolveBinding(element.filters, state, t) || [])
+    const [globalFilter, setGlobalFilter] = useState<string>(resolveBinding(element.globalFilter, state, t) || "")
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(resolveBinding(element.columnVisibility, state, t) || {})
+    const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+    const [pagination, setPagination] = useState<PaginationState>({
+        pageIndex: resolveBinding(element.currentPage, state, t) ?? 0,
+        pageSize: element.pageSize ?? 10,
+    })
+    const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
+    const [editingRowId, setEditingRowId] = useState<string | null>(null)
+    const [editingCell, setEditingCell] = useState<{ rowId: string; colKey: string } | null>(null)
+    const [modalOpen, setModalOpen] = useState(false)
+    const [currentEditData, setCurrentEditData] = useState<any>(null)
 
-export interface DataGridSchema {
-    id: string;
-    styles?: AnyObj;
-    columns: GridColumn[];
-    datasource: Datasource<AnyObj>;
-    actions?: GridAction[];
-    childRenderer?: (row: AnyObj) => React.ReactNode;
-    editMode?: EditMode;
-    editFormElement?: AnyObj; // FormElement schema for modal/form edit
-    rowIdKey?: string; // default "id"
-    serverSide?: boolean; // true => sorting/filter/paging pushed to datasource.query
-    pageSizeOptions?: number[];
-}
+    const data = useMemo(() => {
+        if (element.serverSide && element.dataSourceId) {
+            return dataSources[element.dataSourceId] || []
+        }
+        return resolveBinding(element.rows, state, t) || []
+    }, [element, dataSources, state, t])
 
-/* ----------------------------- DataGrid ------------------------------ */
+    const totalCount = resolveBinding(element.totalCount, state, t) ?? data.length
 
-export function DataGrid({
-    id,
-    styles,
-    columns,
-    datasource,
-    actions = [],
-    childRenderer,
-    editMode = "modal",
-    editFormElement,
-    rowIdKey = "id",
-    serverSide = true,
-    pageSizeOptions = [10, 25, 50, 100],
-}: DataGridSchema) {
-    const { runEventHandler } = useActionHandler({ runtime: {} as any });
-    const { t, state } = useAppState();
+    const columns: ColumnDef<any>[] = useMemo(() => {
+        const cols: ColumnDef<any>[] = []
 
-    /* --------------------------- Local state --------------------------- */
-
-    const [data, setData] = React.useState<AnyObj[]>([]);
-    const [total, setTotal] = React.useState(0);
-    const [loading, setLoading] = React.useState(false);
-
-    const [sorting, setSorting] = React.useState<SortingState>([]);
-    const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
-    const [columnOrder, setColumnOrder] = React.useState<ColumnOrderState>([]);
-    const [columnPinning, setColumnPinning] = React.useState<ColumnPinningState>({});
-    const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
-    const [globalFilter, setGlobalFilter] = React.useState<string>("");
-
-    const [pagination, setPagination] = React.useState<PaginationState>({
-        pageIndex: 0,
-        pageSize: pageSizeOptions[0],
-    });
-
-    const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
-    const [inlineDrafts, setInlineDrafts] = React.useState<Record<string, AnyObj>>({});
-    const [modalRow, setModalRow] = React.useState<AnyObj | null>(null);
-
-    const columnResizeMode: ColumnResizeMode = "onChange";
-
-    /* ---------------------------- Helpers ------------------------------ */
-
-    const getRowId = React.useCallback(
-        (row: AnyObj) => String(row[rowIdKey] ?? row.id ?? row._id),
-        [rowIdKey]
-    );
-
-    const selectedIds = React.useMemo(
-        () =>
-            Object.entries(rowSelection)
-                .filter(([, v]) => v)
-                .map(([k]) => getRowId(data[Number(k)]))
-                .filter(Boolean),
-        [rowSelection, data, getRowId]
-    );
-
-    /* ------------------------- Build columns --------------------------- */
-
-    const tanColumns = React.useMemo<ColumnDef<AnyObj, any>[]>(() => {
-        const selectCol: ColumnDef<AnyObj> = {
-            id: "__select",
-            size: 36,
-            enableResizing: false,
-            header: ({ table }) => (
-                <Checkbox
-                    checked={table.getIsAllPageRowsSelected()}
-                    onCheckedChange={(val) => table.toggleAllPageRowsSelected(Boolean(val))}
-                    aria-label="Select all"
-                />
-            ),
-            cell: ({ row }) => (
-                <Checkbox
-                    checked={row.getIsSelected()}
-                    onCheckedChange={(val) => row.toggleSelected(Boolean(val))}
-                    aria-label="Select row"
-                />
-            ),
-        };
-
-        const expandCol: ColumnDef<AnyObj> = childRenderer
-            ? {
-                id: "__expand",
-                size: 36,
-                enableResizing: false,
-                cell: ({ row }) => {
-                    const rid = getRowId(row.original);
-                    const isOpen = !!expanded[rid];
-                    return (
+        if (element.subRowsKey) {
+            cols.push({
+                id: "expander",
+                header: () => null,
+                cell: ({ row }) => (
+                    row.getCanExpand() ? (
                         <Button
                             variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                                setExpanded((prev) => ({ ...prev, [rid]: !isOpen }))
-                            }
-                            aria-label={isOpen ? t("collapse") : t("expand")}
+                            onClick={row.getToggleExpandedHandler()}
+                            className="h-8 w-8 p-0"
                         >
-                            {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            {row.getIsExpanded() ? <ChevronDown className="h-4 w-4" /> : <ChevronDown className="h-4 w-4 rotate-[-90deg]" />}
                         </Button>
-                    );
-                },
-            }
-            : (null as any);
-
-        const dataCols: ColumnDef<AnyObj, any>[] = columns.map((c) => {
-            const headerText = (s: any) => resolveBinding(c.header ?? c.id, s, t) ?? c.id;
-
-            return {
-                id: c.id,
-                accessorKey: c.accessorKey ?? c.id,
-                enableSorting: c.enableSorting ?? true,
-                enableHiding: c.enableHiding ?? true,
-                enableResizing: c.enableResizing ?? true,
-                size: c.width,
-                minSize: c.minSize ?? 60,
-                maxSize: c.maxSize ?? 700,
-                header: () => (
-                    <div className={classesFromStyleProps(c.headerClass)}>
-                        {headerText(state)}
-                    </div>
+                    ) : null
                 ),
+                size: 40,
+            })
+        }
+
+        if (element.selectable) {
+            cols.push({
+                id: "select",
+                header: ({ table }) => (
+                    <Checkbox
+                        checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+                        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                        aria-label="Select all"
+                    />
+                ),
+                cell: ({ row }) => (
+                    <Checkbox
+                        checked={row.getIsSelected()}
+                        onCheckedChange={(value) => row.toggleSelected(!!value)}
+                        aria-label="Select row"
+                    />
+                ),
+                enableSorting: false,
+                enableHiding: false,
+                size: 40,
+            })
+        }
+
+        element.columns.forEach((col: DatagGridCol) => {
+            const resolvedCol = deepResolveBindings(col, state, t) as DatagGridCol
+            cols.push({
+                accessorKey: resolvedCol.key,
+                header: ({ column }) => {
+                    return resolvedCol.sortable ? (
+                        <Button
+                            variant="ghost"
+                            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                        >
+                            {resolveBinding(resolvedCol.header, state, t)}
+                            <ArrowUpDown className="ml-2 h-4 w-4" />
+                        </Button>
+                    ) : (
+                        resolvedCol.header
+                    )
+                },
                 cell: ({ row, getValue }) => {
-                    const rowObj = row.original;
-                    const rid = getRowId(rowObj);
-                    const isEditing = editMode === "inline" && inlineDrafts[rid];
+                    const value = getValue()
+                    const isEditing = (element.editingMode === 'cell' && editingCell?.rowId === row.id && editingCell?.colKey === resolvedCol.key) ||
+                        (element.editingMode === 'row' && editingRowId === row.id)
 
-                    // Inline edit render
-                    if (isEditing && c.enableEditing !== false && c.editor) {
-                        const draft = inlineDrafts[rid] ?? {};
-                        const current = draft[c.accessorKey ?? c.id] ?? getValue();
-                        const onChange = (v: any) =>
-                            setInlineDrafts((d) => ({
-                                ...d,
-                                [rid]: { ...(d[rid] || {}), [c.accessorKey ?? c.id]: v },
-                            }));
-
-                        switch (c.editor.type) {
-                            case "text":
-                                return (
-                                    <Input
-                                        value={current ?? ""}
-                                        onChange={(e) => onChange(e.target.value)}
-                                        className={classesFromStyleProps(c.cellClass)}
-                                    />
-                                );
-                            case "number":
-                                return (
-                                    <Input
-                                        type="number"
-                                        value={current ?? ""}
-                                        onChange={(e) => onChange(Number(e.target.value))}
-                                        className={classesFromStyleProps(c.cellClass)}
-                                    />
-                                );
-                            case "checkbox":
-                                return (
-                                    <Checkbox
-                                        checked={Boolean(current)}
-                                        onCheckedChange={(v) => onChange(Boolean(v))}
-                                    />
-                                );
-                            case "select": {
-                                const opts = (c.editor.options || []).map((o: any) =>
-                                    "value" in o ? o : { value: o.value ?? o.id, label: o.label ?? String(o.name ?? o.value) }
-                                );
-                                return (
-                                    <select
-                                        className={cn("border rounded px-2 py-1 w-full", classesFromStyleProps(c.cellClass))}
-                                        value={current ?? ""}
-                                        onChange={(e) => onChange(e.target.value)}
-                                    >
-                                        <option value="" />
-                                        {opts.map((o: any) => (
-                                            <option key={o.value} value={o.value}>
-                                                {o.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                );
-                            }
-                            case "custom":
-                                return c.editor.render({ value: current, row: rowObj, onChange });
-                        }
+                    if (isEditing && resolvedCol.editable) {
+                        return renderEditor(resolvedCol, value, row.original, resolvedCol.key)
                     }
 
-                    // Normal render
-                    const content = c.render ? c.render(rowObj) : getValue();
-                    return <div className={classesFromStyleProps(c.cellClass)}>{String(content ?? "")}</div>;
+                    return renderCell(resolvedCol, value, row.original)
                 },
-            };
-        });
+                filterFn: getFilterFn(resolvedCol.filterType),
+                size: Number(resolvedCol.width) || undefined,
+                minSize: Number(resolvedCol.minWidth) || undefined,
+                maxSize: Number(resolvedCol.maxWidth) || undefined,
+                meta: {
+                    align: resolvedCol.align,
+                    cellClass: resolvedCol.cellClass,
+                    headerClass: resolvedCol.headerClass,
+                    footer: resolvedCol.footer,
+                },
+                enableHiding: !resolvedCol.hidden,
+                enableResizing: resolvedCol.resizable,
+                enablePinning: !!resolvedCol.pinned,
+            })
+        })
 
-        const actionCol: ColumnDef<AnyObj> | null =
-            actions.length || editMode !== "inline"
-                ? {
-                    id: "__actions",
-                    size: 140,
-                    enableResizing: false,
-                    header: () => <span className="opacity-70">{t("actions")}</span>,
-                    cell: ({ row }) => {
-                        const original = row.original;
-                        const rid = getRowId(original);
-                        const isEditing = !!inlineDrafts[rid];
+        if (element.rowActions?.length) {
+            cols.push({
+                id: "actions",
+                cell: ({ row }) => {
+                    const actions = deepResolveBindings(element.rowActions, state, t) as Array<any>
+                    return (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                {actions.map((action) => {
+                                    const show = action.condition ? resolveBinding(action.condition, { ...state, row: row.original }, t) : true
+                                    if (!show) return null
+                                    return (
+                                        <DropdownMenuItem
+                                            key={action.id}
+                                            onClick={() => runEventHandler(action.onClick, { row: row.original })}
+                                        >
+                                            {action.icon && <span className="mr-2">{action.icon}</span>}
+                                            {action.label}
+                                        </DropdownMenuItem>
+                                    )
+                                })}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )
+                },
+                size: 60,
+            })
+        }
 
-                        return (
-                            <div className="flex items-center gap-1">
-                                {/* Inline edit controls */}
-                                {editMode === "inline" && (
-                                    <>
-                                        {!isEditing ? (
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() =>
-                                                    setInlineDrafts((d) => ({ ...d, [rid]: { ...original } }))
-                                                }
-                                            >
-                                                {t("edit")}
-                                            </Button>
-                                        ) : (
-                                            <>
-                                                <Button
-                                                    size="sm"
-                                                    variant="default"
-                                                    onClick={async () => {
-                                                        const payload = inlineDrafts[rid];
-                                                        await datasource.update?.(rid, payload);
-                                                        setInlineDrafts((d) => {
-                                                            const { [rid]: _, ...rest } = d;
-                                                            return rest;
-                                                        });
-                                                        // refresh
-                                                        refetch();
-                                                    }}
-                                                >
-                                                    {t("save")}
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={() =>
-                                                        setInlineDrafts((d) => {
-                                                            const { [rid]: _, ...rest } = d;
-                                                            return rest;
-                                                        })
-                                                    }
-                                                >
-                                                    {t("cancel")}
-                                                </Button>
-                                            </>
-                                        )}
-                                    </>
-                                )}
-
-                                {/* Modal / form edit control */}
-                                {editMode !== "inline" && (
-                                    <Button size="sm" variant="ghost" onClick={() => setModalRow(original)}>
-                                        {t("edit")}
-                                    </Button>
-                                )}
-
-                                {/* Row actions menu */}
-                                {actions.length > 0 && (
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button size="sm" variant="outline">
-                                                {t("more")}
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            {actions.map((a) => {
-                                                const label = resolveBinding(a.label ?? a.id, state, t) || a.id;
-                                                const disabled = a.selectionRequired && selectedIds.length === 0;
-                                                return (
-                                                    <DropdownMenuItem
-                                                        key={a.id}
-                                                        disabled={disabled}
-                                                        onClick={() =>
-                                                            runEventHandler(a.handler, {
-                                                                selection: selectedIds.length ? selectedIds : [rid],
-                                                                row: original,
-                                                            })
-                                                        }
-                                                    >
-                                                        {label}
-                                                    </DropdownMenuItem>
-                                                );
-                                            })}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                )}
-                            </div>
-                        );
-                    },
-                }
-                : null;
-
-        const base = [
-            selectCol,
-            ...(expandCol ? [expandCol] : []),
-            ...dataCols,
-            ...(actionCol ? [actionCol] : []),
-        ];
-        return base;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [
-        columns,
-        childRenderer,
-        expanded,
-        editMode,
-        inlineDrafts,
-        actions,
-        selectedIds,
-        state,
-        t,
-        getRowId,
-    ]);
-
-    /* ------------------------ React Table setup ------------------------ */
+        return cols
+    }, [element, state, t, editingCell, editingRowId])
 
     const table = useReactTable({
         data,
-        columns: tanColumns,
+        columns,
+        onSortingChange: (updater) => {
+            const newSorting = typeof updater === 'function' ? updater(sorting) : updater
+            setSorting(newSorting)
+            if (element.onSortChange) runEventHandler(element.onSortChange, { sorting: newSorting })
+        },
+        onColumnFiltersChange: (updater) => {
+            const newFilters = typeof updater === 'function' ? updater(columnFilters) : updater
+            setColumnFilters(newFilters)
+            if (element.onFilterChange) runEventHandler(element.onFilterChange, { filters: newFilters })
+        },
+        onGlobalFilterChange: setGlobalFilter,
+        globalFilterFn: "includesString",
+        getCoreRowModel: getCoreRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getPaginationRowModel: element.infinite ? undefined : getPaginationRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        onColumnVisibilityChange: (updater) => {
+            const newVisibility = typeof updater === 'function' ? updater(columnVisibility) : updater
+            setColumnVisibility(newVisibility)
+            if (element.onColumnVisibilityChange) runEventHandler(element.onColumnVisibilityChange, { visibility: newVisibility })
+        },
+        onRowSelectionChange: (updater) => {
+            const newSelection = typeof updater === 'function' ? updater(rowSelection) : updater
+            setRowSelection(newSelection)
+            if (element.onSelectionChange) runEventHandler(element.onSelectionChange, { selection: newSelection })
+        },
+        getExpandedRowModel: getExpandedRowModel(),
+        onPaginationChange: setPagination,
+        getSubRows: element.subRowsKey
+            ? (row) => element.subRowsKey !== undefined ? row[element.subRowsKey as keyof typeof row] : undefined
+            : undefined,
         state: {
             sorting,
-            columnVisibility,
-            columnOrder,
-            columnPinning,
-            rowSelection,
+            columnFilters,
             globalFilter,
+            columnVisibility,
+            rowSelection,
             pagination,
+            expanded: expandedRows,
         },
-        onSortingChange: setSorting,
-        onColumnVisibilityChange: setColumnVisibility,
-        onColumnOrderChange: setColumnOrder,
-        onColumnPinningChange: setColumnPinning,
-        onRowSelectionChange: setRowSelection,
-        onPaginationChange: setPagination,
-        getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: serverSide ? undefined : getSortedRowModel(),
-        getFilteredRowModel: serverSide ? undefined : getFilteredRowModel(),
-        manualSorting: serverSide,
-        manualFiltering: serverSide,
-        manualPagination: serverSide,
-        columnResizeMode,
-        getRowId: (row, idx) => getRowId(row) ?? String(idx),
-        pageCount: serverSide ? Math.ceil(total / pagination.pageSize) : undefined,
-        globalFilterFn: "includesString",
-    });
+        enableColumnResizing: element.resizableColumns,
+        enablePinning: true,
+        manualPagination: element.serverSide,
+        manualSorting: element.serverSide,
+        manualFiltering: element.serverSide,
+        rowCount: totalCount,
+        pageCount: element.serverSide ? Math.ceil(totalCount / pagination.pageSize) : undefined,
+    })
 
-    /* ------------------------- Virtualization ------------------------- */
-
-    const parentRef = React.useRef<HTMLDivElement | null>(null);
+    const { rows } = table.getRowModel()
     const rowVirtualizer = useVirtualizer({
-        count: table.getRowModel().rows.length,
-        getScrollElement: () => parentRef.current,
-        estimateSize: () => 40,
-        overscan: 10,
-    });
+        count: element.infinite ? rows.length + 1 : rows.length, // +1 for loading row in infinite
+        getScrollElement: () => tableContainerRef.current,
+        estimateSize: () => element.virtualRowHeight ?? 48,
+        overscan: 20,
+    })
 
-    /* --------------------------- Fetch data --------------------------- */
+    const tableContainerRef = React.useRef<HTMLDivElement>(null)
 
-    const refetch = React.useCallback(async () => {
-        setLoading(true);
-
-        const qp: QueryParams = {
-            page: pagination.pageIndex + 1,
-            pageSize: pagination.pageSize,
-            sort: sorting.map((s) => ({ id: s.id, desc: s.desc })),
-            global: globalFilter || undefined,
-            filters: table
-                .getAllColumns()
-                .filter((c) => c.getIsFiltered())
-                .map((c) => ({ id: c.id, value: c.getFilterValue() })),
-        };
-
-        try {
-            const res = await datasource.query(qp);
-            setData(res.items || []);
-            setTotal(res.total ?? res.items?.length ?? 0);
-        } finally {
-            setLoading(false);
+    useEffect(() => {
+        if (element.infinite && rowVirtualizer.getVirtualItems().length > 0) {
+            const lastItem = rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1]
+            if (lastItem && lastItem.index >= rows.length - 1 && element.onLoadMore) {
+                runEventHandler(element.onLoadMore)
+            }
         }
-    }, [datasource, globalFilter, pagination, sorting, table]);
+    }, [rowVirtualizer.getVirtualItems()])
 
-    React.useEffect(() => {
-        refetch();
-    }, [refetch]);
-
-    /* ---------------------------- Toolbar ----------------------------- */
-
-    function Toolbar() {
-        const allCols = table.getAllLeafColumns().filter((c) => !["__select", "__expand"].includes(c.id));
-
-        return (
-            <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                    <Input
-                        placeholder={t("search")}
-                        value={globalFilter ?? ""}
-                        onChange={(e) => setGlobalFilter(e.target.value)}
-                        className="h-9 w-56"
-                    />
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                            setGlobalFilter("");
-                            table.resetColumnFilters();
-                        }}
-                    >
-                        {t("clear_filters")}
-                    </Button>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="outline" className="gap-2">
-                                <Settings2 className="h-4 w-4" />
-                                {t("columns")}
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-48">
-                            <DropdownMenuLabel>{t("toggle_columns")}</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {allCols.map((col) => (
-                                <DropdownMenuCheckboxItem
-                                    key={col.id}
-                                    checked={col.getIsVisible()}
-                                    onCheckedChange={(v) => col.toggleVisibility(Boolean(v))}
-                                >
-                                    {col.columnDef.header as any || col.id}
-                                </DropdownMenuCheckboxItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-
-                {actions.length > 0 && (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="default">
-                                {t("actions")}
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            {actions.map((a) => {
-                                const disabled = a.selectionRequired && selectedIds.length === 0;
-                                return (
-                                    <DropdownMenuItem
-                                        key={a.id}
-                                        disabled={disabled}
-                                        onClick={() =>
-                                            runEventHandler(a.handler, {
-                                                selection: selectedIds,
-                                            })
-                                        }
-                                    >
-                                        {resolveBinding(a.label ?? a.id, state, t) || a.id}
-                                    </DropdownMenuItem>
-                                );
-                            })}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                )}
-            </div>
-        );
+    const handleCellEdit = (rowId: string, colKey: string, value: any) => {
+        // Update data
+        if (element.onCellEdit) {
+            runEventHandler(element.onCellEdit, { rowId, colKey, value })
+        }
+        setEditingCell(null)
     }
 
-    /* ---------------------------- Rendering --------------------------- */
+    const startEditing = (row: Row<any>, col?: DatagGridCol) => {
+        if (element.editingMode === 'modal' && element.editForm) {
+            setCurrentEditData(row.original)
+            setModalOpen(true)
+        } else if (element.editingMode === 'row') {
+            setEditingRowId(row.id)
+        } else if (element.editingMode === 'cell' && col) {
+            setEditingCell({ rowId: row.id, colKey: col.key })
+        }
+    }
+
+    const handleModalSubmit = (data: any) => {
+        if (element.onCellEdit) { // Reuse onCellEdit for row edit
+            runEventHandler(element.onCellEdit, { rowId: currentEditData.id, data })
+        }
+        setModalOpen(false)
+    }
+
+    const renderCell = (col: DatagGridCol, value: any, rowData: any) => {
+        let cellValue = value
+        const cellClass = typeof col.cellClass === 'function' ? col.cellClass(rowData) :
+            Array.isArray(col.cellClass) ? col.cellClass.find(c => resolveBinding(c.condition, { ...state, row: rowData }, t))?.class :
+                resolveBinding(col.cellClass, { ...state, row: rowData }, t)
+
+        switch (col.renderer) {
+            case 'image':
+                return <img src={value} alt="" className="h-8 w-8 object-cover" />
+            case 'link':
+                return <a href={value} className="text-blue-600 hover:underline">{value}</a>
+            case 'badge':
+                return <Badge variant="outline">{value}</Badge>
+            case 'progress':
+                return <Progress value={Number(value)} className="w-[60%]" />
+            case 'chart':
+                return <Chart chartType={col.chartConfig?.type || 'bar'} data={rowData[col.chartConfig?.dataKey || '']} options={col.chartConfig?.options} />
+            case 'checkbox':
+                return <Checkbox checked={!!value} disabled />
+            case 'custom':
+                // Assume customRender is a component name, resolve from registry or something
+                const CustomComp = col.customRender ? runtime.customComponents?.[col.customRender] : null
+                return CustomComp ? <CustomComp data={rowData} /> : value
+            default:
+                return value
+        }
+    }
+
+    const renderEditor = (col: DatagGridCol, value: any, rowData: any, colKey: string) => {
+        const handleChange = (newValue: any) => handleCellEdit(rowData.id, colKey, newValue)
+
+        switch (col.editorType || col.filterType || 'text') {
+            case InputType.text:
+            case InputType.email:
+            case InputType.password:
+            case InputType.number:
+            case InputType.textarea:
+                return <Input type={col.editorType} defaultValue={value} onBlur={(e) => handleChange(e.target.value)} autoFocus />
+            case InputType.select:
+            case InputType.multiselect:
+                return (
+                    <Select defaultValue={value} onValueChange={handleChange}>
+                        <SelectTrigger>
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Array.isArray(col.options)
+                                ? col.options.map(opt => <SelectItem key={opt.value} value={opt.value}>{resolveBinding(opt.label, state, t)}</SelectItem>)
+                                : null}
+                        </SelectContent>
+                    </Select>
+                )
+            case InputType.date:
+            case InputType.datetime_local:
+                return <Input type={col.editorType} defaultValue={value} onChange={(e) => handleChange(e.target.value)} />
+            case InputType.checkbox:
+            case InputType.switch:
+                return <Switch checked={value} onCheckedChange={handleChange} />
+            case InputType.color:
+                return <Input type="color" defaultValue={value} onChange={(e) => handleChange(e.target.value)} />
+            // Add more as needed
+            default:
+                return <Input defaultValue={value} onBlur={(e) => handleChange(e.target.value)} autoFocus />
+        }
+    }
+
+    const getFilterFn = (type?: string) => {
+        switch (type) {
+            case 'number':
+            case 'range':
+                return 'inNumberRange'
+            case 'date':
+            case 'datetime':
+            case 'time':
+                return 'equals'
+            case 'bool':
+                return 'equals'
+            default:
+                return 'includesString'
+        }
+    }
+
+    const renderFilter = (column: any, colDef: DatagGridCol) => {
+        const filterValue = column.getFilterValue()
+
+        switch (colDef.filterType) {
+            case 'text':
+                return <Input placeholder={`Filter ${colDef.header}...`} value={filterValue ?? ''} onChange={e => column.setFilterValue(e.target.value)} />
+            case 'select':
+            case 'multi-select':
+                return (
+                    <Select value={filterValue} onValueChange={v => column.setFilterValue(v)}>
+                        <SelectTrigger>
+                            <SelectValue placeholder={`Filter ${colDef.header}`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Array.isArray(colDef.options)
+                                ? colDef.options.map(opt => <SelectItem key={opt.value} value={opt.value}>{resolveBinding(opt.label, state, t)}</SelectItem>)
+                                : null}
+                        </SelectContent>
+                    </Select>
+                )
+            case 'date':
+                return (
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline">{filterValue ? filterValue.toString() : `Filter ${colDef.header}`}</Button>
+                        </PopoverTrigger>
+                        <PopoverContent>
+                            <Calendar
+                                selected={filterValue}
+                                onSelect={(date: any) => column.setFilterValue(date)}
+                                mode="single"
+                                required
+                            />
+                        </PopoverContent>
+                    </Popover>
+                )
+            case 'bool':
+                return (
+                    <div className="flex items-center space-x-2">
+                        <Switch checked={filterValue} onCheckedChange={v => column.setFilterValue(v)} />
+                        <Label>{resolveBinding(colDef.header, state, t)}</Label>
+                    </div>
+                )
+            case 'number':
+            case 'range':
+                return <Input type="number" placeholder={`Filter ${colDef.header}...`} value={filterValue ?? ''} onChange={e => column.setFilterValue(e.target.value)} />
+            default:
+                return null
+        }
+    }
+
+    const rowClass = (row: Row<any>) => {
+        if (typeof element.rowClass === 'function') return element.rowClass(row.original)
+        if (Array.isArray(element.rowClass)) return element.rowClass.find(c => resolveBinding(c.condition, { ...state, row: row.original }, t))?.class
+        return resolveBinding(element.rowClass, { ...state, row: row.original }, t)
+    }
+
+    const loading = resolveBinding(element.loading, state, t) ?? false
+    const emptyMessage = resolveBinding(element.emptyMessage, state, t) ?? "No data available"
 
     return (
-        <div className={classesFromStyleProps(styles)}>
-            <ResizablePanelGroup direction="vertical" className="h-full">
-                <ResizablePanel defaultSize={100}>
-                    <div className="flex flex-col gap-2">
-                        <Toolbar />
-
-                        <div
-                            ref={parentRef}
-                            className={cn(
-                                "relative h-[60vh] w-full overflow-auto rounded border",
-                                loading && "opacity-70"
-                            )}
-                        >
-                            <Table className="table-fixed">
-                                <TableHeader>
-                                    {table.getHeaderGroups().map((hg) => (
-                                        <TableRow key={hg.id}>
-                                            {hg.headers.map((header) => {
-                                                const canSort = header.column.getCanSort();
-                                                return (
-                                                    <TableHead
-                                                        key={header.id}
-                                                        style={{ width: header.getSize() }}
-                                                        className="relative select-none"
-                                                    >
-                                                        <div
-                                                            className={cn(
-                                                                "flex items-center gap-1",
-                                                                canSort && "cursor-pointer"
-                                                            )}
-                                                            onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
-                                                        >
-                                                            {header.isPlaceholder
-                                                                ? null
-                                                                : flexRender(header.column.columnDef.header, header.getContext())}
-                                                            {header.column.getIsSorted() === "asc" && <span>▲</span>}
-                                                            {header.column.getIsSorted() === "desc" && <span>▼</span>}
-                                                        </div>
-
-                                                        {/* Resize handle */}
-                                                        {header.column.getCanResize() && (
-                                                            <div
-                                                                onMouseDown={header.getResizeHandler()}
-                                                                onTouchStart={header.getResizeHandler()}
-                                                                className="absolute right-0 top-0 h-full w-1 cursor-col-resize select-none"
-                                                            />
-                                                        )}
-                                                    </TableHead>
-                                                );
-                                            })}
-                                        </TableRow>
-                                    ))}
-                                </TableHeader>
-
-                                <TableBody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}>
-                                    {rowVirtualizer.getVirtualItems().map((vr) => {
-                                        const row = table.getRowModel().rows[vr.index];
-                                        if (!row) return null;
-                                        const rid = getRowId(row.original);
-                                        const showChild = !!expanded[rid];
-
+        <div
+            ref={tableContainerRef}
+            className={cn("rounded-md border overflow-auto", element.styles?.className)}
+            style={{ height: element.height ? `${element.height}px` : element.autoHeight ? 'auto' : '400px' }}
+        >
+            <div className="flex items-center py-4 px-4 space-x-4">
+                <Input
+                    placeholder="Search..."
+                    value={globalFilter ?? ""}
+                    onChange={(event) => {
+                        setGlobalFilter(event.target.value)
+                        if (element.onGlobalFilterChange) runEventHandler(element.onGlobalFilterChange, { globalFilter: event.target.value })
+                    }}
+                    className="max-w-sm"
+                />
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="ml-auto">
+                            Columns
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        {table
+                            .getAllColumns()
+                            .filter((column) => column.getCanHide())
+                            .map((column) => (
+                                <DropdownMenuCheckboxItem
+                                    key={column.id}
+                                    className="capitalize"
+                                    checked={column.getIsVisible()}
+                                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                                >
+                                    {column.columnDef.header as string}
+                                </DropdownMenuCheckboxItem>
+                            ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+                {element.groupActions?.map(action => (
+                    <Button
+                        key={action.id}
+                        variant={action.variant as any || 'default'}
+                        onClick={() => runEventHandler(action.onClick, { selectedRows: table.getSelectedRowModel().rows.map(r => r.original) })}
+                    >
+                        {action.icon && <span className="mr-2">{action.icon}</span>}
+                        {resolveBinding(action.label, state, t)}
+                    </Button>
+                ))}
+            </div>
+            <Table>
+                <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                            {headerGroup.headers.map((header) => {
+                                const meta = header.column.columnDef.meta as any
+                                return (
+                                    <TableHead
+                                        key={header.id}
+                                        colSpan={header.colSpan}
+                                        style={{ width: header.getSize(), textAlign: meta?.align }}
+                                        className={cn(meta?.headerClass)}
+                                    >
+                                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                                        {header.column.getCanFilter() ? (
+                                            <div className="mt-2">
+                                                {renderFilter(header.column, element.columns.find(c => c.key === header.id) as DatagGridCol)}
+                                            </div>
+                                        ) : null}
+                                    </TableHead>
+                                )
+                            })}
+                        </TableRow>
+                    ))}
+                </TableHeader>
+                <TableBody>
+                    {loading ? (
+                        Array.from({ length: pagination.pageSize }).map((_, i) => (
+                            <TableRow key={i}>
+                                {table.getVisibleLeafColumns().map((col, j) => (
+                                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                                ))}
+                            </TableRow>
+                        ))
+                    ) : rows.length ? (
+                        rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                            const row = rows[virtualRow.index]
+                            if (!row) return null
+                            return (
+                                <TableRow
+                                    key={row.id}
+                                    data-state={row.getIsSelected() && "selected"}
+                                    className={cn(rowClass(row))}
+                                    onClick={() => {
+                                        if (element.onRowClick) runEventHandler(element.onRowClick, { row: row.original })
+                                    }}
+                                >
+                                    {row.getVisibleCells().map((cell) => {
+                                        const meta = cell.column.columnDef.meta as any
                                         return (
-                                            <React.Fragment key={row.id}>
-                                                <TableRow
-                                                    data-index={vr.index}
-                                                    ref={(node) => {
-                                                        if (node) {
-                                                            (node as any).style.transform = `translateY(${vr.start}px)`;
-                                                            (node as any).style.position = "absolute";
-                                                            (node as any).style.width = "100%";
-                                                        }
-                                                    }}
-                                                    data-state={row.getIsSelected() && "selected"}
-                                                >
-                                                    {row.getVisibleCells().map((cell) => (
-                                                        <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
-                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                        </TableCell>
-                                                    ))}
-                                                </TableRow>
-
-                                                {showChild && childRenderer && (
-                                                    <TableRow
-                                                        ref={(node) => {
-                                                            if (node) {
-                                                                (node as any).style.transform = `translateY(${vr.start + 40}px)`;
-                                                                (node as any).style.position = "absolute";
-                                                                (node as any).style.width = "100%";
-                                                            }
-                                                        }}
-                                                    >
-                                                        <TableCell colSpan={row.getVisibleCells().length}>
-                                                            {childRenderer(row.original)}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )}
-                                            </React.Fragment>
-                                        );
+                                            <TableCell
+                                                key={cell.id}
+                                                style={{ textAlign: meta?.align }}
+                                                className={cn(typeof meta?.cellClass === 'function' ? meta.cellClass(row.original) : meta?.cellClass)}
+                                                onDoubleClick={() => {
+                                                    const colDef = element.columns.find(c => c.key === cell.column.id)
+                                                    if (colDef?.editable) startEditing(row, colDef)
+                                                }}
+                                            >
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </TableCell>
+                                        )
                                     })}
-                                </TableBody>
-                            </Table>
-
-                            {/* Column reorder via simple drag handle (header) */}
-                            <div className="hidden">
-                                {/** Optional: integrate @dnd-kit for column reordering if you want full UX.
-                 * For now, table exposes setColumnOrder — populate it from external DnD.
-                 */}
-                            </div>
-                        </div>
-
-                        {/* Pagination */}
-                        <div className="flex items-center justify-between gap-2">
-                            <div className="text-sm opacity-70">
-                                {t("rows")}: {total}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <select
-                                    className="h-9 rounded border px-2"
-                                    value={pagination.pageSize}
-                                    onChange={(e) =>
-                                        setPagination((p) => ({ ...p, pageSize: Number(e.target.value), pageIndex: 0 }))
-                                    }
-                                >
-                                    {pageSizeOptions.map((ps) => (
-                                        <option key={ps} value={ps}>
-                                            {t("per_page")}: {ps}
-                                        </option>
-                                    ))}
-                                </select>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => setPagination((p) => ({ ...p, pageIndex: 0 }))}
-                                    disabled={pagination.pageIndex === 0}
-                                >
-                                    {"<<"}
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => setPagination((p) => ({ ...p, pageIndex: Math.max(0, p.pageIndex - 1) }))}
-                                    disabled={pagination.pageIndex === 0}
-                                >
-                                    {t("prev")}
-                                </Button>
-                                <span className="text-sm">
-                                    {t("page")} {pagination.pageIndex + 1} {t("of")}{" "}
-                                    {Math.max(1, Math.ceil(total / pagination.pageSize))}
-                                </span>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                        setPagination((p) => ({
-                                            ...p,
-                                            pageIndex: Math.min(Math.ceil(total / p.pageSize) - 1, p.pageIndex + 1),
-                                        }))
-                                    }
-                                    disabled={pagination.pageIndex >= Math.ceil(total / pagination.pageSize) - 1}
-                                >
-                                    {t("next")}
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                        setPagination((p) => ({
-                                            ...p,
-                                            pageIndex: Math.max(0, Math.ceil(total / p.pageSize) - 1),
-                                        }))
-                                    }
-                                    disabled={pagination.pageIndex >= Math.ceil(total / pagination.pageSize) - 1}
-                                >
-                                    {">>"}
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                </ResizablePanel>
-                <ResizableHandle withHandle />
-            </ResizablePanelGroup>
-
-            {/* Modal / Form editing */}
-            {editMode !== "inline" && modalRow && (
-                <Dialog open={!!modalRow} onOpenChange={() => setModalRow(null)}>
-                    <DialogContent className="max-w-2xl">
-                        <DialogHeader>{t("edit_row")}</DialogHeader>
-                        {editFormElement ? (
-                            <FormResolver
-                                element={{
-                                    ...editFormElement,
-                                    onSubmit: editFormElement.onSubmit || {
-                                        action: "crud_update",
-                                        dataSourceId: datasource.id,
-                                        params: { body: modalRow, statePath: undefined },
-                                        responseType: "data",
-                                    },
-                                }}
-                            />
-                        ) : (
-                            <FormResolver
-                                element={{
-                                    id: `${id}-edit`,
-                                    type: "form",
-                                    formGroupType: "single",
-                                    styles: {},
-                                    formFields: Object.keys(modalRow).map((k) => ({
-                                        id: `${id}-${k}`,
-                                        fieldType: "input",
-                                        input: {
-                                            id: `${id}-${k}`,
-                                            type: "input",
-                                            name: k,
-                                            inputType: "text",
-                                            value: modalRow[k],
-                                            styles: {},
-                                        },
-                                    })),
-                                    onSubmit: {
-                                        action: "crud_update",
-                                        dataSourceId: datasource.id,
-                                        params: { body: { ...modalRow } },
-                                        responseType: "data",
-                                    },
-                                }}
-                            />
-                        )}
+                                </TableRow>
+                            )
+                        })
+                    ) : (
+                        <TableRow>
+                            <TableCell colSpan={columns.length} className="h-24 text-center">
+                                {emptyMessage}
+                            </TableCell>
+                        </TableRow>
+                    )}
+                    {element.infinite && loading && (
+                        <TableRow>
+                            <TableCell colSpan={columns.length} className="text-center">
+                                Loading more...
+                            </TableCell>
+                        </TableRow>
+                    )}
+                </TableBody>
+            </Table>
+            {!element.infinite && (
+                <div className="flex items-center justify-end space-x-2 py-4 px-4">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => table.previousPage()}
+                        disabled={!table.getCanPreviousPage()}
+                    >
+                        Previous
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => table.nextPage()}
+                        disabled={!table.getCanNextPage()}
+                    >
+                        Next
+                    </Button>
+                </div>
+            )}
+            {element.editingMode === 'modal' && element.editForm && (
+                <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Edit Row</DialogTitle>
+                        </DialogHeader>
+                        <FormResolver
+                            element={element.editForm}
+                            defaultData={currentEditData}
+                            onFormSubmit={handleModalSubmit}
+                        />
                     </DialogContent>
                 </Dialog>
             )}
         </div>
-    );
+    )
 }

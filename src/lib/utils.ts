@@ -320,13 +320,13 @@ export function resolveBinding(val: any, state: AnyObj, t: (k: string) => string
 const isPlainObj = (v: any) =>
     v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date) && !(v instanceof File) && !(v instanceof FormData);
 
-export function deepResolveBindings(input: any, state: any, t: (k: string) => string, resolveBinding: (v: any, s: any, t: any) => any): any {
+export function deepResolveBindings(input: any, state: any, t: (k: string) => string): any {
     if (input == null) return input;
-    if (Array.isArray(input)) return input.map(v => deepResolveBindings(v, state, t, resolveBinding));
+    if (Array.isArray(input)) return input.map(v => deepResolveBindings(v, state, t));
     if (isPlainObj(input)) {
         if ('binding' in input) return resolveBinding(input, state, t);
         const out: any = {};
-        for (const [k, v] of Object.entries(input)) out[k] = deepResolveBindings(v, state, t, resolveBinding);
+        for (const [k, v] of Object.entries(input)) out[k] = deepResolveBindings(v, state, t);
         return out;
     }
     if (typeof input === 'string') return resolveBinding(input, state, t);

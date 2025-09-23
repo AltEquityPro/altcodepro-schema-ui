@@ -33,7 +33,6 @@ export enum ElementType {
     header = 'header',
     footer = 'footer',
     button = 'button',
-    input = 'input',
     three_d_model = 'three_d_model',
     modal = 'modal',
     icon = 'icon',
@@ -305,6 +304,7 @@ export interface MapsGlobalConfig {
 export interface BaseElement {
     id: string;
     name: string;
+    value?: Binding;
     type: ElementType;
     styles?: StyleProps;
     accessibility?: AccessibilityProps;
@@ -489,25 +489,90 @@ export interface TableElement extends BaseElement {
     crudActions?: EventHandler[];
 }
 
-export type GridCol = {
+export type DatagGridCol = {
     key: string;
-    header: string;
-    width?: number;
+    header: string | Binding;
+    width?: number | string;
+    minWidth?: number | string;
+    maxWidth?: number | string;
     sortable?: boolean;
     filterable?: boolean;
+    filterType?: 'text' | 'select' | 'multi-select' | 'date' | 'datetime' | 'time' | 'number' | 'range' | 'bool';
+    options?: { value: any; label: string | Binding }[] | Binding; // for select/multi-select
+    renderer?: 'text' | 'image' | 'link' | 'badge' | 'progress' | 'chart' | 'checkbox' | 'custom';
+    chartConfig?: {
+        type: 'bar' | 'line' | 'pie' | 'sparkline';
+        dataKey: string;
+        options?: Record<string, any>;
+    };
+    customRender?: string; // component name or script
+    editable?: boolean;
+    editorType?: InputType;
+    cellClass?: string | Binding | { condition: Binding; class: string }[] | ((row: any) => string);
+    headerClass?: string | Binding;
+    align?: Alignment;
+    footer?: string | Binding | { aggregate: 'sum' | 'avg' | 'count' | 'min' | 'max' | 'custom'; customScript?: string };
+    resizable?: boolean;
+    pinned?: 'left' | 'right' | false;
+    hidden?: boolean;
 };
 
 export interface DataGridElement extends BaseElement {
     type: ElementType.datagrid;
     id: string;
-    rows: any[];
-    columns: GridCol[];
+    columns: DatagGridCol[];
+    rows?: any[]; // Client-side data
+    totalCount?: number | Binding; // For server-side pagination
     pageSize?: number;
+    currentPage?: number | Binding;
+    infinite?: boolean; // Infinite scrolling instead of pagination
+    virtualization?: boolean;
     virtualRowHeight?: number;
-    height?: number;
+    height?: number | string;
+    autoHeight?: boolean;
     selectable?: boolean;
-    onChange?: EventHandler;
+    selectionMode?: 'single' | 'multiple';
     serverSide?: boolean;
+    sorting?: { column: string; direction: 'asc' | 'desc' }[] | Binding; // Multi-sort support
+    filters?: Record<string, any> | Binding; // Column filters
+    globalFilter?: string | Binding; // Global search
+    reorderable?: boolean; // Column reordering
+    resizableColumns?: boolean;
+    columnVisibility?: Record<string, boolean> | Binding;
+    subRowsKey?: string; // Key for nested/child rows
+    expansionTemplate?: UIElement | string; // Custom renderer for expanded rows
+    rowActions?: Array<{
+        id: string;
+        label: Binding;
+        icon?: string;
+        variant?: ButtonVariant;
+        onClick: EventHandler;
+        condition?: Binding; // Visibility condition
+    }>;
+    groupActions?: Array<{
+        id: string;
+        label: Binding;
+        icon?: string;
+        variant?: ButtonVariant;
+        onClick: EventHandler;
+    }>;
+    editingMode?: 'none' | 'cell' | 'row' | 'modal';
+    editForm?: FormElement; // For modal editing
+    rowClass?: string | Binding | { condition: Binding; class: string }[] | ((row: any) => string);
+    loading?: boolean | Binding;
+    emptyMessage?: Binding;
+    onSortChange?: EventHandler;
+    onFilterChange?: EventHandler;
+    onGlobalFilterChange?: EventHandler;
+    onPageChange?: EventHandler;
+    onLoadMore?: EventHandler; // For infinite load
+    onSelectionChange?: EventHandler;
+    onRowClick?: EventHandler;
+    onCellEdit?: EventHandler;
+    onColumnReorder?: EventHandler;
+    onColumnVisibilityChange?: EventHandler;
+    onRowExpand?: EventHandler;
+    onRowCollapse?: EventHandler;
     zIndex?: number;
 }
 
@@ -740,7 +805,7 @@ export interface BreadcrumbElement extends BaseElement {
 }
 
 export type UIElement =
-    | ButtonElement | InputElement | ModalElement | IconElement
+    | ButtonElement | ModalElement | IconElement
     | TextElement | ImageElement | VideoElement | CardElement
     | ContainerElement | FormElement | TableElement | DataGridElement | MapElement
     | StepWizardElement | AlertElement | DropdownElement | TabsElement | AccordionElement
@@ -1103,7 +1168,7 @@ export interface UIProject {
                 ios?: { app_name?: string; app_store_id?: string; url: string };
                 iphone?: { app_name?: string; app_store_id?: string; url: string };
                 ipad?: { app_name?: string; app_store_id?: string; url: string };
-                android?: { package: string; app_name?: string; url?: string; class?: string };
+                android?: { package: string; app_name?: string; url: string; class?: string };
                 web?: { url: string; should_fallback?: boolean };
                 windows?: { app_id: string; app_name?: string; url: string };
                 windows_phone?: { app_id: string; app_name?: string; url: string };
