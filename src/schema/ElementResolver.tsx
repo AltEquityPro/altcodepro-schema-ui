@@ -6,25 +6,17 @@ import { ElementType, Alignment, InputType, ButtonVariant } from "./types-bridge
 import { resolveBinding, isVisible, classesFromStyleProps, getAccessibilityProps, motionFromAnimation, deepResolveBindings, cn } from "../lib/utils";
 
 // shadcn imports
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../components/ui/accordion";
+import { AccordionRenderer } from "../components/ui/accordion";
 import {
-    AlertDialog,
-    AlertDialogTrigger,
-    AlertDialogContent,
-    AlertDialogHeader,
-    AlertDialogFooter,
-    AlertDialogTitle,
-    AlertDialogDescription,
-    AlertDialogAction,
-    AlertDialogCancel,
+    AlertDialogRenderer,
 } from "../components/ui/alert-dialog";
 import { Alert, AlertDescription } from "../components/ui/alert";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
-import { Badge } from "../components/ui/badge";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "../components/ui/breadcrumb";
-import { Button } from "../components/ui/button";
-import { Calendar } from "../components/ui/calendar";
-import { Card, CardContent, CardHeader, CardFooter, CardTitle, CardDescription } from "../components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage, AvatarRenderer } from "../components/ui/avatar";
+import { Badge, BadgeRenderer } from "../components/ui/badge";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbRenderer, BreadcrumbSeparator } from "../components/ui/breadcrumb";
+import { Button, ButtonRenderer } from "../components/ui/button";
+import { Calendar, CalendarRenderer } from "../components/ui/calendar";
+import { Card, CardContent, CardHeader, CardFooter, CardTitle, CardDescription, CardRenderer } from "../components/ui/card";
 import {
     type CarouselApi,
     Carousel,
@@ -32,6 +24,7 @@ import {
     CarouselItem,
     CarouselPrevious,
     CarouselNext,
+    CarouselRenderer,
 } from "../components/ui/carousel";
 import { Chart } from "../components/ui/chart";
 import { Checkbox } from "../components/ui/checkbox";
@@ -83,8 +76,33 @@ import { RatingInput } from "../components/ui/rating-input";
 import { SignatureInput } from "../components/ui/signature-input";
 import { TagsInput } from "../components/ui/tags-input";
 import { CustomElement } from "react-hook-form";
-import { HeaderElement, FooterElement, ButtonElement, ModalElement, IconElement, TextElement, ImageElement, CardElement, ContainerElement, TableElement, DataGridElement, AlertElement, BreadcrumbElement, DrawerElement, DropdownMenuElement, ContextMenuElement, TabsElement, AccordionElement, CarouselElement, LoaderElement, VideoElement, PaymentElement, ChartElement, AvatarElement, VoiceElement, CallElement, SliderElement, WalletElement, EditorElement, QuizElement, CalendarElement, QRCodeElement, StepWizardElement, WalletConnectButtonElement, FileUploadElement } from "../types";
-import { RichTextInput } from "@/all_src_code_combined";
+import {
+    AccordionElement,
+    AlertElement,
+    AvatarElement,
+    BreadcrumbElement,
+    ButtonElement,
+    CallElement,
+    CalendarElement,
+    CardElement, CarouselElement,
+    ChartElement,
+    ContainerElement,
+    ContextMenuElement,
+    DataGridElement,
+    ModalElement,
+    DrawerElement,
+    DropdownMenuElement,
+    EditorElement,
+    FileUploadElement,
+    FooterElement,
+    HeaderElement,
+    IconElement,
+    ImageElement,
+    PaymentElement,
+    QRCodeElement, SliderElement, StepWizardElement, TableElement, TabsElement, TextElement, VideoElement, VoiceElement, WalletElement, WalletConnectButtonElement,
+    AlertDialogElement,
+    BadgeElement
+} from "../types";
 
 interface ElementResolverProps {
     element: UIElement;
@@ -129,128 +147,87 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
     );
 
     switch (resolvedElement.type) {
-        case ElementType.header:
-            const header = resolvedElement as HeaderElement;
+        case ElementType.accordion:
             return wrapWithMotion(
-                <header className={cn(`text-${header.alignment || 'left'}`)}>
-                    {renderChildren()}
-                </header>
+                <AccordionRenderer
+                    element={resolvedElement as AccordionElement}
+                    runtime={runtime}
+                />
+            )
+
+        case ElementType.alert:
+            const alert = resolvedElement as AlertElement;
+            return wrapWithMotion(
+                <Alert dismissible={alert.dismissible} variant={alert.variant || 'default'}>
+                    <AlertDescription>{resolveBinding(alert.message, state, t)}</AlertDescription>
+                </Alert>
             );
 
-        case ElementType.footer:
-            const footer = resolvedElement as FooterElement;
+        case ElementType.alert_dialog:
             return wrapWithMotion(
-                <footer className={cn(`text-${footer.alignment || 'left'}`)}>
-                    {renderChildren()}
-                </footer>
+                <AlertDialogRenderer element={resolvedElement as AlertDialogElement} runtime={runtime} />
+            )
+
+
+        case ElementType.avatar:
+            const avatar = resolvedElement as AvatarElement;
+            return wrapWithMotion(
+                <AvatarRenderer element={resolvedElement as AvatarElement} />
             );
+
+        case ElementType.badge:
+            return wrapWithMotion(<BadgeRenderer element={resolvedElement as BadgeElement} runtime={runtime} />)
+
+        case ElementType.breadcrumb:
+            return wrapWithMotion(
+                <BreadcrumbRenderer element={resolvedElement as BreadcrumbElement} runtime={runtime} />
+            )
 
         case ElementType.button:
-            const button = resolvedElement as ButtonElement;
             return wrapWithMotion(
-                <Button
-                    variant={(button.variant || ButtonVariant.primary) as any}
-                    disabled={resolveBinding(button.disabled, state, t)}
-                    onClick={() => runEventHandler(button.onClick)}
-                >
-                    {button.icon && <ElementResolver element={button.icon} runtime={runtime} />}
-                    {resolveBinding(button.text, state, t)}
-                </Button>
+                <ButtonRenderer element={resolvedElement as ButtonElement} runtime={runtime} />
+            )
+
+
+        case ElementType.call:
+            const call = resolvedElement as CallElement;
+            return wrapWithMotion(
+                <div>Unsupported: Call (requires WebRTC)</div>
             );
 
-
-        case ElementType.three_d_model:
+        case ElementType.calendar:
             return wrapWithMotion(
-                <div>Unsupported: 3D Model (requires @react-three/fiber)</div>
-            );
+                <CalendarRenderer element={resolvedElement as CalendarElement} runtime={runtime} />
+            )
 
-        case ElementType.modal:
-            const modal = resolvedElement as ModalElement;
+        case ElementType.card:
             return wrapWithMotion(
-                <Dialog open={resolveBinding(modal.isOpen, state, t)} onOpenChange={(open) => !open && runEventHandler(modal.onClose)}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>{resolveBinding(modal.title, state, t)}</DialogTitle>
-                        </DialogHeader>
-                        {renderChildren(modal.content)}
-                        {modal.closeButton && <ElementResolver element={modal.closeButton} runtime={runtime} />}
-                    </DialogContent>
-                </Dialog>
-            );
+                <CardRenderer element={resolvedElement as CardElement} runtime={runtime} />
+            )
 
-        case ElementType.icon:
-            const icon = resolvedElement as IconElement;
-            const IconComp = runtime.icons?.[icon.name] || Loader2; // Fallback to Loader2
+        case ElementType.carousel:
+            const carousel = resolvedElement as CarouselElement;
             return wrapWithMotion(
-                <IconComp size={icon.size} aria-label={resolveBinding(icon.label, state, t)} />
-            );
+                <CarouselRenderer element={resolvedElement as CarouselElement} runtime={runtime} state={state} t={t} />
+            )
 
-        case ElementType.text:
-            const text = resolvedElement as TextElement;
-            const TextTag = text.tag || 'p';
-            const MotionText = motion(TextTag);
-
-            if (text.contentFormat === 'html') {
-                // Use regular React element for dangerouslySetInnerHTML
-                return React.createElement(
-                    TextTag,
-                    {
-                        className: cn(className, `text-${text.alignment || 'left'}`, text.fontWeight ? `font-${text.fontWeight}` : ''),
-                        ...accessibilityProps,
-                        dangerouslySetInnerHTML: { __html: resolveBinding(text.content, state, t) },
-                    }
-                );
-            } else {
-                // Use motion component for non-HTML content
-                return (
-                    <MotionText
-                        {...accessibilityProps}
-                        {...animationProps}
-                    >
-                        {resolveBinding(text.content, state, t)}
-                    </MotionText>
-                );
-            }
-
-        case ElementType.image:
-            const image = resolvedElement as ImageElement;
+        case ElementType.chart:
+            const chart = resolvedElement as ChartElement;
             return wrapWithMotion(
-                <img
-                    src={resolveBinding(image.src, state, t)}
-                    alt={resolveBinding(image.alt, state, t)}
-                    width={image.width}
-                    height={image.height}
+                <Chart
+                    chartType={chart.chartType}
+                    data={resolveBinding(chart.data, state, t)}
+                    options={chart.options}
                 />
             );
 
-        case ElementType.card:
-            const card = resolvedElement as CardElement;
+        case ElementType.checkbox:
+            const checkbox = resolvedElement as InputElement;
             return wrapWithMotion(
-                <Card>
-                    {card.header && <CardHeader><ElementResolver element={card.header} runtime={runtime} /></CardHeader>}
-                    <CardContent>{renderChildren(card.content)}</CardContent>
-                    {card.footer && <CardFooter>{renderChildren(card.footer)}</CardFooter>}
-                </Card>
-            );
-
-        case ElementType.map:
-            return wrapWithMotion(
-                <div>Unsupported: Map (requires react-leaflet or similar)</div>
-            );
-
-        case ElementType.container:
-            const container = resolvedElement as ContainerElement;
-            const layoutClass = {
-                flex: 'flex',
-                grid: 'grid',
-                block: 'block',
-                row: 'flex flex-row',
-                column: 'flex flex-col',
-            }[container.layout] || 'flex';
-            return wrapWithMotion(
-                <div className={cn(layoutClass, container.gap ? `gap-${container.gap}` : '')}>
-                    {renderChildren()}
-                </div>
+                <Checkbox
+                    checked={resolveBinding(checkbox.value, state, t)}
+                    onCheckedChange={(checked) => runEventHandler(checkbox.onChange, { value: checked })}
+                />
             );
 
         case ElementType.collapsible:
@@ -274,138 +251,19 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
                 </Command>
             );
 
-        case ElementType.form:
-            return <FormResolver element={resolvedElement as FormElement} />;
-
-        case ElementType.table:
-            const table = resolvedElement as TableElement;
-            const headers = resolveBinding(table.headers, state, t) || [];
-            const rows = resolveBinding(table.rows, state, t) || [];
+        case ElementType.container:
+            const container = resolvedElement as ContainerElement;
+            const layoutClass = {
+                flex: 'flex',
+                grid: 'grid',
+                block: 'block',
+                row: 'flex flex-row',
+                column: 'flex flex-col',
+            }[container.layout] || 'flex';
             return wrapWithMotion(
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            {headers.map((header: string, i: number) => (
-                                <TableHead key={i}>{header}</TableHead>
-                            ))}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {rows.map((row: any, i: number) => (
-                            <TableRow key={i}>
-                                {(row.cells || []).map((cell: any, j: number) => (
-                                    <TableCell key={j}>{resolveBinding(cell, state, t)}</TableCell>
-                                ))}
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            );
-
-        case ElementType.datagrid:
-            return <DataGrid element={resolvedElement as DataGridElement} runtime={runtime} />;
-
-        case ElementType.alert:
-            const alert = resolvedElement as AlertElement;
-            return wrapWithMotion(
-                <Alert variant={(alert.variant || 'default') as any}>
-                    <AlertDescription>{resolveBinding(alert.message, state, t)}</AlertDescription>
-                </Alert>
-            );
-
-        case ElementType.badge:
-            return wrapWithMotion(
-                <Badge>{resolveBinding((resolvedElement as any).message, state, t) || 'Badge'}</Badge>
-            );
-
-        case ElementType.breadcrumb:
-            const breadcrumb = resolvedElement as BreadcrumbElement;
-            return wrapWithMotion(
-                <Breadcrumb>
-                    <BreadcrumbList>
-                        {breadcrumb.items.map((item, i) => (
-                            <React.Fragment key={item.id}>
-                                <BreadcrumbItem>
-                                    {item.href ? (
-                                        <BreadcrumbLink href={resolveBinding(item.href, state, t)}>
-                                            {resolveBinding(item.label, state, t)}
-                                        </BreadcrumbLink>
-                                    ) : (
-                                        <BreadcrumbPage>{resolveBinding(item.label, state, t)}</BreadcrumbPage>
-                                    )}
-                                </BreadcrumbItem>
-                                {i < breadcrumb.items.length - 1 && <BreadcrumbSeparator />}
-                            </React.Fragment>
-                        ))}
-                    </BreadcrumbList>
-                </Breadcrumb>
-            );
-
-        case ElementType.dropdown:
-            const dropdown = resolvedElement as DropdownElement;
-            return wrapWithMotion(
-                <Select
-                    value={resolveBinding(dropdown.selectedValue, state, t)}
-                    onValueChange={(v) => runEventHandler(dropdown.onChange, { value: v })}
-                >
-                    <SelectTrigger>
-                        <SelectValue placeholder={resolveBinding(dropdown.label, state, t)} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {(resolveBinding(dropdown.options, state, t) || []).map((opt: any) => (
-                            <SelectItem key={opt.value} value={opt.value}>
-                                {resolveBinding(opt.label, state, t)}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            );
-
-        case ElementType.drawer:
-            const drawer = resolvedElement as DrawerElement;
-            return wrapWithMotion(
-                <Drawer
-                    open={resolveBinding(drawer.isOpen, state, t)}
-                    onOpenChange={(open) => runEventHandler(drawer.onOpenChange, { open })}
-                >
-                    {drawer.trigger && (
-                        <DrawerTrigger asChild>
-                            <ElementResolver element={drawer.trigger} runtime={runtime} />
-                        </DrawerTrigger>
-                    )}
-                    <DrawerContent>
-                        <DrawerHeader>
-                            <DrawerTitle>{resolveBinding(drawer.title, state, t)}</DrawerTitle>
-                            {drawer.description && (
-                                <DrawerDescription>{resolveBinding(drawer.description, state, t)}</DrawerDescription>
-                            )}
-                        </DrawerHeader>
-                        {renderChildren(drawer.content)}
-                        {drawer.footer && <DrawerFooter>{renderChildren(drawer.footer)}</DrawerFooter>}
-                    </DrawerContent>
-                </Drawer>
-            );
-
-        case ElementType.dropdown_menu:
-            const dropdownMenu = resolvedElement as DropdownMenuElement;
-            return wrapWithMotion(
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <ElementResolver element={dropdownMenu.trigger} runtime={runtime} />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        {dropdownMenu.items.map((item) => (
-                            <DropdownMenuItem
-                                key={item.id}
-                                onSelect={() => runEventHandler(item.onSelect)}
-                                className={item.variant === 'destructive' ? 'text-red-600' : ''}
-                            >
-                                {item.icon && <span className={item.icon} />}
-                                {resolveBinding(item.label, state, t)}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <div className={cn(layoutClass, container.gap ? `gap-${container.gap}` : '')}>
+                    {renderChildren()}
+                </div>
             );
 
         case ElementType.context_menu:
@@ -481,91 +339,426 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
                 </ContextMenu>
             );
 
-        case ElementType.tabs:
-            const tabs = resolvedElement as TabsElement;
+        case ElementType.custom:
+            const custom = resolvedElement as CustomElement;
+            const CustomComp = runtime.customComponents?.[custom.component] || (() => (
+                <div>Custom Component: {custom.component}</div>
+            ));
             return wrapWithMotion(
-                <Tabs
-                    value={tabs.activeTab}
-                    onValueChange={(v) => runEventHandler(tabs.onChange, { value: v })}
+                <CustomComp {...resolveBinding(custom.props, state, t)} />
+            );
+
+        case ElementType.datagrid:
+            return <DataGrid element={resolvedElement as DataGridElement} runtime={runtime} />;
+
+        case ElementType.dialog:
+            const dialog = resolvedElement as ModalElement;
+            return wrapWithMotion(
+                <Dialog open={resolveBinding(dialog.isOpen, state, t)} onOpenChange={(open) => !open && runEventHandler(dialog.onClose)}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>{resolveBinding(dialog.title, state, t)}</DialogTitle>
+                        </DialogHeader>
+                        {renderChildren(dialog.content)}
+                        {dialog.closeButton && <ElementResolver element={dialog.closeButton} runtime={runtime} />}
+                    </DialogContent>
+                </Dialog>
+            );
+
+        case ElementType.drawer:
+            const drawer = resolvedElement as DrawerElement;
+            return wrapWithMotion(
+                <Drawer
+                    open={resolveBinding(drawer.isOpen, state, t)}
+                    onOpenChange={(open) => runEventHandler(drawer.onOpenChange, { open })}
                 >
-                    <TabsList>
-                        {tabs.tabs.map((tab) => (
-                            <TabsTrigger key={tab.id} value={tab.id}>
-                                {tab.label}
-                            </TabsTrigger>
+                    {drawer.trigger && (
+                        <DrawerTrigger asChild>
+                            <ElementResolver element={drawer.trigger} runtime={runtime} />
+                        </DrawerTrigger>
+                    )}
+                    <DrawerContent>
+                        <DrawerHeader>
+                            <DrawerTitle>{resolveBinding(drawer.title, state, t)}</DrawerTitle>
+                            {drawer.description && (
+                                <DrawerDescription>{resolveBinding(drawer.description, state, t)}</DrawerDescription>
+                            )}
+                        </DrawerHeader>
+                        {renderChildren(drawer.content)}
+                        {drawer.footer && <DrawerFooter>{renderChildren(drawer.footer)}</DrawerFooter>}
+                    </DrawerContent>
+                </Drawer>
+            );
+
+        case ElementType.dropdown:
+            const dropdown = resolvedElement as DropdownElement;
+            return wrapWithMotion(
+                <Select
+                    value={resolveBinding(dropdown.selectedValue, state, t)}
+                    onValueChange={(v) => runEventHandler(dropdown.onChange, { value: v })}
+                >
+                    <SelectTrigger>
+                        <SelectValue placeholder={resolveBinding(dropdown.label, state, t)} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {(resolveBinding(dropdown.options, state, t) || []).map((opt: any) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                                {resolveBinding(opt.label, state, t)}
+                            </SelectItem>
                         ))}
-                    </TabsList>
-                    {tabs.tabs.map((tab) => (
-                        <TabsContent key={tab.id} value={tab.id}>
-                            {renderChildren(tab.content)}
-                        </TabsContent>
-                    ))}
-                </Tabs>
+                    </SelectContent>
+                </Select>
             );
 
-        case ElementType.accordion:
-            const accordion = resolvedElement as AccordionElement;
+        case ElementType.dropdown_menu:
+            const dropdownMenu = resolvedElement as DropdownMenuElement;
             return wrapWithMotion(
-                <Accordion
-                    type="single"
-                    value={resolveBinding(accordion.expandedItem, state, t)}
-                    onValueChange={(v) => runEventHandler(accordion.onChange, { value: v })}
-                >
-                    {accordion.items.map((item) => (
-                        <AccordionItem key={item.id} value={item.id}>
-                            <AccordionTrigger>{resolveBinding(item.title, state, t)}</AccordionTrigger>
-                            <AccordionContent>{renderChildren(item.content)}</AccordionContent>
-                        </AccordionItem>
-                    ))}
-                </Accordion>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <ElementResolver element={dropdownMenu.trigger} runtime={runtime} />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        {dropdownMenu.items.map((item) => (
+                            <DropdownMenuItem
+                                key={item.id}
+                                onSelect={() => runEventHandler(item.onSelect)}
+                                className={item.variant === 'destructive' ? 'text-red-600' : ''}
+                            >
+                                {item.icon && <span className={item.icon} />}
+                                {resolveBinding(item.label, state, t)}
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
             );
 
-        case ElementType.carousel:
-            const carousel = resolvedElement as CarouselElement;
-            const [api, setApi] = useState<CarouselApi>();
-            useEffect(() => {
-                if (carousel.autoPlay && api) {
-                    const interval = setInterval(() => api.scrollNext(), carousel.interval || 3000);
-                    return () => clearInterval(interval);
+        case ElementType.editor:
+            const editor = resolvedElement as EditorElement;
+            return wrapWithMotion(
+                <div>Unsupported: Editor (requires react-quill or similar)</div>
+            );
+
+        case ElementType.file_upload:
+            const fileUpload = resolvedElement as FileUploadElement;
+            return wrapWithMotion(
+                <Input
+                    type="file"
+                    accept={fileUpload.accept}
+                    multiple={fileUpload.multiple}
+                    onChange={(e) => runEventHandler(fileUpload.onUploaded, { files: e.target.files })}
+                />
+            );
+
+        case ElementType.footer:
+            const footer = resolvedElement as FooterElement;
+            return wrapWithMotion(
+                <footer className={cn(`text-${footer.alignment || 'left'}`)}>
+                    {renderChildren()}
+                </footer>
+            );
+
+        case ElementType.form:
+            return <FormResolver element={resolvedElement as FormElement} />;
+
+        case ElementType.header:
+            const header = resolvedElement as HeaderElement;
+            return wrapWithMotion(
+                <header className={cn(`text-${header.alignment || 'left'}`)}>
+                    {renderChildren()}
+                </header>
+            );
+
+        case ElementType.hover_card:
+            const hoverCard = resolvedElement as HoverCardElement;
+            return wrapWithMotion(
+                <HoverCard>
+                    <HoverCardTrigger asChild>
+                        {hoverCard.trigger && <ElementResolver element={hoverCard.trigger} runtime={runtime} />}
+                    </HoverCardTrigger>
+                    <HoverCardContent>
+                        {renderChildren(hoverCard.content)}
+                    </HoverCardContent>
+                </HoverCard>
+            );
+
+        case ElementType.icon:
+            const icon = resolvedElement as IconElement;
+            const IconComp = runtime.icons?.[icon.name] || Loader2; // Fallback to Loader2
+            return wrapWithMotion(
+                <IconComp size={icon.size} aria-label={resolveBinding(icon.label, state, t)} />
+            );
+
+        case ElementType.image:
+            const image = resolvedElement as ImageElement;
+            return wrapWithMotion(
+                <img
+                    src={resolveBinding(image.src, state, t)}
+                    alt={resolveBinding(image.alt, state, t)}
+                    width={image.width}
+                    height={image.height}
+                />
+            );
+
+        case ElementType.input:
+            const input = resolvedElement as InputElement;
+            const value = resolveBinding(input.value, state, t);
+            const options = resolveBinding(input.options, state, t) || [];
+
+            const handleInputChange = (newValue: any) => {
+                if (input.onChange) {
+                    runEventHandler(input.onChange, { value: newValue });
                 }
-            }, [api, carousel.autoPlay, carousel.interval]);
+            };
+
+            const inputProps = {
+                value,
+                placeholder: resolveBinding(input.placeholder, state, t),
+                onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+                    handleInputChange(e.target.value),
+                min: input.min,
+                max: input.max,
+                step: input.step,
+                accept: input.accept,
+                multiple: input.multiple,
+            };
+
+            const renderInput = () => {
+                switch (input.inputType) {
+                    case InputType.text:
+                    case InputType.email:
+                    case InputType.password:
+                    case InputType.number:
+                    case InputType.date:
+                    case InputType.datetime_local:
+                    case InputType.time:
+                    case InputType.month:
+                    case InputType.week:
+                    case InputType.search:
+                    case InputType.tel:
+                    case InputType.url:
+                    case InputType.color:
+                        return <Input type={input.inputType} {...inputProps} />;
+
+                    case InputType.checkbox:
+                        return <Checkbox checked={value} onCheckedChange={handleInputChange} />;
+
+                    case InputType.radio:
+                        return (
+                            <RadioGroup value={value} onValueChange={handleInputChange}>
+                                {options.map((opt: any) => (
+                                    <div key={opt.value} className="flex items-center space-x-2">
+                                        <RadioGroupItem value={opt.value} id={opt.value} />
+                                        <Label htmlFor={opt.value}>{resolveBinding(opt.label, state, t)}</Label>
+                                    </div>
+                                ))}
+                            </RadioGroup>
+                        );
+
+                    case InputType.select:
+                        return (
+                            <Select value={value} onValueChange={handleInputChange}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={inputProps.placeholder} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {options.map((opt: any) => (
+                                        <SelectItem key={opt.value} value={opt.value}>
+                                            {resolveBinding(opt.label, state, t)}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        );
+
+                    case InputType.file:
+                        return (
+                            <Input
+                                type="file"
+                                {...inputProps}
+                                onChange={(e) => handleInputChange(e.target.files)}
+                            />
+                        );
+
+                    case InputType.textarea:
+                        return <Textarea {...inputProps} />;
+
+                    case InputType.multiselect:
+                        return (
+                            <TagsInput
+                                value={value || []}
+                                onChange={handleInputChange}
+                                options={options}
+                            />
+                        );
+
+                    case InputType.slider:
+                        return (
+                            <Slider
+                                value={[value || 0]}
+                                min={input.min}
+                                max={input.max}
+                                step={input.step}
+                                onValueChange={(v) => handleInputChange(v[0])}
+                            />
+                        );
+
+                    case InputType.toggle:
+                        return <Toggle pressed={value} onPressedChange={handleInputChange} />;
+
+                    case InputType.switch:
+                        return <Switch checked={value} onCheckedChange={handleInputChange} />;
+
+                    case InputType.otp:
+                        return (
+                            <InputOTP
+                                maxLength={input.max ?? 6}
+                                value={value}
+                                onChange={handleInputChange}
+                            >
+                                <InputOTPGroup>
+                                    {Array.from({ length: input.max ?? 6 }).map((_, i) => (
+                                        <InputOTPSlot key={i} index={i} />
+                                    ))}
+                                </InputOTPGroup>
+                            </InputOTP>
+                        );
+
+                    case InputType.createselect:
+                        return (
+                            <CreateSelect
+                                options={options}
+                                value={value}
+                                onChange={handleInputChange}
+                                onCreate={(newOpt) => runEventHandler(input.onCreate, { newOption: newOpt })}
+                            />
+                        );
+
+                    case InputType.calendar:
+                        return (
+                            <Calendar
+                                selected={value ? new Date(value) : undefined}
+                                onSelect={(date) => handleInputChange(date)}
+                            />
+                        );
+
+                    case InputType.rating:
+                        return <RatingInput value={value} onChange={handleInputChange} />;
+
+                    case InputType.signature:
+                        return <SignatureInput value={value} onChange={handleInputChange} />;
+
+                    case InputType.richtext:
+                        return <RichtextInput value={value} onChange={handleInputChange} />;
+
+                    case InputType.code:
+                        return <CodeInput value={value} onChange={handleInputChange} />;
+
+                    case InputType.markdown:
+                        return <MarkdownInput value={value} onChange={handleInputChange} />;
+
+                    case InputType.tags:
+                        return <TagsInput value={value || []} onChange={handleInputChange} />;
+
+                    case InputType.currency:
+                        return (
+                            <CurrencyInput
+                                value={value}
+                                onChange={handleInputChange}
+                                currency={resolveBinding(input.currency, state, t)}
+                            />
+                        );
+
+                    case InputType.credit_card:
+                        return <CreditCardInput value={value} onChange={handleInputChange} />;
+
+                    default:
+                        return <Input {...inputProps} />;
+                }
+            };
+
             return wrapWithMotion(
-                <Carousel setApi={setApi}>
-                    <CarouselContent>
-                        {(resolveBinding(carousel.items, state, t) || []).map((item: any, i: number) => (
-                            <CarouselItem key={i}>
-                                {typeof item === 'object' && 'type' in item ? (
-                                    <ElementResolver element={item} runtime={runtime} />
-                                ) : (
-                                    item
-                                )}
-                            </CarouselItem>
+                <div className="space-y-1">
+                    {input.label && <Label htmlFor={input.id}>{resolveBinding(input.label, state, t)}</Label>}
+                    {renderInput()}
+                </div>
+            );
+
+        case ElementType.menubar:
+            const menubar = resolvedElement as MenubarElement;
+            return wrapWithMotion(
+                <Menubar>
+                    {menubar.menus.map((menu) => (
+                        <MenubarMenu key={menu.id}>
+                            <MenubarTrigger>{resolveBinding(menu.label, state, t)}</MenubarTrigger>
+                            <MenubarContent>
+                                {menu.items.map((item) => (
+                                    <MenubarItem
+                                        key={item.id}
+                                        onSelect={() => runEventHandler(item.onSelect)}
+                                    >
+                                        {resolveBinding(item.label, state, t)}
+                                    </MenubarItem>
+                                ))}
+                            </MenubarContent>
+                        </MenubarMenu>
+                    ))}
+                </Menubar>
+            );
+
+        case ElementType.modal:
+            const modal = resolvedElement as ModalElement;
+            return wrapWithMotion(
+                <Dialog open={resolveBinding(modal.isOpen, state, t)} onOpenChange={(open) => !open && runEventHandler(modal.onClose)}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>{resolveBinding(modal.title, state, t)}</DialogTitle>
+                        </DialogHeader>
+                        {renderChildren(modal.content)}
+                        {modal.closeButton && <ElementResolver element={modal.closeButton} runtime={runtime} />}
+                    </DialogContent>
+                </Dialog>
+            );
+
+        case ElementType.navigation_menu:
+            const navMenu = resolvedElement as NavigationMenuElement;
+            return wrapWithMotion(
+                <NavigationMenu>
+                    <NavigationMenuList>
+                        {navMenu.items.map((item) => (
+                            <NavigationMenuItem key={item.id}>
+                                <NavigationMenuTrigger>{resolveBinding(item.label, state, t)}</NavigationMenuTrigger>
+                                <NavigationMenuContent>
+                                    {renderChildren(item.content)}
+                                </NavigationMenuContent>
+                            </NavigationMenuItem>
                         ))}
-                    </CarouselContent>
-                    <CarouselPrevious />
-                    <CarouselNext />
-                </Carousel>
+                    </NavigationMenuList>
+                </NavigationMenu>
             );
 
-        case ElementType.loader:
-            const loader = resolvedElement as LoaderElement;
+        case ElementType.pagination:
+            const pagination = resolvedElement as PaginationElement;
             return wrapWithMotion(
-                <Loader2
-                    className={cn("animate-spin", loader.size ? `h-${loader.size} w-${loader.size}` : '')}
-                />
-            );
-
-        case ElementType.video:
-            const video = resolvedElement as VideoElement;
-            return wrapWithMotion(
-                <video
-                    src={resolveBinding(video.src, state, t)}
-                    width={video.width}
-                    height={video.height}
-                    autoPlay={video.autoPlay}
-                    loop={video.loop}
-                    controls={video.controls}
-                />
+                <Pagination>
+                    <PaginationContent>
+                        <PaginationItem>
+                            <PaginationPrevious onClick={() => runEventHandler(pagination.onPrevious)} />
+                        </PaginationItem>
+                        {pagination.pages.map((page, i) => (
+                            <PaginationItem key={i}>
+                                <PaginationLink
+                                    isActive={page.active}
+                                    onClick={() => runEventHandler(pagination.onPageChange, { page: page.number })}
+                                >
+                                    {page.number}
+                                </PaginationLink>
+                            </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                            <PaginationNext onClick={() => runEventHandler(pagination.onNext)} />
+                        </PaginationItem>
+                    </PaginationContent>
+                </Pagination>
             );
 
         case ElementType.payment:
@@ -576,44 +769,127 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
                 </div>
             );
 
-        case ElementType.chart:
-            const chart = resolvedElement as ChartElement;
+        case ElementType.popover:
+            const popover = resolvedElement as PopoverElement;
             return wrapWithMotion(
-                <Chart
-                    chartType={chart.chartType}
-                    data={resolveBinding(chart.data, state, t)}
-                    options={chart.options}
-                />
+                <Popover>
+                    <PopoverTrigger asChild>
+                        {popover.trigger && <ElementResolver element={popover.trigger} runtime={runtime} />}
+                    </PopoverTrigger>
+                    <PopoverContent>
+                        {renderChildren(popover.content)}
+                    </PopoverContent>
+                </Popover>
             );
 
-        case ElementType.custom:
-            const custom = resolvedElement;
-            const CustomComp = runtime.customComponents?.[custom.component] || (() => (
-                <div>Custom Component: {custom.component}</div>
-            ));
+        case ElementType.progress:
+            const progress = resolvedElement as ProgressElement;
             return wrapWithMotion(
-                <CustomComp {...resolveBinding(custom.props, state, t)} />
+                <Progress value={resolveBinding(progress.value, state, t)} />
             );
 
-        case ElementType.avatar:
-            const avatar = resolvedElement as AvatarElement;
+        case ElementType.qr_code:
+            const qrCode = resolvedElement as QRCodeElement;
             return wrapWithMotion(
-                <Avatar>
-                    <AvatarImage src={resolveBinding(avatar.src, state, t)} />
-                    <AvatarFallback>{avatar.src ? '' : 'AV'}</AvatarFallback>
-                </Avatar>
+                <div>Unsupported: QR Code (requires qrcode.react)</div>
             );
 
-        case ElementType.voice:
-            const voice = resolvedElement as VoiceElement;
+        case ElementType.radio_group:
+            const radioGroup = resolvedElement as RadioGroupElement;
             return wrapWithMotion(
-                <div>Unsupported: Voice (requires Web Speech API)</div>
+                <RadioGroup
+                    value={resolveBinding(radioGroup.value, state, t)}
+                    onValueChange={(v) => runEventHandler(radioGroup.onChange, { value: v })}
+                >
+                    {(resolveBinding(radioGroup.options, state, t) || []).map((opt: any) => (
+                        <div key={opt.value} className="flex items-center space-x-2">
+                            <RadioGroupItem value={opt.value} id={opt.value} />
+                            <Label htmlFor={opt.value}>{resolveBinding(opt.label, state, t)}</Label>
+                        </div>
+                    ))}
+                </RadioGroup>
             );
 
-        case ElementType.call:
-            const call = resolvedElement as CallElement;
+        case ElementType.resizable:
+            const resizable = resolvedElement as ResizableElement;
             return wrapWithMotion(
-                <div>Unsupported: Call (requires WebRTC)</div>
+                <ResizablePanelGroup direction={resizable.direction || 'horizontal'}>
+                    {resizable.panels.map((panel, i) => (
+                        <React.Fragment key={i}>
+                            <ResizablePanel>{renderChildren(panel.content)}</ResizablePanel>
+                            {i < resizable.panels.length - 1 && <ResizableHandle />}
+                        </React.Fragment>
+                    ))}
+                </ResizablePanelGroup>
+            );
+
+        case ElementType.scroll_area:
+            return wrapWithMotion(
+                <ScrollArea>
+                    {renderChildren()}
+                </ScrollArea>
+            );
+
+        case ElementType.separator:
+            return wrapWithMotion(
+                <Separator />
+            );
+
+        case ElementType.sheet:
+            const sheet = resolvedElement as SheetElement;
+            return wrapWithMotion(
+                <Sheet
+                    open={resolveBinding(sheet.isOpen, state, t)}
+                    onOpenChange={(open) => runEventHandler(sheet.onOpenChange, { open })}
+                >
+                    {sheet.trigger && (
+                        <SheetTrigger asChild>
+                            <ElementResolver element={sheet.trigger} runtime={runtime} />
+                        </SheetTrigger>
+                    )}
+                    <SheetContent>
+                        <SheetHeader>
+                            <SheetTitle>{resolveBinding(sheet.title, state, t)}</SheetTitle>
+                            {sheet.description && (
+                                <SheetDescription>{resolveBinding(sheet.description, state, t)}</SheetDescription>
+                            )}
+                        </SheetHeader>
+                        {renderChildren(sheet.content)}
+                        {sheet.footer && <SheetFooter>{renderChildren(sheet.footer)}</SheetFooter>}
+                    </SheetContent>
+                </Sheet>
+            );
+
+        case ElementType.sidebar:
+            const sidebar = resolvedElement as SidebarElement;
+            return wrapWithMotion(
+                <Sidebar>
+                    <SidebarHeader>{sidebar.header && <ElementResolver element={sidebar.header} runtime={runtime} />}</SidebarHeader>
+                    <SidebarContent>
+                        {sidebar.groups.map((group) => (
+                            <SidebarGroup key={group.id}>
+                                <SidebarGroupLabel>{resolveBinding(group.label, state, t)}</SidebarGroupLabel>
+                                <SidebarGroupContent>
+                                    <SidebarMenu>
+                                        {group.items.map((item) => (
+                                            <SidebarMenuItem key={item.id}>
+                                                <SidebarMenuButton asChild>
+                                                    <ElementResolver element={item} runtime={runtime} />
+                                                </SidebarMenuButton>
+                                            </SidebarMenuItem>
+                                        ))}
+                                    </SidebarMenu>
+                                </SidebarGroupContent>
+                            </SidebarGroup>
+                        ))}
+                    </SidebarContent>
+                    <SidebarFooter>{sidebar.footer && <ElementResolver element={sidebar.footer} runtime={runtime} />}</SidebarFooter>
+                </Sidebar>
+            );
+
+        case ElementType.skeleton:
+            return wrapWithMotion(
+                <Skeleton />
             );
 
         case ElementType.slider:
@@ -628,55 +904,6 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
                         ))}
                     </CarouselContent>
                 </Carousel>
-            );
-
-        case ElementType.wallet:
-            const wallet = resolvedElement as WalletElement;
-            return wrapWithMotion(
-                <div>Unsupported: Wallet (requires {wallet.provider} integration)</div>
-            );
-
-        case ElementType.editor:
-            const editor = resolvedElement as EditorElement;
-            return wrapWithMotion(
-                <div>Unsupported: Editor (requires react-quill or similar)</div>
-            );
-
-        case ElementType.quiz:
-            const quiz = resolvedElement as QuizElement;
-            return wrapWithMotion(
-                <div>
-                    {quiz.questions.map((q) => (
-                        <div key={q.id}>
-                            <p>{resolveBinding(q.question, state, t)}</p>
-                            <RadioGroup onValueChange={(v) => runEventHandler(quiz.onSubmit, { answer: v })}>
-                                {q.options.map((opt) => (
-                                    <div key={opt.value} className="flex items-center space-x-2">
-                                        <RadioGroupItem value={opt.value} id={opt.value} />
-                                        <Label htmlFor={opt.value}>{resolveBinding(opt.label, state, t)}</Label>
-                                    </div>
-                                ))}
-                            </RadioGroup>
-                        </div>
-                    ))}
-                </div>
-            );
-
-        case ElementType.calendar:
-            const calendar = resolvedElement as CalendarElement;
-            return wrapWithMotion(
-                <Calendar
-                    mode="single"
-                    required={false}
-                    selected={calendar.value ? new Date(resolveBinding(calendar.value, state, t)) : undefined}
-                    onSelect={(date) => runEventHandler(calendar.onSelect, { date })}
-                />
-            );
-
-        case ElementType.qr_code:
-            const qrCode = resolvedElement as QRCodeElement;
-            return wrapWithMotion(
-                <div>Unsupported: QR Code (requires qrcode.react)</div>
             );
 
         case ElementType.step_wizard:
@@ -714,23 +941,163 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
                 </div>
             );
 
+        case ElementType.switch:
+            const switchEl = resolvedElement as InputElement;
+            return wrapWithMotion(
+                <Switch
+                    checked={resolveBinding(switchEl.value, state, t)}
+                    onCheckedChange={(checked) => runEventHandler(switchEl.onChange, { value: checked })}
+                />
+            );
+
+        case ElementType.table:
+            const table = resolvedElement as TableElement;
+            const headers = resolveBinding(table.headers, state, t) || [];
+            const rows = resolveBinding(table.rows, state, t) || [];
+            return wrapWithMotion(
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            {headers.map((header: string, i: number) => (
+                                <TableHead key={i}>{header}</TableHead>
+                            ))}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {rows.map((row: any, i: number) => (
+                            <TableRow key={i}>
+                                {(row.cells || []).map((cell: any, j: number) => (
+                                    <TableCell key={j}>{resolveBinding(cell, state, t)}</TableCell>
+                                ))}
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            );
+
+        case ElementType.tabs:
+            const tabs = resolvedElement as TabsElement;
+            return wrapWithMotion(
+                <Tabs
+                    value={tabs.activeTab}
+                    onValueChange={(v) => runEventHandler(tabs.onChange, { value: v })}
+                >
+                    <TabsList>
+                        {tabs.tabs.map((tab) => (
+                            <TabsTrigger key={tab.id} value={tab.id}>
+                                {tab.label}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                    {tabs.tabs.map((tab) => (
+                        <TabsContent key={tab.id} value={tab.id}>
+                            {renderChildren(tab.content)}
+                        </TabsContent>
+                    ))}
+                </Tabs>
+            );
+
+        case ElementType.text:
+            const text = resolvedElement as TextElement;
+            const TextTag = text.tag || 'p';
+            const MotionText = motion[TextTag] || motion.div;
+            return (
+                <MotionText
+                    className={cn(className, `text-${text.alignment || 'left'}`, text.fontWeight ? `font-${text.fontWeight}` : '')}
+                    {...accessibilityProps}
+                    {...animationProps}
+                    dangerouslySetInnerHTML={text.contentFormat === 'html' ? { __html: resolveBinding(text.content, state, t) } : undefined}
+                >
+                    {text.contentFormat !== 'html' ? resolveBinding(text.content, state, t) : null}
+                </MotionText>
+            );
+
+        case ElementType.textarea:
+            const textarea = resolvedElement as InputElement;
+            return wrapWithMotion(
+                <Textarea
+                    value={resolveBinding(textarea.value, state, t)}
+                    onChange={(e) => runEventHandler(textarea.onChange, { value: e.target.value })}
+                    placeholder={resolveBinding(textarea.placeholder, state, t)}
+                />
+            );
+
+        case ElementType.three_d_model:
+            return wrapWithMotion(
+                <div>Unsupported: 3D Model (requires @react-three/fiber)</div>
+            );
+
+        case ElementType.toggle:
+            const toggle = resolvedElement as InputElement;
+            return wrapWithMotion(
+                <Toggle
+                    pressed={resolveBinding(toggle.value, state, t)}
+                    onPressedChange={(pressed) => runEventHandler(toggle.onChange, { value: pressed })}
+                />
+            );
+
+        case ElementType.toggle_group:
+            const toggleGroup = resolvedElement as ToggleGroupElement;
+            return wrapWithMotion(
+                <ToggleGroup
+                    type="multiple"
+                    value={resolveBinding(toggleGroup.value, state, t) || []}
+                    onValueChange={(value) => runEventHandler(toggleGroup.onChange, { value })}
+                >
+                    {(resolveBinding(toggleGroup.options, state, t) || []).map((opt: any) => (
+                        <ToggleGroupItem key={opt.value} value={opt.value}>
+                            {resolveBinding(opt.label, state, t)}
+                        </ToggleGroupItem>
+                    ))}
+                </ToggleGroup>
+            );
+
+        case ElementType.tooltip:
+            const tooltip = resolvedElement as TooltipElement;
+            return wrapWithMotion(
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            {tooltip.trigger && <ElementResolver element={tooltip.trigger} runtime={runtime} />}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            {resolveBinding(tooltip.content, state, t)}
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            );
+
+        case ElementType.video:
+            const video = resolvedElement as VideoElement;
+            return wrapWithMotion(
+                <video
+                    src={resolveBinding(video.src, state, t)}
+                    width={video.width}
+                    height={video.height}
+                    autoPlay={video.autoPlay}
+                    loop={video.loop}
+                    controls={video.controls}
+                />
+            );
+
+        case ElementType.voice:
+            const voice = resolvedElement as VoiceElement;
+            return wrapWithMotion(
+                <div>Unsupported: Voice (requires Web Speech API)</div>
+            );
+
+        case ElementType.wallet:
+            const wallet = resolvedElement as WalletElement;
+            return wrapWithMotion(
+                <div>Unsupported: Wallet (requires {wallet.provider} integration)</div>
+            );
+
         case ElementType.wallet_connect_button:
             const walletButton = resolvedElement as WalletConnectButtonElement;
             return wrapWithMotion(
                 <Button onClick={() => runEventHandler({ action: 'wallet_connect' as any, params: { projectId: walletButton.projectId, chainId: walletButton.chainId } })}>
                     Connect Wallet
                 </Button>
-            );
-
-        case ElementType.file_upload:
-            const fileUpload = resolvedElement as FileUploadElement;
-            return wrapWithMotion(
-                <Input
-                    type="file"
-                    accept={fileUpload.accept}
-                    multiple={fileUpload.multiple}
-                    onChange={(e) => runEventHandler(fileUpload.onUploaded, { files: e.target.files })}
-                />
             );
 
         default:

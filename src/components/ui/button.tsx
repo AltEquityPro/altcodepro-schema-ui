@@ -1,8 +1,11 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-
-import { cn } from "@/src/lib/utils"
+import { useAppState } from "@/src/schema/StateContext"
+import { useActionHandler } from "@/src/schema/Actions"
+import { ElementResolver } from "@/src/schema/ElementResolver"
+import { resolveBinding, cn } from "@/src/lib/utils"
+import { ButtonElement, UIElement } from "@/src/types"
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
@@ -10,6 +13,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        pirmary: "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
@@ -19,6 +23,15 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
+        success:
+          "bg-green-600 text-white hover:bg-green-700 focus-visible:ring-green-500/40 dark:bg-green-700 dark:hover:bg-green-800",
+        danger:
+          "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500/40 dark:bg-red-700 dark:hover:bg-red-800",
+        warning:
+          "bg-yellow-500 text-black hover:bg-yellow-600 focus-visible:ring-yellow-500/40 dark:bg-yellow-600 dark:hover:bg-yellow-700",
+        info:
+          "bg-blue-500 text-white hover:bg-blue-600 focus-visible:ring-blue-500/40 dark:bg-blue-600 dark:hover:bg-blue-700",
+
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
@@ -54,5 +67,37 @@ function Button({
     />
   )
 }
+interface ButtonRendererProps {
+  element: ButtonElement
+  runtime?: Record<string, any>
+}
 
-export { Button, buttonVariants }
+function ButtonRenderer({ element, runtime = {} }: ButtonRendererProps) {
+  const { state, t } = useAppState()
+  const { runEventHandler } = useActionHandler({ runtime })
+
+  const text = resolveBinding(element.text, state, t)
+  const disabled = resolveBinding(element.disabled, state, t)
+
+  return (
+    <Button
+      variant={(element.variant || "default") as any}
+      size={element.size || "default"}
+      disabled={disabled}
+      aria-disabled={disabled ? true : undefined}
+      asChild={element.asChild}
+      onClick={() => runEventHandler(element.onClick)}
+    >
+      <>
+        {element.iconLeft && (
+          <ElementResolver element={element.iconLeft as UIElement} runtime={runtime} />
+        )}
+        {text}
+        {element.iconRight && (
+          <ElementResolver element={element.iconRight as UIElement} runtime={runtime} />
+        )}
+      </>
+    </Button>
+  )
+}
+export { ButtonRenderer, Button, buttonVariants }

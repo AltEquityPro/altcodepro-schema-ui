@@ -47,6 +47,7 @@ export enum ElementType {
     table = 'table',
     datagrid = 'datagrid',
     alert = 'alert',
+    alert_dialog = 'alert_dialog',
     badge = 'badge',
     breadcrumb = 'breadcrumb',
     dropdown = 'dropdown',
@@ -113,14 +114,18 @@ export enum InputType {
     currency = 'currency',
     credit_card = 'credit_card',
 }
-
-export enum ButtonVariant {
-    primary = 'primary',
-    secondary = 'secondary',
-    outline = 'outline',
-    danger = 'danger',
-    success = 'success',
-}
+export type ButtonVariant =
+    | "default"
+    | "primary"
+    | "success"
+    | "danger"
+    | "warning"
+    | "info"
+    | "destructive"
+    | "outline"
+    | "secondary"
+    | "ghost"
+    | "link";
 
 export enum Alignment {
     left = 'left',
@@ -329,9 +334,46 @@ export interface ButtonElement extends BaseElement {
     type: ElementType.button;
     text: Binding;
     variant: ButtonVariant;
-    onClick?: EventHandler;
-    disabled?: boolean | Binding;
-    icon?: IconElement;
+    size?: "default" | "sm" | "lg" | "icon"
+    onClick?: EventHandler
+    disabled?: boolean | Binding
+    iconLeft?: IconElement
+    iconRight?: IconElement
+    asChild?: boolean
+}
+export interface BadgeElement extends BaseElement {
+    type: ElementType.badge
+
+    /** Main text/label binding */
+    text?: Binding
+
+    /** Optional value (e.g. for counts or dynamic binding) */
+    value?: Binding
+
+    /** Badge style variant */
+    variant?: "default" | "secondary" | "destructive" | "outline"
+
+    /** Render as child (useful when badge is wrapping a link/button) */
+    asChild?: boolean
+
+    /** Optional icon to render before/after text */
+    iconLeft?: IconElement
+    iconRight?: IconElement
+
+    /** Optional click handler (badges can be interactive) */
+    onClick?: EventHandler
+
+    /** Optional tooltip text */
+    tooltip?: Binding
+
+    /** Optional max length (truncate text beyond this) */
+    maxLength?: number
+
+    /** Show a dot badge (no text, just a small circle) */
+    isDot?: boolean
+
+    /** Size variant (smaller or larger badges) */
+    size?: "sm" | "md" | "lg"
 }
 
 export interface InputElement extends BaseElement {
@@ -418,10 +460,18 @@ export interface VideoElement extends BaseElement {
 }
 
 export interface CardElement extends BaseElement {
-    type: ElementType.card;
-    header?: UIElement;
-    content: UIElement[];
-    footer?: UIElement[];
+    type: ElementType.card
+    header?: UIElement
+    title?: UIElement
+    description?: UIElement
+    action?: UIElement
+    content: UIElement[]
+    footer?: UIElement[]
+    variant?: "default" | "outline" | "ghost" | "elevated" | "borderless"
+    clickable?: boolean | Binding         // whole card clickable
+    href?: Binding                        // navigation target
+    media?: UIElement                     // image, chart, video in header
+    badge?: UIElement                     // e.g. “New”, “Premium”
 }
 
 export interface ContainerElement extends BaseElement {
@@ -639,7 +689,14 @@ export interface WalletConnectButtonElement extends BaseElement {
 export interface AlertElement extends BaseElement {
     type: ElementType.alert;
     message: Binding;
-    variant: string;
+    dismissible?: boolean;
+    variant: | "default"
+    | "primary"
+    | "success"
+    | "danger"
+    | "warning"
+    | "info"
+    | "destructive";
     dismissible?: boolean;
 }
 
@@ -660,17 +717,29 @@ export interface TabsElement extends BaseElement {
 }
 
 export interface AccordionElement extends BaseElement {
-    type: ElementType.accordion;
-    items: { id: string; title: Binding; content: UIElement[] }[];
-    expandedItem?: string;
-    onChange?: EventHandler;
+    type: ElementType.accordion
+    items: {
+        id: string
+        title: Binding
+        content: UIElement[]
+    }[]
+    expandedItem?: string | string[] // single or multiple
+    onChange?: EventHandler
+    multiple?: boolean
+    collapsible?: boolean
 }
 
+
 export interface CarouselElement extends BaseElement {
-    type: ElementType.carousel;
-    items: Binding | UIElement[];
-    autoPlay?: boolean;
-    interval?: number;
+    type: ElementType.carousel
+    items: (UIElement & { interval?: number })[] | Binding
+    autoPlay?: boolean
+    interval?: number
+    orientation?: "horizontal" | "vertical"
+    loop?: boolean
+    showControls?: boolean
+    showIndicators?: boolean
+    showProgress?: boolean
 }
 
 export interface LoaderElement extends BaseElement {
@@ -703,11 +772,15 @@ export interface CustomElement extends BaseElement {
 }
 
 export interface AvatarElement extends BaseElement {
-    type: ElementType.avatar;
-    src: Binding;
-    size: number | string;
-    generation?: GenerationSpec;
-    onlineStatus?: boolean | Binding;
+    type: ElementType.avatar
+    src?: Binding
+    alt?: Binding
+    size?: number | string
+    fallback?: Binding
+    generation?: GenerationSpec
+    onlineStatus?: boolean | "online" | "offline" | "away" | Binding
+    shape?: "circle" | "square" | "rounded"
+    showRing?: boolean
 }
 
 export interface VoiceElement extends BaseElement {
@@ -757,9 +830,11 @@ export interface QuizElement extends BaseElement {
 }
 
 export interface CalendarElement extends BaseElement {
-    type: ElementType.calendar;
-    events: { id: string; title: Binding; start: Binding; end: Binding }[];
-    onSelect: EventHandler;
+    type: ElementType.calendar
+    events: { id: string; title: Binding; start: Binding; end: Binding }[]
+    selectedDate?: Binding
+    selectionMode?: "single" | "multiple" | "range"
+    onSelect: EventHandler
 }
 
 export interface QRCodeElement extends BaseElement {
@@ -800,12 +875,152 @@ export interface ThreeDModelElement extends BaseElement {
 }
 
 export interface BreadcrumbElement extends BaseElement {
-    type: ElementType.breadcrumb;
-    items: { id: string; label: Binding; href?: string }[];
+    type: ElementType.breadcrumb
+    items: {
+        id: string
+        label: Binding
+        href?: string | Binding
+        iconLeft?: UIElement
+        iconRight?: UIElement
+        onClick?: EventHandler
+    }[]
+    separator?: "chevron" | "slash" | "dot" | "custom"
+    ellipsisAfter?: number // collapse middle items if too many
+    tooltip?: boolean // show tooltips on hover for truncated labels
 }
 
+export interface AlertDialogElement extends BaseElement {
+    type: ElementType.alert_dialog;
+
+    title: Binding;
+    description?: Binding;
+    content: UIElement[];
+
+    isOpen: boolean | Binding;
+    onOpenChange?: EventHandler;
+
+    /** Optional trigger button (opens dialog) */
+    trigger?: UIElement;
+
+    /** Primary / secondary actions */
+    cancelButton?: ButtonElement;
+    actionButton?: ButtonElement;
+
+    /** Extended actions (for >2 buttons) */
+    actions?: Array<ButtonElement & { role?: "default" | "destructive" | "cancel" }>;
+
+    /** Visual variants for tone */
+    variant?: "default" | "info" | "warning" | "danger" | "success" | "destructive";
+
+    /** Whether clicking outside or pressing ESC closes dialog */
+    dismissible?: boolean;
+
+    /** Layout control */
+    size?: "sm" | "md" | "lg" | "xl" | "full";
+    position?: "center" | "top" | "bottom";
+}
+
+
+
+export interface HoverCardElement extends BaseElement {
+    type: ElementType.hover_card;
+    trigger: UIElement;
+    content: UIElement[];
+}
+
+export interface MenubarElement extends BaseElement {
+    type: ElementType.menubar;
+    menus: Array<{
+        id: string;
+        label: Binding;
+        items: Array<{
+            id: string;
+            label: Binding;
+            onSelect?: EventHandler;
+        }>;
+    }>;
+}
+
+export interface NavigationMenuElement extends BaseElement {
+    type: ElementType.navigation_menu;
+    items: Array<{
+        id: string;
+        label: Binding;
+        content: UIElement[];
+    }>;
+}
+
+export interface PaginationElement extends BaseElement {
+    type: ElementType.pagination;
+    pages: Array<{
+        number: number;
+        active: boolean;
+    }>;
+    onPrevious?: EventHandler;
+    onNext?: EventHandler;
+    onPageChange?: EventHandler;
+}
+
+export interface PopoverElement extends BaseElement {
+    type: ElementType.popover;
+    trigger: UIElement;
+    content: UIElement[];
+}
+
+export interface ProgressElement extends BaseElement {
+    type: ElementType.progress;
+    value: number | Binding;
+}
+
+export interface RadioGroupElement extends BaseElement {
+    type: ElementType.radio_group;
+    value: Binding;
+    options: Array<{ value: string; label: Binding }>;
+    onChange?: EventHandler;
+}
+
+export interface ResizableElement extends BaseElement {
+    type: ElementType.resizable;
+    direction: 'horizontal' | 'vertical';
+    panels: Array<{ id: string; content: UIElement[] }>;
+}
+
+export interface SheetElement extends BaseElement {
+    type: ElementType.sheet;
+    title: Binding;
+    description?: Binding;
+    content: UIElement[];
+    footer?: UIElement[];
+    isOpen: boolean | Binding;
+    trigger?: UIElement;
+    onOpenChange?: EventHandler;
+}
+
+export interface SidebarElement extends BaseElement {
+    type: ElementType.sidebar;
+    header?: UIElement;
+    groups: Array<{
+        id: string;
+        label: Binding;
+        items: UIElement[];
+    }>;
+    footer?: UIElement;
+}
+
+export interface ToggleGroupElement extends BaseElement {
+    type: ElementType.toggle_group;
+    value: Binding;
+    options: Array<{ value: string; label: Binding }>;
+    onChange?: EventHandler;
+}
+
+export interface TooltipElement extends BaseElement {
+    type: ElementType.tooltip;
+    trigger: UIElement;
+    content: Binding;
+}
 export type UIElement =
-    | ButtonElement | ModalElement | IconElement
+    | ButtonElement | ModalElement | IconElement | BadgeElement
     | TextElement | ImageElement | VideoElement | CardElement
     | ContainerElement | FormElement | TableElement | DataGridElement | MapElement
     | StepWizardElement | AlertElement | DropdownElement | TabsElement | AccordionElement
@@ -813,7 +1028,9 @@ export type UIElement =
     | VoiceElement | CallElement | WalletElement | WalletConnectButtonElement
     | FileUploadElement | EditorElement | QuizElement | CalendarElement
     | QRCodeElement | ThreeDModelElement | PaymentElement | SliderElement
-    | DrawerElement | ContextMenuElement | DropdownMenuElement | BreadcrumbElement;
+    | DrawerElement | ContextMenuElement | DropdownMenuElement | BreadcrumbElement | AlertDialogElement
+    | HoverCardElement | MenubarElement | NavigationMenuElement | PaginationElement | PopoverElement | RadioGroupElement
+    | ProgressElement | RadioGroupElement | ResizableElement | SheetElement | SidebarElement | ToggleGroupElement | TooltipElement;
 
 export interface DataSource {
     id: string;

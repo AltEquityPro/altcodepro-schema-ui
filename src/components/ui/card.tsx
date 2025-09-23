@@ -1,13 +1,14 @@
 import * as React from "react"
-
 import { cn } from "@/src/lib/utils"
+import { CardElement, UIElement } from "@/src/types"
+import { ElementResolver } from "@/src/schema/ElementResolver"
 
 function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
+        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm transition hover:shadow-md",
         className
       )}
       {...props}
@@ -62,13 +63,7 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-content"
-      className={cn("px-6", className)}
-      {...props}
-    />
-  )
+  return <div data-slot="card-content" className={cn("px-6", className)} {...props} />
 }
 
 function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
@@ -81,7 +76,59 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+interface CardRendererProps {
+  element: CardElement
+  runtime?: Record<string, any>
+}
+
+function CardRenderer({ element, runtime = {} }: CardRendererProps) {
+  const renderChildren = (children?: UIElement[]) =>
+    children?.map((child) => (
+      <ElementResolver key={child.id} element={child} runtime={runtime} />
+    ))
+
+  const cardBody = (
+    <Card>
+      {/* Header */}
+      {(element.media || element.badge || element.title || element.description || element.action || element.header) && (
+        <CardHeader>
+          {element.media && renderChildren([element.media])}
+          {element.badge && renderChildren([element.badge])}
+          {element.title && (
+            <CardTitle>{renderChildren([element.title])}</CardTitle>
+          )}
+          {element.description && (
+            <CardDescription>{renderChildren([element.description])}</CardDescription>
+          )}
+          {element.action && (
+            <CardAction>{renderChildren([element.action])}</CardAction>
+          )}
+          {element.header && renderChildren([element.header])}
+        </CardHeader>
+      )}
+
+      {/* Content */}
+      <CardContent>{renderChildren(element.content)}</CardContent>
+
+      {/* Footer */}
+      {element.footer && <CardFooter>{renderChildren(element.footer)}</CardFooter>}
+    </Card>
+  )
+
+  // Clickable wrapper
+  if (element.clickable && element.href) {
+    return (
+      <a href={String(element.href)} className="block">
+        {cardBody}
+      </a>
+    )
+  }
+
+  return cardBody
+}
+
 export {
+  CardRenderer,
   Card,
   CardHeader,
   CardFooter,

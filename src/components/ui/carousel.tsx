@@ -1,11 +1,15 @@
+"use client"
+
 import * as React from "react"
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
 } from "embla-carousel-react"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 
-import { cn } from "@/src/lib/utils"
+import { cn, resolveBinding } from "@/src/lib/utils"
 import { Button } from "./button"
+import { CarouselElement, UIElement } from "@/src/types"
+import { ElementResolver } from "@/src/schema/ElementResolver"
 
 type CarouselApi = UseEmblaCarouselType[1]
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>
@@ -32,11 +36,7 @@ const CarouselContext = React.createContext<CarouselContextProps | null>(null)
 
 function useCarousel() {
   const context = React.useContext(CarouselContext)
-
-  if (!context) {
-    throw new Error("useCarousel must be used within a <Carousel />")
-  }
-
+  if (!context) throw new Error("useCarousel must be used within a <Carousel />")
   return context
 }
 
@@ -50,10 +50,7 @@ function Carousel({
   ...props
 }: React.ComponentProps<"div"> & CarouselProps) {
   const [carouselRef, api] = useEmblaCarousel(
-    {
-      ...opts,
-      axis: orientation === "horizontal" ? "x" : "y",
-    },
+    { ...opts, axis: orientation === "horizontal" ? "x" : "y" },
     plugins
   )
   const [canScrollPrev, setCanScrollPrev] = React.useState(false)
@@ -65,13 +62,8 @@ function Carousel({
     setCanScrollNext(api.canScrollNext())
   }, [])
 
-  const scrollPrev = React.useCallback(() => {
-    api?.scrollPrev()
-  }, [api])
-
-  const scrollNext = React.useCallback(() => {
-    api?.scrollNext()
-  }, [api])
+  const scrollPrev = React.useCallback(() => api?.scrollPrev(), [api])
+  const scrollNext = React.useCallback(() => api?.scrollNext(), [api])
 
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -96,9 +88,9 @@ function Carousel({
     onSelect(api)
     api.on("reInit", onSelect)
     api.on("select", onSelect)
-
     return () => {
       api?.off("select", onSelect)
+      api?.off("reInit", onSelect)
     }
   }, [api, onSelect])
 
@@ -106,7 +98,7 @@ function Carousel({
     <CarouselContext.Provider
       value={{
         carouselRef,
-        api: api,
+        api,
         opts,
         orientation:
           orientation || (opts?.axis === "y" ? "vertical" : "horizontal"),
@@ -132,13 +124,8 @@ function Carousel({
 
 function CarouselContent({ className, ...props }: React.ComponentProps<"div">) {
   const { carouselRef, orientation } = useCarousel()
-
   return (
-    <div
-      ref={carouselRef}
-      className="overflow-hidden"
-      data-slot="carousel-content"
-    >
+    <div ref={carouselRef} className="overflow-hidden" data-slot="carousel-content">
       <div
         className={cn(
           "flex",
@@ -153,7 +140,6 @@ function CarouselContent({ className, ...props }: React.ComponentProps<"div">) {
 
 function CarouselItem({ className, ...props }: React.ComponentProps<"div">) {
   const { orientation } = useCarousel()
-
   return (
     <div
       role="group"
@@ -176,7 +162,6 @@ function CarouselPrevious({
   ...props
 }: React.ComponentProps<typeof Button>) {
   const { orientation, scrollPrev, canScrollPrev } = useCarousel()
-
   return (
     <Button
       data-slot="carousel-previous"
@@ -206,7 +191,6 @@ function CarouselNext({
   ...props
 }: React.ComponentProps<typeof Button>) {
   const { orientation, scrollNext, canScrollNext } = useCarousel()
-
   return (
     <Button
       data-slot="carousel-next"
@@ -229,7 +213,166 @@ function CarouselNext({
   )
 }
 
+interface CarouselRendererProps {
+  element: CarouselElement
+  runtime?: Record<string, any>
+  state?: Record<string, any>
+  t?: (key: string) => string
+}
+
+function CarouselRenderer({
+  element,
+  runtime = {},
+  state = {},
+  t = (s) => s,
+}: CarouselRendererProps) {
+  const [api, setApi] = React.useState<CarouselApi>()
+  const [selectedIndex, setSelectedIndex] = React.useState(0)
+  const [slideCount, setSlideCount] = React.useState(0)
+  const [progress, setProgress] = React.useState(0)
+  const [videoDurations, setVideoDurations] = React.useState<Record<number, number>>({})
+  const [paused, setPaused] = React.useState(false)
+
+  const autoplayEnabled = !!element.autoPlay
+  const globalInterval = element.interval || 5000
+
+  const items =
+    (resolveBinding(element.items, state, t) as (UIElement & { interval?: number })[]) || []
+
+  // 🔹 AutoPlay + Progress with pause support
+  React.useEffect(() => {
+    if (!autoplayEnabled || !api || paused) return
+
+    let start = Date.now()
+    let frame: number
+    let active = true
+
+    const tick = () => {
+      const currentItem = items[selectedIndex]
+      const currentInterval =
+        videoDurations[selectedIndex] || currentItem?.interval || globalInterval
+      const elapsed = Date.now() - start
+      const ratio = Math.min(elapsed / currentInterval, 1)
+
+      setProgress(ratio * 100)
+
+      if (ratio >= 1) {
+        api.scrollNext()
+        start = Date.now()
+        setProgress(0)
+      }
+
+      if (active) frame = requestAnimationFrame(tick)
+    }
+
+    frame = requestAnimationFrame(tick)
+    return () => {
+      active = false
+      cancelAnimationFrame(frame)
+    }
+  }, [api, autoplayEnabled, paused, selectedIndex, globalInterval, items, videoDurations])
+
+  // 🔹 Track slide index
+  React.useEffect(() => {
+    if (!api) return
+    const update = () => {
+      setSelectedIndex(api.selectedScrollSnap())
+      setSlideCount(api.scrollSnapList().length)
+      setProgress(0)
+    }
+    update()
+    api.on("select", update)
+    api.on("reInit", update)
+    return () => {
+      api.off("select", update)
+      api.off("reInit", update)
+    }
+  }, [api])
+
+  const handleVideoMetadata = (i: number, duration: number) => {
+    setVideoDurations((prev) => ({ ...prev, [i]: duration * 1000 }))
+  }
+
+  return (
+    <div
+      className="relative w-full"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+    >
+      <Carousel
+        setApi={setApi}
+        orientation={element.orientation || "horizontal"}
+        opts={{ loop: element.loop }}
+      >
+        <CarouselContent>
+          {items.map((item, i) => (
+            <CarouselItem key={i} className="flex justify-center">
+              {item.type === "video" ? (
+                <video
+                  src={resolveBinding((item as any).src, runtime.state, runtime.t)}
+                  onLoadedMetadata={(e) =>
+                    handleVideoMetadata(i, (e.currentTarget as HTMLVideoElement).duration)
+                  }
+                  controls
+                  className="max-h-[500px] rounded-lg"
+                />
+              ) : item.type === "image" ? (
+                <img
+                  src={resolveBinding((item as any).src, runtime.state, runtime.t)}
+                  alt={resolveBinding((item as any).alt, runtime.state, runtime.t)}
+                  className="max-h-[500px] rounded-lg object-contain"
+                />
+              ) : (
+                <ElementResolver element={item} runtime={runtime} />
+              )}
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+
+        {element.showControls !== false && (
+          <>
+            <CarouselPrevious />
+            <CarouselNext />
+          </>
+        )}
+      </Carousel>
+
+      {/* Dots */}
+      {element.showIndicators && slideCount > 1 && (
+        <div className="flex justify-center mt-4 space-x-2">
+          {Array.from({ length: slideCount }).map((_, i) => (
+            <button
+              key={i}
+              onClick={() => api?.scrollTo(i)}
+              className={cn(
+                "w-2.5 h-2.5 rounded-full transition-colors",
+                i === selectedIndex
+                  ? "bg-primary"
+                  : "bg-muted-foreground/40 hover:bg-muted-foreground/70"
+              )}
+              aria-label={`Go to slide ${i + 1}`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Progress */}
+      {element.showProgress && autoplayEnabled && (
+        <div className="absolute bottom-0 left-0 w-full h-1 bg-muted-foreground/20">
+          <div
+            className="h-1 bg-primary transition-[width]"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
 export {
+  CarouselRenderer,
   type CarouselApi,
   Carousel,
   CarouselContent,

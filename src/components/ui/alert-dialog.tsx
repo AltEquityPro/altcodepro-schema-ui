@@ -1,8 +1,12 @@
 import * as React from "react"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 
-import { cn } from "@/src/lib/utils"
+import { cn, resolveBinding } from "@/src/lib/utils"
 import { buttonVariants } from "./button"
+import { ElementResolver } from "@/src/schema/ElementResolver"
+import { AlertDialogElement, UIElement } from "@/src/types"
+import { useAppState } from "@/src/schema/StateContext"
+import { useActionHandler } from "@/src/schema/Actions"
 
 function AlertDialog({
   ...props
@@ -140,7 +144,110 @@ function AlertDialogCancel({
   )
 }
 
+function AlertDialogRenderer({
+  element,
+  runtime,
+}: {
+  element: AlertDialogElement
+  runtime: any
+}) {
+  const { state, t } = useAppState()
+  const { runEventHandler } = useActionHandler({ runtime })
+
+  const isOpen = resolveBinding(element.isOpen, state, t)
+
+  return (
+    <AlertDialogPrimitive.Root
+      open={!!isOpen}
+      onOpenChange={(open) =>
+        runEventHandler(element.onOpenChange, { open })
+      }
+    >
+      {element.trigger && (
+        <AlertDialogPrimitive.Trigger asChild>
+          <ElementResolver element={element.trigger} runtime={runtime} />
+        </AlertDialogPrimitive.Trigger>
+      )}
+
+      <AlertDialogPrimitive.Portal>
+        <AlertDialogPrimitive.Overlay
+          className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out"
+        />
+        <AlertDialogPrimitive.Content
+          className={cn(
+            "bg-background fixed top-1/2 left-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border p-6 shadow-lg duration-200",
+          )}
+        >
+          <div className="flex flex-col gap-2 text-center sm:text-left">
+            <AlertDialogPrimitive.Title className="text-lg font-semibold">
+              {resolveBinding(element.title, state, t)}
+            </AlertDialogPrimitive.Title>
+            {element.description && (
+              <AlertDialogPrimitive.Description className="text-sm text-muted-foreground">
+                {resolveBinding(element.description, state, t)}
+              </AlertDialogPrimitive.Description>
+            )}
+          </div>
+
+          {/* Children inside dialog */}
+          {element.content?.map((child: UIElement) => (
+            <ElementResolver key={child.id} element={child} runtime={runtime} />
+          ))}
+
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            {/* cancelButton / actionButton */}
+            {element.cancelButton && (
+              <AlertDialogPrimitive.Cancel
+                className={cn(buttonVariants({ variant: "outline" }))}
+                asChild
+              >
+                <ElementResolver element={element.cancelButton} runtime={runtime} />
+              </AlertDialogPrimitive.Cancel>
+            )}
+            {element.actionButton && (
+              <AlertDialogPrimitive.Action
+                className={cn(buttonVariants())}
+                asChild
+              >
+                <ElementResolver element={element.actionButton} runtime={runtime} />
+              </AlertDialogPrimitive.Action>
+            )}
+
+            {/* Multi-action mode */}
+            {element.actions?.map((btn, i) => {
+              if (btn.role === "cancel") {
+                return (
+                  <AlertDialogPrimitive.Cancel
+                    key={i}
+                    className={cn(buttonVariants({ variant: "outline" }))}
+                    asChild
+                  >
+                    <ElementResolver element={btn} runtime={runtime} />
+                  </AlertDialogPrimitive.Cancel>
+                )
+              }
+              return (
+                <AlertDialogPrimitive.Action
+                  key={i}
+                  className={cn(
+                    buttonVariants({
+                      variant: btn.role === "destructive" ? "destructive" : "default",
+                    })
+                  )}
+                  asChild
+                >
+                  <ElementResolver element={btn} runtime={runtime} />
+                </AlertDialogPrimitive.Action>
+              )
+            })}
+          </div>
+        </AlertDialogPrimitive.Content>
+      </AlertDialogPrimitive.Portal>
+    </AlertDialogPrimitive.Root>
+  )
+}
 export {
+  AlertDialogRenderer,
   AlertDialog,
   AlertDialogPortal,
   AlertDialogOverlay,

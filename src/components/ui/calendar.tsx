@@ -10,7 +10,10 @@ import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker"
 
 import { cn } from "@/src/lib/utils"
 import { Button, buttonVariants } from "./button"
-
+import { resolveBinding } from "@/src/lib/utils"
+import { useAppState } from "@/src/schema/StateContext"
+import { useActionHandler } from "@/src/schema/Actions"
+import { CalendarElement } from "@/src/types"
 function Calendar({
   className,
   classNames,
@@ -210,4 +213,48 @@ function CalendarDayButton({
   )
 }
 
-export { Calendar, CalendarDayButton }
+interface CalendarRendererProps {
+  element: CalendarElement
+  runtime?: Record<string, any>
+}
+
+function CalendarRenderer({ element, runtime = {} }: CalendarRendererProps) {
+  const { state, t } = useAppState()
+  const { runEventHandler } = useActionHandler({ runtime })
+
+  // resolve selected date binding
+  const selectedDate = element.selectedDate
+    ? new Date(resolveBinding(element.selectedDate, state, t))
+    : undefined
+
+  // resolve events
+  const events = element.events.map((event) => ({
+    ...event,
+    title: resolveBinding(event.title, state, t),
+    start: new Date(resolveBinding(event.start, state, t)),
+    end: new Date(resolveBinding(event.end, state, t)),
+  }))
+
+  return (
+    <div className="w-full">
+      <Calendar
+        mode={(element.selectionMode || "single") as any}
+        selected={selectedDate}
+        onSelect={(date: any) => runEventHandler(element.onSelect, { date })}
+      />
+      {events.length > 0 && (
+        <ul className="mt-4 space-y-1 text-sm">
+          {events.map((e) => (
+            <li key={e.id} className="flex items-center gap-2">
+              <span className="font-medium">{e.title}</span>
+              <span className="text-muted-foreground">
+                {e.start.toLocaleDateString()} → {e.end.toLocaleDateString()}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+export { CalendarRenderer, Calendar, CalendarDayButton }

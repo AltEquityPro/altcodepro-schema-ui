@@ -1,8 +1,14 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { ChevronRight, MoreHorizontal } from "lucide-react"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/src/components/ui/tooltip"
+import { resolveBinding } from "@/src/lib/utils"
+import { useAppState } from "@/src/schema/StateContext"
+import { useActionHandler } from "@/src/schema/Actions"
+import { ElementResolver } from "@/src/schema/ElementResolver"
 
 import { cn } from "@/src/lib/utils"
+import { BreadcrumbElement, UIElement } from "@/src/types"
 
 function Breadcrumb({ ...props }: React.ComponentProps<"nav">) {
   return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />
@@ -97,8 +103,95 @@ function BreadcrumbEllipsis({
     </span>
   )
 }
+interface BreadcrumbRendererProps {
+  element: BreadcrumbElement
+  runtime?: Record<string, any>
+}
 
+function BreadcrumbRenderer({ element, runtime = {} }: BreadcrumbRendererProps) {
+  const { state, t } = useAppState()
+  const { runEventHandler } = useActionHandler({ runtime })
+
+  // handle ellipsis if needed
+  const items = React.useMemo(() => {
+    if (!element.ellipsisAfter || element.items.length <= element.ellipsisAfter) return element.items
+    const head = element.items.slice(0, 1)
+    const tail = element.items.slice(-1)
+    return [...head, { id: "ellipsis", label: "…" } as any, ...tail]
+  }, [element])
+
+  const separatorNode = (i: number) => {
+    if (i >= items.length - 1) return null
+    switch (element.separator) {
+      case "slash":
+        return <BreadcrumbSeparator>/</BreadcrumbSeparator>
+      case "dot":
+        return <BreadcrumbSeparator>•</BreadcrumbSeparator>
+      case "custom":
+        return <BreadcrumbSeparator>{element.separator}</BreadcrumbSeparator>
+      default:
+        return <BreadcrumbSeparator />
+    }
+  }
+
+  return (
+    <Breadcrumb>
+      <BreadcrumbList>
+        {items.map((item, i) => {
+          if (item.id === "ellipsis") {
+            return (
+              <React.Fragment key={`ellipsis-${i}`}>
+                <BreadcrumbEllipsis />
+                {separatorNode(i)}
+              </React.Fragment>
+            )
+          }
+
+          const label = resolveBinding(item.label, state, t)
+          const node = item.href ? (
+            <BreadcrumbLink
+              href={resolveBinding(item.href, state, t)}
+              onClick={(e) => {
+                if (item.onClick) {
+                  e.preventDefault()
+                  runEventHandler(item.onClick, { item })
+                }
+              }}
+            >
+              {item.iconLeft && <ElementResolver element={item.iconLeft as UIElement} runtime={runtime} />}
+              {label}
+              {item.iconRight && <ElementResolver element={item.iconRight as UIElement} runtime={runtime} />}
+            </BreadcrumbLink>
+          ) : (
+            <BreadcrumbPage>
+              {item.iconLeft && <ElementResolver element={item.iconLeft as UIElement} runtime={runtime} />}
+              {label}
+              {item.iconRight && <ElementResolver element={item.iconRight as UIElement} runtime={runtime} />}
+            </BreadcrumbPage>
+          )
+
+          return (
+            <React.Fragment key={item.id}>
+              <BreadcrumbItem>
+                {element.tooltip ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>{node}</TooltipTrigger>
+                    <TooltipContent>{label}</TooltipContent>
+                  </Tooltip>
+                ) : (
+                  node
+                )}
+              </BreadcrumbItem>
+              {separatorNode(i)}
+            </React.Fragment>
+          )
+        })}
+      </BreadcrumbList>
+    </Breadcrumb>
+  )
+}
 export {
+  BreadcrumbRenderer,
   Breadcrumb,
   BreadcrumbList,
   BreadcrumbItem,
