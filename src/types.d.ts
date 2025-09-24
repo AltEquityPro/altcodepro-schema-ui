@@ -444,15 +444,45 @@ export interface CarouselElement extends BaseElement {
     showIndicators?: boolean;
     showProgress?: boolean;
 }
+
 export interface ChatElement extends BaseElement {
     type: ElementType.chat;
+
+    // AI/LLM
     model?: string;
     placeholder?: string | Binding;
     historyDataSourceId?: string;
     onSend?: EventHandler;
     onReceive?: EventHandler;
     streaming?: boolean;
+    onTyping?: EventHandler;
+
+    // Suggestions
+    suggestionsDataSourceId?: string;
+
+    // Uploads
+    accept?: string;
+    maxSizeBytes?: number;
+    multiple?: boolean;
+    allowUploads?: boolean;
+    allowPasteImages?: boolean;
+    onUpload?: EventHandler;
+
+    // Actions / buttons
+    quickActions?: { id: string; label: string; payload?: AnyObj }[];
+    onMessageAction?: EventHandler;
+
+    // Message utilities
+    onDeleteMessage?: EventHandler;
+    onCopyMessage?: EventHandler;
+
+    // 🔹 Optional UI polish
+    showTimestamps?: boolean;        // hide/show message timestamps
+    showStatusIcons?: boolean;       // hide/show ✓✓ ticks
+    showAvatars?: boolean;           // render user/assistant avatars
+    typingIndicator?: boolean;       // force typing indicator on/off
 }
+
 export interface ChartElement extends BaseElement {
     type: ElementType.chart;
     chartType: 'bar' | 'line' | 'area' | 'pie' | 'radar' | 'radialBar' | 'scatter' | 'composed' | 'candlestick';
@@ -525,12 +555,34 @@ export interface CommandElement extends BaseElement {
 export interface CommentsElement extends BaseElement {
     type: ElementType.comments;
     threadId: string | Binding;
+
+    // User features
     allowReplies?: boolean;
     allowVoting?: boolean;
+    allowEdit?: boolean;
+    allowDelete?: boolean;
+
+    // Moderator features
+    allowFlagging?: boolean;
+    allowModeration?: boolean;
+    moderationView?: "all" | "flagged" | "hidden" | "pending";
+
+    // Events
     onPost?: EventHandler;
     onReply?: EventHandler;
     onVote?: EventHandler;
+    onEdit?: EventHandler;
+    onDelete?: EventHandler;
+
+    // Moderation hooks
+    onFlag?: EventHandler;
+    onApprove?: EventHandler;
+    onHide?: EventHandler;
+    onBanUser?: EventHandler;
+    onModerateAction?: EventHandler;
 }
+
+
 
 export interface ContainerElement extends BaseElement {
     type: ElementType.container;
@@ -909,13 +961,52 @@ export interface ListItemElement extends BaseElement {
 }
 export interface LottieElement extends BaseElement {
     type: ElementType.lottie;
-    src: Binding; // Lottie JSON file
+    src: Binding; // Lottie JSON file or URL
+
+    // Playback controls
     autoplay?: boolean;
-    loop?: boolean;
+    loop?: boolean;                          // legacy boolean loop
+    loopCount?: Binding<number>;             // finite loop count
     speed?: number;
     direction?: 1 | -1;
+    isPlaying?: Binding<boolean>;            // external play/pause binding
+    progress?: Binding<number>;              // bindable 0..1 progress
+    controlBinding?: Binding<{ cmd: string; args?: any; nonce?: any }>;
+
+    // Segments & markers
+    segments?: Binding<[number, number] | Array<[number, number]>>;
+    markerStart?: Binding<string>;
+    markerEnd?: Binding<string>;
+
+    // Behavior
+    playOnVisible?: boolean;
+    pauseWhenHidden?: boolean;
+    playOnHover?: boolean;
+    pauseOnHover?: boolean;
+    forceAutoplayEvenIfReducedMotion?: boolean;
+
+    // Renderer / accessibility
+    renderer?: "svg" | "canvas" | "html";
+    rendererSettings?: Binding<AnyObj>;
+    ariaLabel?: Binding<string>;
+    title?: Binding<string>;
+
+    // Events
     onComplete?: EventHandler;
+    onLoop?: EventHandler;
+    onEnterFrame?: EventHandler;
+    onSegmentStart?: EventHandler;
+    onClick?: EventHandler;
+    onHoverStart?: EventHandler;
+    onHoverEnd?: EventHandler;
+    onEnterViewport?: EventHandler;
+    onLeaveViewport?: EventHandler;
+    onDataReady?: EventHandler;
+    onDomLoaded?: EventHandler;
+    onConfigReady?: EventHandler;
+    onError?: EventHandler;
 }
+
 
 export interface MenuElement extends BaseElement {
     type: ElementType.menu;
@@ -1049,8 +1140,14 @@ export interface RatingElement extends BaseElement {
     max?: number;
     value: number | Binding;
     readonly?: boolean;
+    allowHalf?: boolean;
+    precision?: number; // e.g., 0.5
+    iconSet?: "star" | "heart" | "emoji" | "custom";
+    icons?: string[]; // if custom/emoji (array of Lucide names, emoji, or URLs)
+    labelsDataSourceId?: string; // optional datasource for tooltips ("Poor", "Excellent", etc.)
     onChange?: EventHandler;
 }
+
 
 export interface ResizableElement extends BaseElement {
     type: ElementType.resizable;
@@ -1075,11 +1172,45 @@ export interface ScrollAreaElement extends BaseElement {
 }
 export interface SearchElement extends BaseElement {
     type: ElementType.search;
+
+    // Bindings
     placeholder?: Binding;
     value?: Binding;
-    debounceMs?: number;
+
+    // Behavior
+    debounceMs?: number;              // debounce delay for onSearch
+    minLength?: number;               // min chars before firing search
+    autoFocus?: boolean;
+    disabled?: boolean;
+
+    // Features
+    showClear?: boolean;
+    showIcon?: boolean;
+    allowVoice?: boolean;
+    voiceLang?: string;
+
+    // Suggestions (local & AI/remote)
+    suggestionsDataSourceId?: string; // static or preloaded suggestions
+    historyDataSourceId?: string;     // optional history store
+    maxSuggestions?: number;
+    allowHistory?: boolean;
+    aiSuggestionsApi?: string;        // endpoint for autocomplete
+    aiSuggestionsMethod?: "GET" | "POST";
+    aiSuggestionsParam?: string;      // key for query param or body
+    aiSuggestionsHeaders?: Record<string, string>; // auth, etc.
+
+    // Styling
+    variant?: "default" | "outlined" | "filled" | "underline";
+    size?: "sm" | "md" | "lg";
+
+    // Events
     onSearch: EventHandler;
+    onClear?: EventHandler;
+    onVoiceStart?: EventHandler;
+    onVoiceEnd?: EventHandler;
+    onSelectSuggestion?: EventHandler;
 }
+
 
 export interface SheetElement extends BaseElement {
     type: ElementType.sheet;
@@ -1107,12 +1238,46 @@ export interface SidebarElement extends BaseElement {
 }
 export interface SignaturePadElement extends BaseElement {
     type: ElementType.signature_pad;
-    exportType?: 'png' | 'jpeg' | 'svg';
+
+    // Export settings
+    exportType?: "png" | "jpeg" | "svg";
+    exportQuality?: number;
+
+    // Drawing
     strokeColor?: string;
     backgroundColor?: string;
+    minWidth?: number;
+    maxWidth?: number;
+    velocityFilterWeight?: number;
+    readOnly?: boolean;
+
+    // Multi-user signing
+    multiSignatures?: boolean;
+    participantsDataSourceId?: string;
+    initialParticipantId?: string;
+
+    // Persistence
+    signatureDataSourceId?: string
+
+    // UI toggles
+    clearButton?: boolean;
+    undoButton?: boolean;
+    saveButton?: boolean;
+    preview?: boolean;
+
+    // Autosave
+    autosave?: boolean;
+    autosaveDebounceMs?: number;
+
+    // Events
     onChange?: EventHandler;
     onClear?: EventHandler;
+    onUndo?: EventHandler;
+    onSave?: EventHandler;
+    onParticipantChange?: EventHandler;
 }
+
+
 export interface Step {
     id: string;
     content?: UIElement[];

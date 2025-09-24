@@ -17,6 +17,9 @@ import {
   EventHandler,
 } from "@/src/types"
 
+/** ---------------------------
+ * Calendar wrapper (DayPicker)
+ * --------------------------- */
 function Calendar({
   className,
   classNames,
@@ -48,10 +51,7 @@ function Calendar({
       }}
       classNames={{
         root: cn("w-fit", defaultClassNames.root),
-        months: cn(
-          "flex gap-4 flex-col md:flex-row relative",
-          defaultClassNames.months
-        ),
+        months: cn("flex gap-4 flex-col md:flex-row relative", defaultClassNames.months),
         month: cn("flex flex-col w-full gap-4", defaultClassNames.month),
         nav: cn(
           "flex items-center gap-1 w-full absolute top-0 inset-x-0 justify-between",
@@ -109,10 +109,7 @@ function Calendar({
           "relative w-full h-full p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md group/day aspect-square select-none",
           defaultClassNames.day
         ),
-        range_start: cn(
-          "rounded-l-md bg-accent",
-          defaultClassNames.range_start
-        ),
+        range_start: cn("rounded-l-md bg-accent", defaultClassNames.range_start),
         range_middle: cn("rounded-none", defaultClassNames.range_middle),
         range_end: cn("rounded-r-md bg-accent", defaultClassNames.range_end),
         today: cn(
@@ -123,29 +120,17 @@ function Calendar({
           "text-muted-foreground aria-selected:text-muted-foreground",
           defaultClassNames.outside
         ),
-        disabled: cn(
-          "text-muted-foreground opacity-50",
-          defaultClassNames.disabled
-        ),
+        disabled: cn("text-muted-foreground opacity-50", defaultClassNames.disabled),
         hidden: cn("invisible", defaultClassNames.hidden),
         ...classNames,
       }}
       components={{
         Root: ({ className, rootRef, ...props }) => (
-          <div
-            data-slot="calendar"
-            ref={rootRef}
-            className={cn(className)}
-            {...props}
-          />
+          <div data-slot="calendar" ref={rootRef} className={cn(className)} {...props} />
         ),
         Chevron: ({ className, orientation, ...props }) => {
-          if (orientation === "left") {
-            return <ChevronLeftIcon className={cn("size-4", className)} {...props} />
-          }
-          if (orientation === "right") {
-            return <ChevronRightIcon className={cn("size-4", className)} {...props} />
-          }
+          if (orientation === "left") return <ChevronLeftIcon className={cn("size-4", className)} {...props} />
+          if (orientation === "right") return <ChevronRightIcon className={cn("size-4", className)} {...props} />
           return <ChevronDownIcon className={cn("size-4", className)} {...props} />
         },
         DayButton: CalendarDayButton,
@@ -163,6 +148,9 @@ function Calendar({
   )
 }
 
+/** ---------------------------
+ * Custom Day Button with dot
+ * --------------------------- */
 function CalendarDayButton({
   className,
   day,
@@ -176,7 +164,6 @@ function CalendarDayButton({
     if (modifiers.focused) ref.current?.focus()
   }, [modifiers.focused])
 
-  // read custom event color from dataset
   const eventColor = (props as any)["data-event-color"]
 
   return (
@@ -186,21 +173,17 @@ function CalendarDayButton({
       size="icon"
       data-day={day.date.toLocaleDateString()}
       data-selected-single={
-        modifiers.selected &&
-        !modifiers.range_start &&
-        !modifiers.range_end &&
-        !modifiers.range_middle
+        modifiers.selected && !modifiers.range_start && !modifiers.range_end && !modifiers.range_middle
       }
       data-range-start={modifiers.range_start}
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
-      className={
-        cn(
-          "flex aspect-square w-full font-normal leading-none relative",
-          "data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground",
-          defaultClassNames.day,
-          className
-        )}
+      className={cn(
+        "flex aspect-square w-full font-normal leading-none relative",
+        "data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground",
+        defaultClassNames.day,
+        className
+      )}
       {...props}
     >
       {day.date.getDate()}
@@ -208,12 +191,15 @@ function CalendarDayButton({
         <span
           className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full"
           style={{ backgroundColor: eventColor || "var(--primary)" }}
-        ></span>
+        />
       )}
     </Button>
   )
 }
 
+/** ---------------------------
+ * Calendar Renderer
+ * --------------------------- */
 interface CalendarRendererProps {
   element: CalendarElement
   state: AnyObj
@@ -227,47 +213,91 @@ function CalendarRenderer({
   t,
   runEventHandler,
 }: CalendarRendererProps) {
-  const selectedDate = element.selectedDate
-    ? new Date(resolveBinding(element.selectedDate, state, t))
-    : undefined
+  const selectedDate = React.useMemo(() => {
+    if (!element.selectedDate) return undefined
+    const raw = resolveBinding(element.selectedDate, state, t)
+    const d = raw ? new Date(raw) : undefined
+    return d && !isNaN(d.getTime()) ? d : undefined
+  }, [element.selectedDate, state, t])
 
-  const parseDate = (val: any) => {
-    const resolved = resolveBinding(val, state, t)
-    const d = resolved ? new Date(resolved) : null
-    return d && !isNaN(d.getTime()) ? d : null
+  const parseDate = React.useCallback(
+    (val: any) => {
+      const resolved = resolveBinding(val, state, t)
+      const d = resolved ? new Date(resolved) : null
+      return d && !isNaN(d.getTime()) ? d : null
+    },
+    [state, t]
+  )
+
+  // safer color resolution: prefer explicit event.dotColor (if you add it),
+  // else try styles.background.type === 'color' -> value, else fallback to CSS var
+  const resolveEventColor = (evt: CalendarEventElement): string => {
+    const anyEvt = evt as AnyObj
+    const explicit = anyEvt.dotColor ? resolveBinding(anyEvt.dotColor, state, t) : null
+    if (explicit) return String(explicit)
+
+    const bg = evt.styles?.background
+    if (bg && (bg as AnyObj).type === "color") {
+      const v = (bg as AnyObj).value ? resolveBinding((bg as AnyObj).value, state, t) : null
+      if (v) return String(v)
+    }
+    return "var(--primary)"
   }
 
-  const events = element.events.map((event) => ({
-    ...event,
-    title: resolveBinding(event.title, state, t),
-    start: parseDate(event.start),
-    end: parseDate(event.end),
-    location: event.location ? resolveBinding(event.location, state, t) : undefined,
-    description: event.description
-      ? resolveBinding(event.description, state, t)
-      : undefined,
-    btnLabel: event.eventBtnLabel
-      ? resolveBinding(event.eventBtnLabel, state, t)
-      : undefined,
-    color: event.styles?.background || "#0ea5e9",
-  }))
+  const events = React.useMemo(() => {
+    return (element.events || []).map((evt: any) => {
+      const start = parseDate(evt.start)
+      const end = parseDate(evt.end)
+      return {
+        ...evt,
+        title: resolveBinding(evt.title, state, t),
+        start,
+        end,
+        location: evt.location ? resolveBinding(evt.location, state, t) : undefined,
+        description: evt.description ? resolveBinding(evt.description, state, t) : undefined,
+        btnLabel: evt.eventBtnLabel ? resolveBinding(evt.eventBtnLabel, state, t) : undefined,
+        color: resolveEventColor(evt as CalendarEventElement),
+        allDay: !!evt.allDay,
+      }
+    }).filter(e => !!e.start) // keep valid starts only
+  }, [element.events, parseDate, state, t])
 
-  // map days to colors
-  const dayEventColors: Record<string, string> = {}
-  events.forEach((e: any) => {
-    if (e.start) {
-      dayEventColors[e.start.toDateString()] = e.color
+  // Build day → color map; cover full ranges (start → end), not just start day
+  const dayEventColors = React.useMemo<Record<string, string>>(() => {
+    const map: Record<string, string> = {}
+
+    const addRange = (start: Date, end: Date, color: string) => {
+      const s = new Date(start.getFullYear(), start.getMonth(), start.getDate())
+      const e = end
+        ? new Date(end.getFullYear(), end.getMonth(), end.getDate())
+        : new Date(start.getFullYear(), start.getMonth(), start.getDate())
+
+      // Ensure e >= s
+      const last = e >= s ? e : s
+      for (
+        let d = new Date(s.getTime());
+        d <= last;
+        d.setDate(d.getDate() + 1)
+      ) {
+        const key = d.toDateString()
+        // prefer first color; if you want "last wins", replace with unconditional set
+        if (!map[key]) map[key] = color
+      }
     }
-  })
+
+    events.forEach(e => {
+      if (!e.start) return
+      addRange(e.start, e.end || e.start, e.color)
+    })
+    return map
+  }, [events])
 
   return (
     <div className="w-full">
       <Calendar
         mode={(element.selectionMode || "single") as any}
         selected={selectedDate}
-        onSelect={(date: any) =>
-          element.onSelect && runEventHandler(element.onSelect, { date })
-        }
+        onSelect={(date: any) => element.onSelect && runEventHandler(element.onSelect, { date })}
         modifiers={{
           custom: (day: Date) => !!dayEventColors[day.toDateString()],
         }}
@@ -303,14 +333,12 @@ function CalendarRenderer({
                     ? "All day"
                     : e.start && e.end
                       ? `${e.start.toLocaleString()} → ${e.end.toLocaleString()}`
-                      : null}
+                      : e.start
+                        ? e.start.toLocaleString()
+                        : null}
                 </div>
-                {e.location && (
-                  <div className="text-xs text-muted-foreground">{e.location}</div>
-                )}
-                {e.description && (
-                  <p className="mt-1 text-sm text-muted-foreground">{e.description}</p>
-                )}
+                {e.location && <div className="text-xs text-muted-foreground">{e.location}</div>}
+                {e.description && <p className="mt-1 text-sm text-muted-foreground">{e.description}</p>}
               </div>
               {e.onClick && e.btnLabel && (
                 <Button

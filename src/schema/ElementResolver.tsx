@@ -161,6 +161,15 @@ import { PaymentFormRenderer } from "../components/ui/payment-renderer";
 import { VoiceRenderer } from "../components/ui/voice-renderer";
 import { ThreeDRenderer } from "../components/ui/threed-render";
 import { CalendarEventRenderer } from "../components/ui/calendar_event_render";
+import { AudioRenderer } from "../components/ui/audio-render";
+import { ChatRenderer } from "../components/ui/chat";
+import { CommentsRenderer } from "../components/ui/comments";
+import { ListRenderer } from "../components/ui/list";
+import { ListItemRenderer } from "../components/ui/list_item";
+import LottieRenderer from "../components/ui/lottie";
+import { RatingInput } from "../components/ui/rating-input";
+import { SearchRenderer } from "../components/ui/search";
+import { SignaturePadRenderer } from "../components/ui/signature";
 
 interface ElementResolverProps {
     element: UIElement;
@@ -200,7 +209,7 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
                 <AlertDialogRenderer element={resolvedElement as AlertDialogElement} runtime={runtime} />
             )
         case ElementType.audio:
-            return <AudioRenderer element={resolvedElement as AudioElement} />;
+            return <AudioRenderer element={resolvedElement as AudioElement} state={state} t={t} runEventHandler={runEventHandler} />;
 
         case ElementType.avatar:
             const avatar = resolvedElement as AvatarElement;
@@ -399,9 +408,17 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
 
         case ElementType.radio_group:
             return <RadioGroupRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
-        case ElementType.rating:
-            return <RatingRenderer element={resolvedElement as RatingElement} runEventHandler={runEventHandler} />;
-
+        case ElementType.rating: {
+            const el = resolvedElement as RatingElement;
+            const value = resolveBinding(el.value, state, t) || 0;
+            return (
+                <RatingInput
+                    {...el}
+                    value={value}
+                    onChange={(val) => runEventHandler(el.onChange, { value: val })}
+                />
+            );
+        }
         case ElementType.resizable:
             return <ResizableRenderer element={resolvedElement} state={state} t={t} />
 
@@ -422,7 +439,7 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             const sidebar = resolvedElement as SidebarElement;
             return <SidebarRenderer element={resolvedElement} runtime={runtime} runEventHandler={runEventHandler} state={state} t={t} />
         case ElementType.signature_pad:
-            return <SignaturePadRenderer element={resolvedElement as SignaturePadElement} runEventHandler={runEventHandler} />;
+            return <SignaturePadRenderer element={resolvedElement as SignaturePadElement} t={t} runEventHandler={runEventHandler} />;
 
         case ElementType.skeleton:
             return wrapWithMotion(element,
