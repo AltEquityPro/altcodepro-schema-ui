@@ -65,7 +65,7 @@ export enum ElementType {
     payment = 'payment',
     popover = 'popover',
     progress = 'progress',
-    qr_code = 'qr_code',
+    qr_reader = 'qr_reader',
     quiz = 'quiz',
     radio_group = 'radio_group',
     resizable = 'resizable',
@@ -786,12 +786,7 @@ export interface FileUploadElement extends BaseElement {
     onQueueChange?: EventHandler
 }
 
-export interface WalletConnectButtonElement extends BaseElement {
-    type: ElementType.wallet_connect_button;
-    projectId?: string | Binding;
-    chainId?: number;
-    allowedChains?: number[];
-}
+
 export interface Step {
     id: string;
     title: Binding;
@@ -1091,6 +1086,16 @@ export interface CallElement extends BaseElement {
     onPeerLeave?: EventHandler;         // payload: { peerId }
     onStats?: EventHandler;             // periodic stats payload
 
+    // in your CallElement (add fields)
+    mode?: "mesh" | "sfu";            // default "mesh"
+    sfu?: {
+        // Generic SFU signaling over the SAME ws used by signalingServer.
+        // If you use a separate SFU ws, pass it here and I'll open a 2nd WS.
+        url?: Binding;                  // optional (defaults to signalingServer)
+        authToken?: Binding;            // optional bearer or custom
+        autoSubscribe?: boolean;        // default true
+    };
+
     // Analytics
     tracking?: {
         dataSourceId?: string;            // send analytics via Actions api_call
@@ -1101,12 +1106,30 @@ export interface CallElement extends BaseElement {
 
 export interface WalletElement extends BaseElement {
     type: ElementType.wallet;
-    provider: 'metamask' | 'walletconnect';
+    provider: "metamask" | "walletconnect";
     chainId: number;
     projectId?: string;
+    mode?: "full" | "button";
+
+    // Hooks
     onConnect?: EventHandler;
     onDisconnect?: EventHandler;
+    onError?: EventHandler;
+
+    // 👇 NEW: Contract interactions
+    contracts?: {
+        address: string | Binding;
+        abi: string[];   // JSON ABI or subset
+        functions: {
+            name: string;                       // e.g. "balanceOf"
+            type: "view" | "write";
+            inputs?: Array<{ name: string; type: string }>;
+            label?: string;                     // Button label
+            onResult?: EventHandler;            // Hook with return value
+        }[];
+    }[];
 }
+
 
 export interface EditorElement extends BaseElement {
     type: ElementType.editor
@@ -1150,11 +1173,14 @@ export interface CalendarElement extends BaseElement {
     onSelect: EventHandler
 }
 
-export interface QRCodeElement extends BaseElement {
-    type: ElementType.qr_code;
-    value: Binding;
-    size: number;
+export interface QRReaderlement extends BaseElement {
+    type: ElementType.qr_reader;
+    value: Binding;             // text/URL encoded into QR
+    size?: number;              // px size (default 128)
+    mode?: "generate" | "scan"; // choose generate or scan
+    onScan?: EventHandler;      // callback when QR scanned
 }
+
 export interface PaymentElement extends BaseElement {
     type: ElementType.payment;
     provider: 'stripe' | 'paypal' | 'razorpay' | 'custom';
@@ -1448,7 +1474,7 @@ export type UIElement =
     | ContainerElement | FormElement | TableElement | DataGridElement | MapElement
     | StepWizardElement | AlertElement | DropdownElement | TabsElement | AccordionElement
     | CarouselElement | LoaderElement | ChartElement | CustomElement | AvatarElement
-    | VoiceElement | CallElement | WalletElement | WalletConnectButtonElement
+    | VoiceElement | CallElement | WalletElement
     | FileUploadElement | EditorElement | QuizElement | CalendarElement
     | QRCodeElement | ThreeDModelElement | PaymentElement | ToggleElement
     | DrawerElement | ContextMenuElement | BreadcrumbElement | AlertDialogElement

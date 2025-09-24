@@ -14,7 +14,7 @@ import {
 } from "./dialog"
 import { AnyObj, CommandElement, EventHandler } from "@/src/types"
 import { RenderChildren } from "@/src/schema/RenderChildren"
-import { DynamicIcon } from "./DynamicIcon"
+import { DynamicIcon } from "./dynamic-icon"
 
 /* ------------------------------------------------------------------
  * Base Command Wrapper

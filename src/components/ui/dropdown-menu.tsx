@@ -6,7 +6,7 @@ import { cn, resolveBinding } from "@/src/lib/utils"
 import wrapWithMotion from "./wrapWithMotion"
 import { RenderChildren } from "@/src/schema/RenderChildren"
 import { AnyObj, DropdownElement, DropdownItem, EventHandler } from "@/src/types"
-import { DynamicIcon } from "./DynamicIcon"
+import { DynamicIcon } from "./dynamic-icon"
 
 function DropdownMenu({
   ...props

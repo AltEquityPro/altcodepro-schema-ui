@@ -11,7 +11,7 @@ import { cn, resolveBinding } from "@/src/lib/utils"
 import { RenderChildren } from "@/src/schema/RenderChildren"
 import { AnyObj, MenuElement, EventHandler } from "@/src/types"
 import wrapWithMotion from "./wrapWithMotion"
-import { DynamicIcon } from "./DynamicIcon"
+import { DynamicIcon } from "./dynamic-icon"
 import {
     Drawer,
     DrawerContent,

@@ -114,14 +114,13 @@ import {
     IconElement,
     ImageElement,
     PaymentElement,
-    QRCodeElement,
+    QRReaderlement,
     TableElement,
     TabsElement,
     TextElement,
     VideoElement,
     VoiceElement,
     WalletElement,
-    WalletConnectButtonElement,
     AlertDialogElement,
     BadgeElement,
     CollapsibleElement,
@@ -135,15 +134,17 @@ import {
 } from "../types";
 import { RenderChildren } from "./RenderChildren";
 import { ContainerRenderer } from "../components/ui/container";
-import { DynamicIcon } from "../components/ui/DynamicIcon";
+import { DynamicIcon } from "../components/ui/dynamic-icon";
 import CustomComponentRender from "../components/ui/custom-component";
 import { RichTextEditor } from "../components/ui/richtext-input";
-import { FileUploadRenderer } from "../components/ui/FileUpload";
+import { FileUploadRenderer } from "../components/ui/file-upload";
 import wrapWithMotion from "../components/ui/wrapWithMotion";
-import { MenuRenderer } from "../components/ui/menurender";
+import { MenuRenderer } from "../components/ui/menu-render";
 import StepWizardRenderer from "../components/ui/stepper";
 import { VideoRenderer } from "../components/ui/videoplayer";
-import { CallRenderer } from "../components/ui/call/CallRenderer";
+import { CallRenderer } from "../components/ui/call-renderer";
+import { QRCodeRenderer } from "../components/ui/qr-code";
+import { WalletRenderer } from "../components/ui/wallet-renderer";
 
 interface ElementResolverProps {
     element: UIElement;
@@ -351,10 +352,10 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
         case ElementType.progress:
             return <ProgressRenderer element={resolvedElement} state={state} t={t} />
 
-        case ElementType.qr_code:
-            const qrCode = resolvedElement as QRCodeElement;
-            return wrapWithMotion(element,
-                <div>Unsupported: QR Code (requires qrcode.react)</div>
+        case ElementType.qr_reader:
+            const qr = resolvedElement as QRReaderlement;
+            return wrapWithMotion(qr,
+                <QRCodeRenderer element={qr} state={state} t={t} runEventHandler={runEventHandler} />
             );
 
         case ElementType.radio_group:
@@ -545,16 +546,8 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
 
         case ElementType.wallet:
             const wallet = resolvedElement as WalletElement;
-            return wrapWithMotion(element,
-                <div>Unsupported: Wallet (requires {wallet.provider} integration)</div>
-            );
-
-        case ElementType.wallet_connect_button:
-            const walletButton = resolvedElement as WalletConnectButtonElement;
-            return wrapWithMotion(element,
-                <Button onClick={() => runEventHandler({ action: 'wallet_connect' as any, params: { projectId: walletButton.projectId, chainId: walletButton.chainId } })}>
-                    Connect Wallet
-                </Button>
+            return wrapWithMotion(wallet,
+                <WalletRenderer element={wallet} state={state} t={t} runEventHandler={runEventHandler} />
             );
 
         default:

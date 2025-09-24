@@ -5,7 +5,7 @@ import * as ContextMenuPrimitive from "@radix-ui/react-context-menu"
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
 
 import { cn, resolveBinding } from "@/src/lib/utils"
-import { DynamicIcon } from "./DynamicIcon"
+import { DynamicIcon } from "./dynamic-icon"
 import { AnyObj, ContextMenuElement, EventHandler, ContextMenuItem as ContextMenuItemType } from "@/src/types"
 import { ElementResolver } from "@/src/schema/ElementResolver"
 

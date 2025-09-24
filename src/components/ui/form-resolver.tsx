@@ -53,7 +53,7 @@ import { CodeInput } from "./code-input";
 import { MarkdownInput } from "./markdown-input";
 import { CurrencyInput } from "./currency-input";
 import { TabGroup, WizardGroup } from "./form-group";
-import { FileUpload } from "./FileUpload";
+import { FileUpload } from "./file-upload";
 
 /** ---------- Helpers ---------- */
 type SelectOption = { value: string; label: string };
