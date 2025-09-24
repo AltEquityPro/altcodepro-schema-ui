@@ -114,7 +114,7 @@ import {
     IconElement,
     ImageElement,
     PaymentElement,
-    QRReaderlement,
+    QRReaderElement,
     TableElement,
     TabsElement,
     TextElement,
@@ -130,7 +130,19 @@ import {
     SidebarElement,
     BaseElement,
     MenuElement,
-    ToggleElement
+    ToggleElement,
+    AudioElement,
+    CalendarEventElement,
+    ChatElement,
+    CommentsElement,
+    ListElement,
+    ListItemElement,
+    LottieElement,
+    RatingElement,
+    SearchElement,
+    SignaturePadElement,
+    TimelineElement,
+    TreeElement
 } from "../types";
 import { RenderChildren } from "./RenderChildren";
 import { ContainerRenderer } from "../components/ui/container";
@@ -145,6 +157,10 @@ import { VideoRenderer } from "../components/ui/videoplayer";
 import { CallRenderer } from "../components/ui/call-renderer";
 import { QRCodeRenderer } from "../components/ui/qr-code";
 import { WalletRenderer } from "../components/ui/wallet-renderer";
+import { PaymentFormRenderer } from "../components/ui/payment-renderer";
+import { VoiceRenderer } from "../components/ui/voice-renderer";
+import { ThreeDRenderer } from "../components/ui/threed-render";
+import { CalendarEventRenderer } from "../components/ui/calendar_event_render";
 
 interface ElementResolverProps {
     element: UIElement;
@@ -183,6 +199,9 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             return wrapWithMotion(resolvedElement,
                 <AlertDialogRenderer element={resolvedElement as AlertDialogElement} runtime={runtime} />
             )
+        case ElementType.audio:
+            return <AudioRenderer element={resolvedElement as AudioElement} />;
+
         case ElementType.avatar:
             const avatar = resolvedElement as AvatarElement;
             return wrapWithMotion(resolvedElement,
@@ -198,18 +217,21 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             return wrapWithMotion(resolvedElement,
                 <ButtonRenderer element={resolvedElement as ButtonElement} runtime={runtime} />
             )
-        // ElementResolver.tsx (switch case)
+
+        case ElementType.calendar:
+            return wrapWithMotion(resolvedElement,
+                <CalendarRenderer element={resolvedElement as CalendarElement} state={state} t={t} runEventHandler={runEventHandler} />
+            )
+        case ElementType.calendar_event:
+            return <CalendarEventRenderer element={resolvedElement as CalendarEventElement} state={state} t={t} runEventHandler={runEventHandler} />;
+
+
         case ElementType.call: {
             const call = resolvedElement as CallElement;
             return wrapWithMotion(resolvedElement,
                 <CallRenderer element={call} state={state} t={t} runEventHandler={runEventHandler} />
             );
         }
-
-        case ElementType.calendar:
-            return wrapWithMotion(resolvedElement,
-                <CalendarRenderer element={resolvedElement as CalendarElement} runtime={runtime} />
-            )
         case ElementType.card:
             return wrapWithMotion(resolvedElement,
                 <CardRenderer element={resolvedElement as CardElement} runtime={runtime} />
@@ -219,6 +241,9 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             return wrapWithMotion(carousel,
                 <CarouselRenderer element={carousel} runtime={runtime} state={state} t={t} />
             )
+        case ElementType.chat:
+            return <ChatRenderer element={resolvedElement as ChatElement} runEventHandler={runEventHandler} state={state} t={t} />;
+
         case ElementType.chart: {
             const chart = resolvedElement as ChartElement
             return wrapWithMotion(chart, <Chart element={chart} state={state} t={t} />)
@@ -240,6 +265,8 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             return wrapWithMotion(resolvedElement,
                 <CommandRenderer element={resolvedElement as CommandElement} runEventHandler={runEventHandler} />
             )
+        case ElementType.comments:
+            return <CommentsRenderer element={resolvedElement as CommentsElement} runEventHandler={runEventHandler} state={state} t={t} />;
 
         case ElementType.container:
             const container = resolvedElement as ContainerElement;
@@ -327,6 +354,18 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
                     height={image.height}
                 />
             );
+        case ElementType.list:
+            return <ListRenderer element={resolvedElement as ListElement} runEventHandler={runEventHandler} />;
+        case ElementType.list_item:
+            return <ListItemRenderer element={resolvedElement as ListItemElement} runEventHandler={runEventHandler} />;
+
+        case ElementType.lottie:
+            return <LottieRenderer element={resolvedElement as LottieElement} />;
+
+        case ElementType.map:
+            return wrapWithMotion(resolvedElement,
+                <div></div>
+            );
         case ElementType.menu:
             const menubar = resolvedElement as MenuElement;
             return <MenuRenderer element={menubar} runEventHandler={runEventHandler} state={state} t={t} />
@@ -341,9 +380,9 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
         case ElementType.payment:
             const payment = resolvedElement as PaymentElement;
             return wrapWithMotion(element,
-                <div>
-                    Unsupported: Payment (requires {payment.provider} integration)
-                </div>
+                <PaymentFormRenderer
+                    element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t}
+                />
             );
 
         case ElementType.popover:
@@ -353,19 +392,23 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             return <ProgressRenderer element={resolvedElement} state={state} t={t} />
 
         case ElementType.qr_reader:
-            const qr = resolvedElement as QRReaderlement;
+            const qr = resolvedElement as QRReaderElement;
             return wrapWithMotion(qr,
                 <QRCodeRenderer element={qr} state={state} t={t} runEventHandler={runEventHandler} />
             );
 
         case ElementType.radio_group:
             return <RadioGroupRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
+        case ElementType.rating:
+            return <RatingRenderer element={resolvedElement as RatingElement} runEventHandler={runEventHandler} />;
 
         case ElementType.resizable:
             return <ResizableRenderer element={resolvedElement} state={state} t={t} />
 
         case ElementType.scroll_area:
             return <ScrollAreaRenderer element={resolvedElement} />
+        case ElementType.search:
+            return <SearchRenderer element={resolvedElement as SearchElement} runEventHandler={runEventHandler} state={state} t={t} />;
 
         case ElementType.separator:
             return wrapWithMotion(element,
@@ -378,6 +421,8 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
         case ElementType.sidebar:
             const sidebar = resolvedElement as SidebarElement;
             return <SidebarRenderer element={resolvedElement} runtime={runtime} runEventHandler={runEventHandler} state={state} t={t} />
+        case ElementType.signature_pad:
+            return <SignaturePadRenderer element={resolvedElement as SignaturePadElement} runEventHandler={runEventHandler} />;
 
         case ElementType.skeleton:
             return wrapWithMotion(element,
@@ -457,20 +502,12 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
                 </MotionText>
             );
 
-        case ElementType.textarea:
-            const textarea = resolvedElement as InputElement;
-            return wrapWithMotion(element,
-                <Textarea
-                    value={resolveBinding(textarea.value, state, t)}
-                    onChange={(e) => runEventHandler(textarea.onChange, { value: e.target.value })}
-                    placeholder={resolveBinding(textarea.placeholder, state, t)}
-                />
-            );
-
         case ElementType.three_d_model:
-            return wrapWithMotion(element,
-                <div>Unsupported: 3D Model (requires @react-three/fiber)</div>
-            );
+            return <ThreeDRenderer threeElement={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
+        case ElementType.timeline:
+            return <TimelineRenderer element={resolvedElement as TimelineElement} />;
+        case ElementType.tree:
+            return <TreeRenderer element={resolvedElement as TreeElement} runEventHandler={runEventHandler} />;
 
         case ElementType.toggle: {
             const toggle = resolvedElement as ToggleElement
@@ -540,9 +577,8 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
 
         case ElementType.voice:
             const voice = resolvedElement as VoiceElement;
-            return wrapWithMotion(element,
-                <div>Unsupported: Voice (requires Web Speech API)</div>
-            );
+            return <VoiceRenderer element={voice} state={state} t={t} runEventHandler={runEventHandler} />
+
 
         case ElementType.wallet:
             const wallet = resolvedElement as WalletElement;

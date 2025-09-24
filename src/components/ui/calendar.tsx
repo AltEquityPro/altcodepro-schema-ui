@@ -8,12 +8,15 @@ import {
 } from "lucide-react"
 import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker"
 
-import { cn } from "@/src/lib/utils"
+import { cn, resolveBinding } from "@/src/lib/utils"
 import { Button, buttonVariants } from "./button"
-import { resolveBinding } from "@/src/lib/utils"
-import { useAppState } from "@/src/schema/StateContext"
-import { useActionHandler } from "@/src/schema/Actions"
-import { CalendarElement } from "@/src/types"
+import {
+  AnyObj,
+  CalendarElement,
+  CalendarEventElement,
+  EventHandler,
+} from "@/src/types"
+
 function Calendar({
   className,
   classNames,
@@ -128,46 +131,31 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Root: ({ className, rootRef, ...props }) => {
-          return (
-            <div
-              data-slot="calendar"
-              ref={rootRef}
-              className={cn(className)}
-              {...props}
-            />
-          )
-        },
+        Root: ({ className, rootRef, ...props }) => (
+          <div
+            data-slot="calendar"
+            ref={rootRef}
+            className={cn(className)}
+            {...props}
+          />
+        ),
         Chevron: ({ className, orientation, ...props }) => {
           if (orientation === "left") {
-            return (
-              <ChevronLeftIcon className={cn("size-4", className)} {...props} />
-            )
+            return <ChevronLeftIcon className={cn("size-4", className)} {...props} />
           }
-
           if (orientation === "right") {
-            return (
-              <ChevronRightIcon
-                className={cn("size-4", className)}
-                {...props}
-              />
-            )
+            return <ChevronRightIcon className={cn("size-4", className)} {...props} />
           }
-
-          return (
-            <ChevronDownIcon className={cn("size-4", className)} {...props} />
-          )
+          return <ChevronDownIcon className={cn("size-4", className)} {...props} />
         },
         DayButton: CalendarDayButton,
-        WeekNumber: ({ children, ...props }) => {
-          return (
-            <td {...props}>
-              <div className="flex size-(--cell-size) items-center justify-center text-center">
-                {children}
-              </div>
-            </td>
-          )
-        },
+        WeekNumber: ({ children, ...props }) => (
+          <td {...props}>
+            <div className="flex size-(--cell-size) items-center justify-center text-center">
+              {children}
+            </div>
+          </td>
+        ),
         ...components,
       }}
       {...props}
@@ -182,11 +170,14 @@ function CalendarDayButton({
   ...props
 }: React.ComponentProps<typeof DayButton>) {
   const defaultClassNames = getDefaultClassNames()
-
   const ref = React.useRef<HTMLButtonElement>(null)
+
   React.useEffect(() => {
     if (modifiers.focused) ref.current?.focus()
   }, [modifiers.focused])
+
+  // read custom event color from dataset
+  const eventColor = (props as any)["data-event-color"]
 
   return (
     <Button
@@ -203,58 +194,143 @@ function CalendarDayButton({
       data-range-start={modifiers.range_start}
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
-      className={cn(
-        "data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 dark:hover:text-accent-foreground flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-xs [&>span]:opacity-70",
-        defaultClassNames.day,
-        className
-      )}
+      className={
+        cn(
+          "flex aspect-square w-full font-normal leading-none relative",
+          "data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground",
+          defaultClassNames.day,
+          className
+        )}
       {...props}
-    />
+    >
+      {day.date.getDate()}
+      {modifiers.custom && (
+        <span
+          className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full"
+          style={{ backgroundColor: eventColor || "var(--primary)" }}
+        ></span>
+      )}
+    </Button>
   )
 }
 
 interface CalendarRendererProps {
   element: CalendarElement
-  runtime?: Record<string, any>
+  state: AnyObj
+  t: (key: string) => string
+  runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }
 
-function CalendarRenderer({ element, runtime = {} }: CalendarRendererProps) {
-  const { state, t } = useAppState()
-  const { runEventHandler } = useActionHandler({ runtime })
-
-  // resolve selected date binding
+function CalendarRenderer({
+  element,
+  state,
+  t,
+  runEventHandler,
+}: CalendarRendererProps) {
   const selectedDate = element.selectedDate
     ? new Date(resolveBinding(element.selectedDate, state, t))
     : undefined
 
-  // resolve events
+  const parseDate = (val: any) => {
+    const resolved = resolveBinding(val, state, t)
+    const d = resolved ? new Date(resolved) : null
+    return d && !isNaN(d.getTime()) ? d : null
+  }
+
   const events = element.events.map((event) => ({
     ...event,
     title: resolveBinding(event.title, state, t),
-    start: new Date(resolveBinding(event.start, state, t)),
-    end: new Date(resolveBinding(event.end, state, t)),
+    start: parseDate(event.start),
+    end: parseDate(event.end),
+    location: event.location ? resolveBinding(event.location, state, t) : undefined,
+    description: event.description
+      ? resolveBinding(event.description, state, t)
+      : undefined,
+    btnLabel: event.eventBtnLabel
+      ? resolveBinding(event.eventBtnLabel, state, t)
+      : undefined,
+    color: event.styles?.background || "#0ea5e9",
   }))
+
+  // map days to colors
+  const dayEventColors: Record<string, string> = {}
+  events.forEach((e: any) => {
+    if (e.start) {
+      dayEventColors[e.start.toDateString()] = e.color
+    }
+  })
 
   return (
     <div className="w-full">
       <Calendar
         mode={(element.selectionMode || "single") as any}
         selected={selectedDate}
-        onSelect={(date: any) => runEventHandler(element.onSelect, { date })}
+        onSelect={(date: any) =>
+          element.onSelect && runEventHandler(element.onSelect, { date })
+        }
+        modifiers={{
+          custom: (day: Date) => !!dayEventColors[day.toDateString()],
+        }}
+        components={{
+          DayButton: (props) => (
+            <CalendarDayButton
+              {...props}
+              data-event-color={dayEventColors[props.day.date.toDateString()]}
+            />
+          ),
+        }}
       />
+
       {events.length > 0 && (
-        <ul className="mt-4 space-y-1 text-sm">
+        <div className="mt-4 space-y-3">
           {events.map((e) => (
-            <li key={e.id} className="flex items-center gap-2">
-              <span className="font-medium">{e.title}</span>
-              <span className="text-muted-foreground">
-                {e.start.toLocaleDateString()} → {e.end.toLocaleDateString()}
-              </span>
-            </li>
+            <div
+              key={e.id}
+              className="rounded-md border bg-card p-3 shadow-sm hover:bg-accent/50 transition"
+              role="button"
+              tabIndex={0}
+              onClick={() => e.onClick && runEventHandler(e.onClick, { id: e.id })}
+              onKeyDown={(ev) => {
+                if (ev.key === "Enter" || ev.key === " ") {
+                  e.onClick && runEventHandler(e.onClick, { id: e.id })
+                }
+              }}
+            >
+              <div className="flex flex-col gap-1">
+                <h4 className="font-medium leading-none">{e.title}</h4>
+                <div className="text-xs text-muted-foreground">
+                  {e.allDay
+                    ? "All day"
+                    : e.start && e.end
+                      ? `${e.start.toLocaleString()} → ${e.end.toLocaleString()}`
+                      : null}
+                </div>
+                {e.location && (
+                  <div className="text-xs text-muted-foreground">{e.location}</div>
+                )}
+                {e.description && (
+                  <p className="mt-1 text-sm text-muted-foreground">{e.description}</p>
+                )}
+              </div>
+              {e.onClick && e.btnLabel && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2"
+                  onClick={(ev) => {
+                    ev.stopPropagation()
+                    runEventHandler(e.onClick, { id: e.id })
+                  }}
+                >
+                  {e.btnLabel}
+                </Button>
+              )}
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   )
 }
+
 export { CalendarRenderer, Calendar, CalendarDayButton }

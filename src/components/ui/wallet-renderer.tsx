@@ -1,13 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { BrowserProvider, Contract, parseEther } from "ethers";
+import { useEffect, useState } from "react";
+import {
+    BrowserProvider,
+    Contract,
+    parseEther,
+    getAddress,
+    isHexString,
+} from "ethers";
 import WalletConnectProvider from "@walletconnect/ethereum-provider";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { cn, classesFromStyleProps, resolveBinding } from "@/src/lib/utils";
 import { WalletElement } from "@/src/types";
-import { Checkbox } from "@/src/components/ui/checkbox"; // add shadcn/ui checkbox
+import { Checkbox } from "@/src/components/ui/checkbox";
+
+type WalletContract = NonNullable<WalletElement["contracts"]>[number];
+type WalletFunction = WalletContract["functions"][number];
 
 export function WalletRenderer({
     element,
@@ -24,14 +33,53 @@ export function WalletRenderer({
     const [chainId, setChainId] = useState<number | null>(null);
     const [provider, setProvider] = useState<BrowserProvider | null>(null);
 
-    // track per-function form state
-    const [formValues, setFormValues] = useState<Record<string, Record<string, any>>>({});
+    const [formValues, setFormValues] = useState<
+        Record<string, Record<string, any>>
+    >({});
 
     const setInputValue = (fnKey: string, inputName: string, val: any) => {
         setFormValues((prev) => ({
             ...prev,
             [fnKey]: { ...(prev[fnKey] || {}), [inputName]: val },
         }));
+    };
+    // --- Subscribe to events ---
+    const subscribeToEvents = async (contractDef: WalletContract) => {
+        if (!provider) return;
+        const addr = String(resolveBinding(contractDef.address, state, t));
+        const contract = new Contract(addr, contractDef.abi, provider);
+
+        (contractDef.events ?? []).forEach((evt) => {
+            try {
+                contract.on(evt.name, async (...args) => {
+                    // ethers passes args + event object; pop the last one
+                    const eventObj = args[args.length - 1];
+                    const payload = {
+                        args: args.slice(0, -1).map((a: any) => a?.toString?.() ?? a),
+                        event: evt.name,
+                        txHash: eventObj?.transactionHash,
+                        blockNumber: eventObj?.blockNumber,
+                    };
+                    await runEventHandler(evt.onEvent, payload);
+                });
+            } catch (err) {
+                if (element.onError)
+                    runEventHandler(element.onError, { message: String(err) });
+            }
+        });
+
+        return contract;
+    };
+
+    // --- Cleanup events on disconnect ---
+    const unsubscribeFromEvents = (contract: Contract, contractDef: WalletContract) => {
+        (contractDef.events ?? []).forEach((evt) => {
+            try {
+                contract.removeAllListeners(evt.name);
+            } catch {
+                /* ignore */
+            }
+        });
     };
 
     // --- Connect ---
@@ -47,7 +95,11 @@ export function WalletRenderer({
                 setProvider(prov);
                 setAddress(addr);
                 setChainId(Number(net.chainId));
-                if (element.onConnect) await runEventHandler(element.onConnect, { address: addr, chainId: net.chainId });
+                if (element.onConnect)
+                    await runEventHandler(element.onConnect, {
+                        address: addr,
+                        chainId: net.chainId,
+                    });
             }
             if (element.provider === "walletconnect") {
                 const wc = await WalletConnectProvider.init({
@@ -63,10 +115,15 @@ export function WalletRenderer({
                 setProvider(prov);
                 setAddress(addr);
                 setChainId(Number(net.chainId));
-                if (element.onConnect) await runEventHandler(element.onConnect, { address: addr, chainId: net.chainId });
+                if (element.onConnect)
+                    await runEventHandler(element.onConnect, {
+                        address: addr,
+                        chainId: net.chainId,
+                    });
             }
         } catch (err) {
-            if (element.onError) runEventHandler(element.onError, { message: String(err) });
+            if (element.onError)
+                runEventHandler(element.onError, { message: String(err) });
         }
     };
 
@@ -79,25 +136,71 @@ export function WalletRenderer({
 
     // --- Contract call ---
     const runContractFunction = async (
-        contractDef: NonNullable<WalletElement["contracts"]>[number],
-        fn: NonNullable<WalletElement["contracts"]>[number]["functions"][number],
+        contractDef: WalletContract,
+        fn: WalletFunction,
         args: any[]
     ) => {
         if (!provider) throw new Error("No provider");
         const addr = String(resolveBinding(contractDef.address, state, t));
-        const contract = new Contract(addr, contractDef.abi, fn.type === "write" ? await provider.getSigner() : provider);
+        const contract = new Contract(
+            addr,
+            contractDef.abi,
+            fn.type === "write" ? await provider.getSigner() : provider
+        );
 
         try {
             const result = await contract[fn.name](...args);
-            if (fn.onResult) await runEventHandler(fn.onResult, { result: result?.toString?.() });
+            if (fn.onResult)
+                await runEventHandler(fn.onResult, { result: result?.toString?.() });
             return result;
         } catch (err) {
-            if (element.onError) await runEventHandler(element.onError, { message: String(err) });
+            if (element.onError)
+                await runEventHandler(element.onError, { message: String(err) });
         }
     };
 
+    useEffect(() => {
+        if (!provider || !element.contracts) return;
+
+        const contracts: Contract[] = [];
+
+        // subscribe
+        element.contracts.forEach((c) => {
+            const addr = String(resolveBinding(c.address, state, t));
+            const contract = new Contract(addr, c.abi, provider);
+            contracts.push(contract);
+
+            (c.events ?? []).forEach((evt) => {
+                contract.on(evt.name, async (...args) => {
+                    const eventObj = args[args.length - 1];
+                    const payload = {
+                        args: args.slice(0, -1).map((a: any) => a?.toString?.() ?? a),
+                        event: evt.name,
+                        txHash: eventObj?.transactionHash,
+                        blockNumber: eventObj?.blockNumber,
+                    };
+                    await runEventHandler(evt.onEvent, payload);
+                });
+            });
+        });
+
+        // cleanup
+        return () => {
+            contracts.forEach((contract, idx) => {
+                const def = element.contracts![idx];
+                (def.events ?? []).forEach((evt) => {
+                    contract.removeAllListeners(evt.name);
+                });
+            });
+        };
+    }, [provider, element.contracts, state, t, runEventHandler, element.onError]);
+
+
     // --- Auto-detect input type ---
-    const renderInput = (fnKey: string, inp: { name: string; type: string; placeholder?: string }) => {
+    const renderInput = (
+        fnKey: string,
+        inp: { name: string; type: string; placeholder?: string }
+    ) => {
         const val = formValues[fnKey]?.[inp.name] ?? "";
 
         if (inp.type.startsWith("uint") || inp.type.startsWith("int")) {
@@ -127,13 +230,25 @@ export function WalletRenderer({
                 <div key={inp.name} className="flex items-center gap-2">
                     <Checkbox
                         checked={!!val}
-                        onCheckedChange={(checked) => setInputValue(fnKey, inp.name, checked)}
+                        onCheckedChange={(checked) =>
+                            setInputValue(fnKey, inp.name, checked)
+                        }
                     />
                     <span>{inp.placeholder || inp.name}</span>
                 </div>
             );
         }
-        // default: string/bytes
+        if (inp.type.startsWith("bytes")) {
+            return (
+                <Input
+                    key={inp.name}
+                    type="text"
+                    placeholder={inp.placeholder || "0x..."}
+                    value={val}
+                    onChange={(e) => setInputValue(fnKey, inp.name, e.target.value)}
+                />
+            );
+        }
         return (
             <Input
                 key={inp.name}
@@ -145,20 +260,53 @@ export function WalletRenderer({
         );
     };
 
+    // --- Argument normalization before contract call ---
+    const normalizeArgs = (
+        fnKey: string,
+        inputs: { name: string; type: string }[]
+    ) =>
+        inputs.map((inp) => {
+            let raw = formValues[fnKey]?.[inp.name];
+
+            if (inp.type.startsWith("uint") || inp.type.startsWith("int")) {
+                return raw ? BigInt(raw) : 0n;
+            }
+            if (inp.type === "bool") {
+                return !!raw;
+            }
+            if (inp.type === "address") {
+                return raw ? getAddress(raw) : "0x0000000000000000000000000000000000000000";
+            }
+            if (inp.type.startsWith("bytes")) {
+                if (raw && isHexString(raw)) return raw;
+                throw new Error(`Invalid hex string for ${inp.name}`);
+            }
+            return raw;
+        });
+
     return (
-        <div className={cn("flex flex-col gap-4 items-center", classesFromStyleProps(element.styles))}>
+        <div
+            className={cn(
+                "flex flex-col gap-4 items-center",
+                classesFromStyleProps(element.styles)
+            )}
+        >
             {address ? (
                 <>
                     <div className="text-sm">
-                        {t("Connected:")} {address.slice(0, 6)}...{address.slice(-4)} (chain {chainId})
+                        {t("Connected:")} {address.slice(0, 6)}...{address.slice(-4)} (chain{" "}
+                        {chainId})
                     </div>
                     <Button variant="destructive" onClick={disconnect}>
                         {t("Disconnect")}
                     </Button>
 
                     {element.mode !== "button" &&
-                        element.contracts?.map((c, i) => (
-                            <div key={i} className="w-full flex flex-col gap-3 border p-3 rounded">
+                        (element.contracts ?? []).map((c, i) => (
+                            <div
+                                key={i}
+                                className="w-full flex flex-col gap-3 border p-3 rounded"
+                            >
                                 {c.functions.map((fn, j) => {
                                     const fnKey = `${c.address}-${fn.name}-${j}`;
                                     const inputs = fn.inputs || [];
@@ -169,18 +317,14 @@ export function WalletRenderer({
                                             <Button
                                                 variant="secondary"
                                                 onClick={async () => {
-                                                    const args = inputs.map((inp) => {
-                                                        let raw = formValues[fnKey]?.[inp.name];
-                                                        if (inp.type.startsWith("uint") || inp.type.startsWith("int")) {
-                                                            return raw ? BigInt(raw) : 0n;
-                                                        }
-                                                        if (inp.type === "bool") {
-                                                            return !!raw;
-                                                        }
-                                                        return raw;
-                                                    });
-                                                    const result = await runContractFunction(c, fn, args);
-                                                    if (result) alert(`${fn.name} result: ${result.toString()}`);
+                                                    try {
+                                                        const args = normalizeArgs(fnKey, inputs);
+                                                        const result = await runContractFunction(c, fn, args);
+                                                        if (result)
+                                                            alert(`${fn.name} result: ${result.toString()}`);
+                                                    } catch (err: any) {
+                                                        alert(`Error: ${err.message}`);
+                                                    }
                                                 }}
                                             >
                                                 {t("Run")} {fn.label || fn.name}

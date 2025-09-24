@@ -1,49 +1,56 @@
-export type Binding = string | { binding: string } | null;
-
-export type AnyObj = Record<string, any>;
-
 export enum ActionType {
+    ai_generate = 'ai_generate',
     api_call = 'api_call',
-    websocket_call = 'websocket_call',
-    graphql_query = 'graphql_query',
-    graphql_subscription = 'graphql_subscription',
-    graphql_mutation = 'graphql_mutation',
-    open_modal = 'open_modal',
+    audit_log = 'audit_log',
     close_modal = 'close_modal',
-    update_state = 'update_state',
-    run_script = 'run_script',
     crud_create = 'crud_create',
+    crud_delete = 'crud_delete',
     crud_read = 'crud_read',
     crud_update = 'crud_update',
-    crud_delete = 'crud_delete',
-    voice_command = 'voice_command',
-    initiate_call = 'initiate_call',
+    export_json = 'export_json',
     export_pdf = 'export_pdf',
     export_ppt = 'export_ppt',
     export_word = 'export_word',
-    export_json = 'export_json',
+    graphql_mutation = 'graphql_mutation',
+    graphql_query = 'graphql_query',
+    graphql_subscription = 'graphql_subscription',
+    initiate_call = 'initiate_call',
+    navigation = 'navigation',
+    open_modal = 'open_modal',
+    run_script = 'run_script',
+    update_state = 'update_state',
+    voice_command = 'voice_command',
     wallet_connect = 'wallet_connect',
     wallet_sign = 'wallet_sign',
-    audit_log = 'audit_log',
-    ai_generate = 'ai_generate',
-    navigation = 'navigation',
+    websocket_call = 'websocket_call',
+}
+
+export enum Alignment {
+    center = 'center',
+    justify = 'justify',
+    left = 'left',
+    right = 'right',
 }
 export enum ElementType {
     accordion = 'accordion',
     alert = 'alert',
     alert_dialog = 'alert_dialog',
+    audio = 'audio',
     avatar = 'avatar',
     badge = 'badge',
     breadcrumb = 'breadcrumb',
     button = 'button',
     calendar = 'calendar',
+    calendar_event = 'calendar_event',
     call = 'call',
     card = 'card',
     carousel = 'carousel',
     chart = 'chart',
+    chat = 'chat',
     code = 'code',
     collapsible = 'collapsible',
     command = 'command',
+    comments = 'comments',
     container = 'container',
     context_menu = 'context_menu',
     custom = 'custom',
@@ -57,7 +64,9 @@ export enum ElementType {
     header = 'header',
     icon = 'icon',
     image = 'image',
-    loader = 'loader',
+    list = 'list',
+    list_item = 'list_item',
+    lottie = 'lottie',
     map = 'map',
     menu = 'menu',
     modal = 'modal',
@@ -66,227 +75,1666 @@ export enum ElementType {
     popover = 'popover',
     progress = 'progress',
     qr_reader = 'qr_reader',
-    quiz = 'quiz',
     radio_group = 'radio_group',
+    rating = 'rating',
     resizable = 'resizable',
     scroll_area = 'scroll_area',
+    search = 'search',
     separator = 'separator',
     sheet = 'sheet',
     sidebar = 'sidebar',
+    signature_pad = 'signature_pad',
     skeleton = 'skeleton',
     step_wizard = 'step_wizard',
     switch = 'switch',
     table = 'table',
     tabs = 'tabs',
     text = 'text',
-    textarea = 'textarea',
     three_d_model = 'three_d_model',
+    timeline = 'timeline',
     toggle = 'toggle',
     toggle_group = 'toggle_group',
     tooltip = 'tooltip',
+    tree = 'tree',
     video = 'video',
     voice = 'voice',
     wallet = 'wallet',
-    wallet_connect_button = 'wallet_connect_button',
 }
 
-
-export enum InputType {
-    text = 'text',
-    email = 'email',
-    password = 'password',
-    number = 'number',
-    date = 'date',
-    checkbox = 'checkbox',
-    radio = 'radio',
-    select = 'select',
-    file = 'file',
-    textarea = 'textarea',
-    voice = 'voice',
-    multiselect = 'multiselect',
-    datetime_local = 'datetime-local',
-    time = 'time',
+export enum FieldType {
+    alert = 'alert',
+    card = 'card',
+    chart = 'chart',
+    custom = 'custom',
+    description = 'description',
+    divider = 'divider',
+    drawer = 'drawer',
+    dropdown_menu = 'dropdown_menu',
+    heading = 'heading',
+    help = 'help',
+    icon = 'icon',
     image = 'image',
-    month = 'month',
-    range = 'range',
-    search = 'search',
-    tel = 'tel',
-    url = 'url',
-    week = 'week',
-    otp = 'otp',
-    createselect = 'createselect',
-    calendar = 'calendar',
-    color = 'color',
-    toggle = 'toggle',
-    rating = 'rating',
-    signature = 'signature',
-    richtext = 'richtext',
-    code = 'code',
-    markdown = 'markdown',
-    tags = 'tags',
-    switch = 'switch',
-    currency = 'currency',
-    credit_card = 'credit_card',
-}
-export type ButtonVariant =
-    | "default"
-    | "primary"
-    | "success"
-    | "danger"
-    | "warning"
-    | "info"
-    | "destructive"
-    | "outline"
-    | "secondary"
-    | "ghost"
-    | "link";
-
-export enum Alignment {
-    left = 'left',
-    center = 'center',
-    right = 'right',
-    justify = 'justify',
-}
-
-export enum LayoutType {
-    SingleColumn = 'single_column',
-    TwoColumns = 'two_columns',
-    ThreeColumns = 'three_columns',
-    FourColumns = 'four_columns',
-    DataDashboard = 'data_dashboard',
-    DataTableWithChart = 'data_table_with_chart',
-    Datagrid = 'datagrid',
-    Map = 'map',
-    Cover = 'cover',
-    Contact = 'contact',
-    FAQ = 'faq',
-    FeatureCarousel = 'feature_carousel',
-    Gallery = 'gallery',
-    StepWizard = 'step_wizard',
-    Timeline = 'timeline',
-    Custom = 'custom',
+    input = 'input',
+    loader = 'loader',
+    modal = 'modal',
+    subheading = 'subheading',
+    video = 'video',
 }
 
 export enum FormGroupType {
     card = 'card',
-    single = 'single',
     container = 'container',
-    tabs = 'tabs',
+    single = 'single',
     step_wizard = 'step_wizard',
+    tabs = 'tabs',
 }
 
-export enum FieldType {
-    input = 'input',
-    heading = 'heading',
-    subheading = 'subheading',
-    description = 'description',
-    help = 'help',
-    divider = 'divider',
+export enum InputType {
+    calendar = 'calendar',
+    checkbox = 'checkbox',
+    code = 'code',
+    color = 'color',
+    createselect = 'createselect',
+    credit_card = 'credit_card',
+    currency = 'currency',
+    date = 'date',
+    datetime_local = 'datetime-local',
+    email = 'email',
+    file = 'file',
     image = 'image',
-    video = 'video',
-    icon = 'icon',
-    chart = 'chart',
-    alert = 'alert',
-    card = 'card',
-    modal = 'modal',
-    drawer = 'drawer',
-    dropdown_menu = 'dropdown_menu',
-    loader = 'loader',
-    custom = 'custom',
+    markdown = 'markdown',
+    month = 'month',
+    multiselect = 'multiselect',
+    number = 'number',
+    otp = 'otp',
+    password = 'password',
+    radio = 'radio',
+    range = 'range',
+    rating = 'rating',
+    richtext = 'richtext',
+    search = 'search',
+    select = 'select',
+    signature = 'signature',
+    switch = 'switch',
+    tags = 'tags',
+    tel = 'tel',
+    text = 'text',
+    textarea = 'textarea',
+    time = 'time',
+    toggle = 'toggle',
+    url = 'url',
+    voice = 'voice',
+    week = 'week',
+}
+
+export enum LayoutType {
+    Contact = 'contact',
+    Cover = 'cover',
+    Custom = 'custom',
+    DataDashboard = 'data_dashboard',
+    DataTableWithChart = 'data_table_with_chart',
+    Datagrid = 'datagrid',
+    FAQ = 'faq',
+    FeatureCarousel = 'feature_carousel',
+    FourColumns = 'four_columns',
+    Gallery = 'gallery',
+    Map = 'map',
+    SingleColumn = 'single_column',
+    StepWizard = 'step_wizard',
+    ThreeColumns = 'three_columns',
+    Timeline = 'timeline',
+    TwoColumns = 'two_columns',
+}
+
+// === Base Types ===
+export type AnyObj = Record<string, any>;
+
+export type Binding = string | { binding: string } | null;
+
+export type ButtonVariant =
+    | 'default'
+    | 'destructive'
+    | 'ghost'
+    | 'info'
+    | 'link'
+    | 'outline'
+    | 'primary'
+    | 'secondary'
+    | 'success'
+    | 'warning';
+
+export type ConditionOp = '==' | '!=' | '>' | '<' | '>=' | '<=' | 'exists' | 'not_exists' | 'matches' | 'in' | 'not_in';
+
+// === Element Types ===
+export interface AnimationSpec {
+    animate?: Record<string, any>;
+    delay?: number;
+    duration?: number;
+    easing?: string;
+    entrance?: string;
+    exit?: string;
+    initial?: Record<string, any>;
+    layout?: boolean;
+    lottieUrl?: string;
+    framework?: 'animate.css' | 'css' | 'framer-motion' | 'gsap';
+    repeat?: number | 'infinite';
+    transition?: Record<string, any>;
+    whileHover?: Record<string, any>;
+    whileTap?: Record<string, any>;
+}
+
+export interface AccessibilityProps {
+    ariaHidden?: boolean;
+    ariaLabel?: Binding;
+    ariaRole?: string;
+    focusable?: boolean;
+    screenReaderText?: Binding;
+    tabIndex?: number;
+    voiceSupport?: boolean;
+}
+
+export interface BaseElement {
+    id: string;
+    name: string;
+    accessibility?: AccessibilityProps;
+    animations?: AnimationSpec;
+    children?: UIElement[];
+    dataSourceId?: string;
+    onEvent?: Record<string, EventHandler>;
+    styles?: StyleProps;
+    type: ElementType;
+    value?: Binding;
+    visibility?: VisibilityControl;
+    zIndex?: number;
+}
+
+export interface AccordionElement extends BaseElement {
+    type: ElementType.accordion;
+    collapsible?: boolean;
+    expandedItem?: string | string[];
+    items: {
+        id: string;
+        title: Binding;
+        content: UIElement[];
+    }[];
+    multiple?: boolean;
+    onChange?: EventHandler;
+}
+
+export interface AlertElement extends BaseElement {
+    type: ElementType.alert;
+    dismissible?: boolean;
+    message: Binding;
+    variant: 'default' | 'primary' | 'success' | 'danger' | 'warning' | 'info' | 'destructive';
+}
+
+export interface AlertDialogElement extends BaseElement {
+    type: ElementType.alert_dialog;
+    actionButton?: ButtonElement;
+    actions?: Array<ButtonElement & { role?: 'default' | 'destructive' | 'cancel' }>;
+    cancelButton?: ButtonElement;
+    content: UIElement[];
+    description?: Binding;
+    dismissible?: boolean;
+    isOpen: boolean | Binding;
+    onOpenChange?: EventHandler;
+    position?: 'center' | 'top' | 'bottom';
+    size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+    title: Binding;
+    trigger?: UIElement;
+    variant?: 'default' | 'info' | 'warning' | 'danger' | 'success' | 'destructive';
+}
+export interface AudioElement extends BaseElement {
+    type: ElementType.audio;
+    src: Binding;
+    autoplay?: boolean;
+    controls?: boolean;
+    loop?: boolean;
+    volume?: number;
+    muted?: boolean;
+    onPlay?: EventHandler;
+    onPause?: EventHandler;
+    onEnded?: EventHandler;
+}
+
+export interface AvatarElement extends BaseElement {
+    type: ElementType.avatar;
+    alt?: Binding;
+    fallback?: Binding;
+    generation?: GenerationSpec;
+    onlineStatus?: boolean | 'online' | 'offline' | 'away' | Binding;
+    shape?: 'circle' | 'square' | 'rounded';
+    showRing?: boolean;
+    size?: number | string;
+    src?: Binding;
+}
+
+export interface BadgeElement extends BaseElement {
+    type: ElementType.badge;
+    asChild?: boolean;
+    iconLeft?: IconElement;
+    iconRight?: IconElement;
+    isDot?: boolean;
+    maxLength?: number;
+    onClick?: EventHandler;
+    size?: 'sm' | 'md' | 'lg';
+    text?: Binding;
+    tooltip?: Binding;
+    value?: Binding;
+    variant?: 'default' | 'secondary' | 'destructive' | 'outline';
+}
+
+export interface BreadcrumbElement extends BaseElement {
+    type: ElementType.breadcrumb;
+    ellipsisAfter?: number;
+    items: {
+        id: string;
+        href?: string | Binding;
+        iconLeft?: UIElement;
+        iconRight?: UIElement;
+        label: Binding;
+        onClick?: EventHandler;
+    }[];
+    separator?: 'chevron' | 'slash' | 'dot' | 'custom';
+    tooltip?: boolean;
+}
+
+export interface ButtonElement extends BaseElement {
+    type: ElementType.button;
+    asChild?: boolean;
+    disabled?: boolean | Binding;
+    iconLeft?: IconElement;
+    iconRight?: IconElement;
+    onClick?: EventHandler;
+    size?: 'default' | 'sm' | 'lg' | 'icon';
+    text: Binding;
+    variant: ButtonVariant;
+}
+
+export interface CalendarElement extends BaseElement {
+    type: ElementType.calendar;
+    events: CalendarEventElement[];
+    onSelect: EventHandler;
+    selectedDate?: Binding;
+    selectionMode?: 'single' | 'multiple' | 'range';
+}
+// types.ts
+export interface CalendarEventElement extends BaseElement {
+    type: ElementType.calendar_event
+    title: Binding
+    start: Binding
+    end: Binding
+    allDay?: boolean
+    location?: Binding
+    description?: Binding
+    onClick?: EventHandler
+    eventBtnLabel?: Binding
+    color?: Binding
+}
+
+
+export interface CallElement extends BaseElement {
+    type: ElementType.call;
+    audioConstraints?: MediaTrackConstraints;
+    autoplay?: boolean;
+    callType: 'video' | 'audio';
+    devicesMenu?: boolean;
+    iceServers?: Array<{ urls: string | string[]; username?: string; credential?: string }>;
+    maxPeers?: number;
+    mirrorLocal?: boolean;
+    mode?: 'mesh' | 'sfu';
+    onConnect?: EventHandler;
+    onDisconnect?: EventHandler;
+    onError?: EventHandler;
+    onPeerJoin?: EventHandler;
+    onPeerLeave?: EventHandler;
+    onStats?: EventHandler;
+    peerId: Binding;
+    screenShare?: boolean;
+    sfu?: {
+        url?: Binding;
+        authToken?: Binding;
+        autoSubscribe?: boolean;
+    };
+    showGridNames?: boolean;
+    signalingServer: Binding;
+    stats?: boolean;
+    tracking?: {
+        dataSourceId?: string;
+        events?: Array<
+            | 'join'
+            | 'leave'
+            | 'mute'
+            | 'unmute'
+            | 'camera_on'
+            | 'camera_off'
+            | 'screenshare_on'
+            | 'screenshare_off'
+            | 'device_change'
+            | 'error'
+        >;
+        heartbeatInterval?: number;
+    };
+    videoConstraints?: MediaTrackConstraints;
+}
+
+export interface CardElement extends BaseElement {
+    type: ElementType.card;
+    action?: UIElement;
+    badge?: UIElement;
+    clickable?: boolean | Binding;
+    content: UIElement[];
+    description?: UIElement;
+    footer?: UIElement[];
+    header?: UIElement;
+    href?: Binding;
+    media?: UIElement;
+    title?: UIElement;
+    variant?: 'default' | 'outline' | 'ghost' | 'elevated' | 'borderless';
+}
+
+export interface CarouselElement extends BaseElement {
+    type: ElementType.carousel;
+    autoPlay?: boolean;
+    interval?: number;
+    items: (UIElement & { interval?: number })[] | Binding;
+    loop?: boolean;
+    orientation?: 'horizontal' | 'vertical';
+    showControls?: boolean;
+    showIndicators?: boolean;
+    showProgress?: boolean;
+}
+export interface ChatElement extends BaseElement {
+    type: ElementType.chat;
+    model?: string;
+    placeholder?: string | Binding;
+    historyDataSourceId?: string;
+    onSend?: EventHandler;
+    onReceive?: EventHandler;
+    streaming?: boolean;
+}
+export interface ChartElement extends BaseElement {
+    type: ElementType.chart;
+    chartType: 'bar' | 'line' | 'area' | 'pie' | 'radar' | 'radialBar' | 'scatter' | 'composed' | 'candlestick';
+    data: Binding | any[];
+    options?: {
+        animation?: boolean | Record<string, any>;
+        areaOpacity?: number;
+        ariaLabel?: string | Binding;
+        brush?: boolean | Record<string, any>;
+        closeKey?: string;
+        colors?: string[];
+        description?: string | Binding;
+        donut?: boolean;
+        grid?: boolean | Record<string, any>;
+        highKey?: string;
+        legend?: boolean;
+        lineDot?: boolean | Record<string, any>;
+        lineStrokeWidth?: number;
+        lowKey?: string;
+        openKey?: string;
+        radius?: number | string;
+        referenceLines?: {
+            x?: number[] | string[];
+            y?: number[];
+        };
+        responsive?: boolean;
+        series?: SeriesSpec[];
+        stacked?: boolean;
+        syncId?: string;
+        tooltip?: boolean;
+        tooltipFormatter?: string | Binding;
+        valueKey?: string;
+        xDomain?: any;
+        xFormatter?: string | Binding;
+        xKey?: string;
+        yDomain?: any;
+        yFormatter?: string | Binding;
+        yKey?: string;
+    };
+}
+
+export interface CollapsibleElement extends BaseElement {
+    type: ElementType.collapsible;
+    content?: UIElement[];
+    open?: boolean | Binding;
+    onOpenChange?: EventHandler;
+    trigger?: UIElement;
+}
+
+export interface CommandElement extends BaseElement {
+    type: ElementType.command;
+    description?: string;
+    emptyMessage?: string;
+    global?: boolean;
+    groups?: {
+        heading: string;
+        items: {
+            id: string;
+            disabled?: boolean;
+            icon?: string;
+            label: string;
+            onSelect?: EventHandler;
+            shortcut?: string;
+        }[];
+    }[];
+    placeholder?: string;
+    showMobileButton?: boolean;
+    title?: string;
+}
+export interface CommentsElement extends BaseElement {
+    type: ElementType.comments;
+    threadId: string | Binding;
+    allowReplies?: boolean;
+    allowVoting?: boolean;
+    onPost?: EventHandler;
+    onReply?: EventHandler;
+    onVote?: EventHandler;
+}
+
+export interface ContainerElement extends BaseElement {
+    type: ElementType.container;
+    align?: 'start' | 'center' | 'end' | 'stretch' | 'baseline';
+    autoCols?: 'auto' | 'min' | 'max' | 'fr';
+    autoRows?: 'auto' | 'min' | 'max' | 'fr';
+    cols?: number;
+    gap?: number | string;
+    justify?: 'start' | 'center' | 'end' | 'between' | 'around' | 'evenly';
+    layout: 'flex' | 'grid' | 'block' | 'row' | 'column';
+    responsiveLayout?: {
+        sm?: Partial<Omit<ContainerElement, 'id' | 'name' | 'type' | 'children'>>;
+        md?: Partial<Omit<ContainerElement, 'id' | 'name' | 'type' | 'children'>>;
+        lg?: Partial<Omit<ContainerElement, 'id' | 'name' | 'type' | 'children'>>;
+        xl?: Partial<Omit<ContainerElement, 'id' | 'name' | 'type' | 'children'>>;
+    };
+    rows?: number;
+    wrap?: boolean;
+}
+
+export type ContextMenuItem =
+    | {
+        id: string;
+        type: 'item';
+        disabled?: boolean;
+        icon?: string;
+        label: Binding;
+        onSelect?: EventHandler;
+        shortcut?: string;
+        variant?: 'default' | 'destructive';
+    }
+    | {
+        id: string;
+        type: 'checkbox';
+        checked?: Binding;
+        disabled?: boolean;
+        label: Binding;
+        onSelect?: EventHandler;
+    }
+    | {
+        id: string;
+        type: 'radio';
+        checked?: Binding;
+        group: string;
+        label: Binding;
+        onSelect?: EventHandler;
+        value: string;
+    }
+    | {
+        id: string;
+        type: 'label';
+        inset?: boolean;
+        label: Binding;
+    }
+    | {
+        id: string;
+        type: 'separator';
+    }
+    | {
+        id: string;
+        type: 'sub';
+        icon?: string;
+        items: ContextMenuItem[];
+        label: Binding;
+    };
+
+export interface ContextMenuElement extends BaseElement {
+    type: ElementType.context_menu;
+    items: ContextMenuItem[];
+    trigger: UIElement;
+}
+
+export interface CustomElement extends BaseElement {
+    type: ElementType.custom;
+    component: string | string[];
+    groupLayout?: 'stack' | 'inline' | 'fragment';
+    props?: Record<string, any>;
+}
+
+export type DatagGridCol = {
+    align?: Alignment;
+    cellClass?: string | Binding | { condition: Binding; class: string }[] | ((row: any) => string);
+    chartConfig?: {
+        type: 'bar' | 'line' | 'pie' | 'sparkline';
+        dataKey: string;
+        options?: Record<string, any>;
+    };
+    customRender?: string;
+    editable?: boolean;
+    editorType?: InputType;
+    filterType?: 'text' | 'select' | 'multi-select' | 'date' | 'datetime' | 'time' | 'number' | 'range' | 'bool';
+    filterable?: boolean;
+    footer?: string | Binding | { aggregate: 'sum' | 'avg' | 'count' | 'min' | 'max' | 'custom'; customScript?: string };
+    header: string | Binding;
+    headerClass?: string | Binding;
+    hidden?: boolean;
+    key: string;
+    maxWidth?: number | string;
+    minWidth?: number | string;
+    options?: { value: any; label: string | Binding }[] | Binding;
+    pinned?: 'left' | 'right' | false;
+    renderer?: 'text' | 'image' | 'link' | 'badge' | 'progress' | 'chart' | 'checkbox' | 'custom';
+    resizable?: boolean;
+    sortable?: boolean;
+    width?: number | string;
+};
+
+export interface DataGridElement extends BaseElement {
+    type: ElementType.datagrid;
+    autoHeight?: boolean;
+    columnVisibility?: Record<string, boolean> | Binding;
+    columns: DatagGridCol[];
+    currentPage?: number | Binding;
+    editForm?: FormElement;
+    editingMode?: 'none' | 'cell' | 'row' | 'modal';
+    emptyMessage?: Binding;
+    expansionTemplate?: UIElement | string;
+    filters?: Record<string, any> | Binding;
+    globalFilter?: string | Binding;
+    groupActions?: Array<{
+        id: string;
+        icon?: string;
+        label: Binding;
+        onClick: EventHandler;
+        variant?: ButtonVariant;
+    }>;
+    height?: number | string;
+    id: string;
+    infinite?: boolean;
+    loading?: boolean | Binding;
+    onCellEdit?: EventHandler;
+    onColumnReorder?: EventHandler;
+    onColumnVisibilityChange?: EventHandler;
+    onFilterChange?: EventHandler;
+    onGlobalFilterChange?: EventHandler;
+    onLoadMore?: EventHandler;
+    onPageChange?: EventHandler;
+    onRowClick?: EventHandler;
+    onRowCollapse?: EventHandler;
+    onRowExpand?: EventHandler;
+    onSelectionChange?: EventHandler;
+    onSortChange?: EventHandler;
+    pageSize?: number;
+    reorderable?: boolean;
+    resizableColumns?: boolean;
+    rowActions?: Array<{
+        id: string;
+        condition?: Binding;
+        icon?: string;
+        label: Binding;
+        onClick: EventHandler;
+        variant?: ButtonVariant;
+    }>;
+    rowClass?: string | Binding | { condition: Binding; class: string }[] | ((row: any) => string);
+    rows?: any[];
+    selectable?: boolean;
+    selectionMode?: 'single' | 'multiple';
+    serverSide?: boolean;
+    sorting?: { column: string; direction: 'asc' | 'desc' }[] | Binding;
+    subRowsKey?: string;
+    totalCount?: number | Binding;
+    virtualRowHeight?: number;
+    virtualization?: boolean;
+    zIndex?: number;
+}
+
+export interface DrawerElement extends BaseElement {
+    type: ElementType.drawer;
+    content: UIElement[];
+    description?: Binding;
+    direction?: 'top' | 'bottom' | 'left' | 'right';
+    footer?: UIElement[];
+    isOpen?: boolean | Binding;
+    onOpenChange?: EventHandler;
+    showCloseButton?: boolean;
+    size?: 'sm' | 'md' | 'lg' | string;
+    title?: Binding;
+    trigger?: UIElement;
+}
+
+export type DropdownItem = {
+    checked?: boolean | Binding;
+    children?: DropdownItem[];
+    disabled?: boolean;
+    group?: string;
+    heading?: Binding;
+    icon?: string;
+    id: string;
+    label: Binding;
+    onSelect?: EventHandler;
+    shortcut?: string;
+    type?: 'checkbox' | 'radio' | 'item' | 'submenu' | 'separator' | 'label' | 'group';
+    value?: string;
+    variant?: 'default' | 'destructive';
+};
+
+export interface DropdownElement extends BaseElement {
+    type: ElementType.dropdown;
+    items: DropdownItem[];
+    trigger: UIElement;
+}
+
+export interface EditorElement extends BaseElement {
+    type: ElementType.editor;
+    content: Binding | string;
+    onChange?: EventHandler;
+    placeholder?: Binding | string;
+    toolbar?: {
+        bold?: boolean;
+        bulletList?: boolean;
+        codeBlock?: boolean;
+        italic?: boolean;
+        orderedList?: boolean;
+        underline?: boolean;
+    };
+}
+export interface FileUploadElement extends BaseElement {
+    type: ElementType.file_upload;
+    accept?: string;
+    headers?: Record<string, string | Binding>;
+    maxSize?: number;
+    multiple?: boolean;
+    onComplete?: EventHandler;
+    onError?: EventHandler;
+    onQueueChange?: EventHandler;
+    onUploaded?: EventHandler;
+    presignUrl: Binding;
+}
+
+export interface FooterElement extends BaseElement {
+    type: ElementType.footer;
+    alignment?: Alignment;
 }
 
 export type FormField =
     | {
         id: string;
         fieldType: FieldType.input;
+        helpText?: Binding;
+        hidden?: boolean | Binding;
         input: InputElement;
         label?: Binding;
         placeholder?: Binding;
-        helpText?: Binding;
         tooltip?: Binding;
-        hidden?: boolean | Binding;
     }
     | {
         id: string;
         fieldType:
-        | FieldType.heading
-        | FieldType.subheading
-        | FieldType.description
-        | FieldType.help
-        | FieldType.divider
-        | FieldType.image
-        | FieldType.video
-        | FieldType.icon
-        | FieldType.chart
         | FieldType.alert
         | FieldType.card
-        | FieldType.modal
+        | FieldType.chart
+        | FieldType.custom
+        | FieldType.description
+        | FieldType.divider
         | FieldType.drawer
         | FieldType.dropdown_menu
+        | FieldType.heading
+        | FieldType.help
+        | FieldType.icon
+        | FieldType.image
         | FieldType.loader
-        | FieldType.custom;
+        | FieldType.modal
+        | FieldType.subheading
+        | FieldType.video;
         element: UIElement;
     };
 
-export interface SegmentSpec {
-    index: number;
-    prompt?: string;
-    durationSeconds: number;
-    continuation?: boolean;
+export interface FormElement extends BaseElement {
+    type: ElementType.form;
+    cancelLabel?: Binding;
+    description?: Binding;
+    formFields: FormField[];
+    formGroupType: FormGroupType;
+    onCancel?: EventHandler;
+    onSubmit: EventHandler;
+    submitLabel?: Binding;
+    tabsConfig?: {
+        tabPosition?: 'top' | 'left' | 'right';
+        variant?: 'default' | 'outline' | 'pills';
+    };
+    title?: Binding;
+    validationSchema?: Record<string, any>;
+    wizardConfig?: {
+        linear?: boolean;
+        showProgress?: boolean;
+        steps: { id: string; title: Binding; description?: Binding }[];
+    };
 }
 
-export interface GenerationSpec {
-    prompt?: string;
-    aspect?: string;
-    style?: string;
-    priority?: number;
-    durationSeconds?: number;
-    captions?: boolean;
-    aiModel?: string;
-    maxChunkSeconds?: number;
-    segments?: SegmentSpec[];
+export interface HeaderElement extends BaseElement {
+    type: ElementType.header;
+    alignment?: Alignment;
+}
+
+
+export interface IconElement extends BaseElement {
+    type: ElementType.icon;
+    label?: Binding;
+    name: string;
+    size: number;
+}
+
+export interface ImageElement extends BaseElement {
+    type: ElementType.image;
+    alt: Binding;
+    generation?: GenerationSpec;
+    height?: number | string;
+    src: string;
+    width?: number | string;
+}
+
+export interface InputElement extends BaseElement {
+    type: ElementType.input;
+    accept?: string;
+    currency?: string | Binding;
+    inputType: InputType;
+    label?: Binding;
+    max?: number;
+    maxFractionDigits?: number;
+    maxSize?: number;
+    min?: number;
+    minFractionDigits?: number;
+    multiple?: boolean;
+    name: string;
+    onChange?: EventHandler;
+    onCreate?: EventHandler;
+    options?: Binding | { value: string; label: Binding }[];
+    placeholder?: Binding;
+    step?: number;
+    validation?: {
+        errorMessage?: Binding;
+        max?: number;
+        min?: number;
+        regex?: string;
+        regexErrorMessage?: Binding;
+        required?: boolean;
+    };
+    value?: Binding;
+}
+
+export interface MapElement extends BaseElement {
+    type: ElementType.map;
+    center: [number, number];
+    controls?: {
+        fullscreen?: boolean;
+        geolocate?: boolean;
+        scale?: boolean;
+        streetView?: boolean;
+        zoom?: boolean;
+    };
+    dataSourceId?: string;
+    google?: { apiKey?: string | Binding; mapId?: string };
+    heatmap?: Array<[number, number, number?]>;
+    height?: number;
+    id: string;
+    mapbox?: { accessToken?: string; styleId?: string };
+    markerCluster?: boolean;
+    markers?: Array<{ id?: string | number; lat: number; lng: number; popup?: string; iconUrl?: string }>;
+    provider?: 'google' | 'mapbox' | 'osm';
+    routes?: Array<{ id?: string | number; coords: Array<[number, number]> }>;
+    tile?: 'osm' | 'mapbox';
+    zoom?: number;
+}
+export interface ListElement extends BaseElement {
+    type: ElementType.list;
+    ordered?: boolean;
+    items: ListItemElement[];
+}
+
+export interface ListItemElement extends BaseElement {
+    type: ElementType.list_item;
+    icon?: IconElement;
+    text: Binding;
+    description?: Binding;
+    onClick?: EventHandler;
+}
+export interface LottieElement extends BaseElement {
+    type: ElementType.lottie;
+    src: Binding; // Lottie JSON file
+    autoplay?: boolean;
+    loop?: boolean;
+    speed?: number;
+    direction?: 1 | -1;
+    onComplete?: EventHandler;
+}
+
+export interface MenuElement extends BaseElement {
+    type: ElementType.menu;
+    items: MenuItem[];
+    label?: Binding;
+    menus?: Array<{
+        id: string;
+        items: MenuItem[];
+        label: Binding;
+    }>;
+    trigger?: UIElement;
+    variant: 'dropdown' | 'context' | 'menubar' | 'navigation';
+}
+
+export type MenuItem =
+    | {
+        id: string;
+        type: 'item';
+        href?: string;
+        icon?: string;
+        label: Binding;
+        onSelect?: EventHandler;
+        shortcut?: string;
+        variant?: 'default' | 'destructive';
+    }
+    | {
+        id: string;
+        type: 'checkbox';
+        checked?: Binding;
+        label: Binding;
+        onSelect?: EventHandler;
+    }
+    | {
+        id: string;
+        type: 'radio';
+        label: Binding;
+        onSelect?: EventHandler;
+        value: string;
+    }
+    | {
+        id: string;
+        type: 'label';
+        label: Binding;
+    }
+    | {
+        id: string;
+        type: 'separator';
+    }
+    | {
+        id: string;
+        type: 'sub';
+        icon?: string;
+        items: MenuItem[];
+        label: Binding;
+    };
+
+export interface ModalElement extends BaseElement {
+    type: ElementType.modal;
+    closeButton?: ButtonElement;
+    content: UIElement[];
+    description: Binding;
+    isOpen: boolean | Binding;
+    onClose: EventHandler;
+    title: Binding;
+}
+
+export interface PaginationElement extends BaseElement {
+    type: ElementType.pagination;
+    currentPage?: number | Binding;
+    onNext?: EventHandler;
+    onPageChange?: EventHandler;
+    onPrevious?: EventHandler;
+    pages: Array<{ number: number; active: boolean }>;
+    showEllipsis?: boolean;
+    totalPages?: number | Binding;
+}
+
+export interface PaymentElement extends BaseElement {
+    type: ElementType.payment;
+    buttonLabel?: Binding;
+    cancelParam?: string;
+    checkoutUrl?: Binding;
+    mode?: 'payment' | 'subscription';
+    onCancel?: EventHandler;
+    onError?: EventHandler;
+    onReturn?: EventHandler;
+    onSuccess?: EventHandler;
+    publicKey?: Binding;
+    sessionId?: Binding;
+    successParam?: string;
+    zIndex?: number;
+}
+
+export interface PopoverElement extends BaseElement {
+    type: ElementType.popover;
+    align?: 'start' | 'center' | 'end';
+    content: UIElement[];
+    open?: boolean | Binding;
+    onOpenChange?: EventHandler;
+    side?: 'top' | 'bottom' | 'left' | 'right';
+    trigger: UIElement;
+}
+
+export interface ProgressElement extends BaseElement {
+    type: ElementType.progress;
+    indeterminate?: boolean | Binding;
+    label?: Binding;
+    labelPosition?: 'inside' | 'outside' | 'none';
+    srOnlyLabel?: boolean | Binding;
+    value: number | Binding;
+}
+
+export interface QRReaderElement extends BaseElement {
+    type: ElementType.qr_reader;
+    mode?: 'generate' | 'scan';
+    onScan?: EventHandler;
+    size?: number;
+    value: Binding;
+}
+
+export interface RadioGroupElement extends BaseElement {
+    type: ElementType.radio_group;
+    disabled?: boolean;
+    onChange?: EventHandler;
+    options: Array<{ value: string; label: Binding; disabled?: boolean }>;
+    orientation?: 'horizontal' | 'vertical';
+    value: Binding;
+}
+export interface RatingElement extends BaseElement {
+    type: ElementType.rating;
+    max?: number;
+    value: number | Binding;
+    readonly?: boolean;
+    onChange?: EventHandler;
+}
+
+export interface ResizableElement extends BaseElement {
+    type: ElementType.resizable;
+    direction: 'horizontal' | 'vertical';
+    panels: Array<{
+        id: string;
+        collapsible?: boolean;
+        content: UIElement[];
+        defaultSize?: number;
+        maxSize?: number;
+        minSize?: number;
+    }>;
+    withHandle?: boolean;
+}
+
+export interface ScrollAreaElement extends BaseElement {
+    type: ElementType.scroll_area;
+    children?: UIElement[];
+    orientation?: 'vertical' | 'horizontal' | 'both';
+    scrollHide?: boolean;
+    size?: 'sm' | 'md' | 'lg';
+}
+export interface SearchElement extends BaseElement {
+    type: ElementType.search;
+    placeholder?: Binding;
+    value?: Binding;
+    debounceMs?: number;
+    onSearch: EventHandler;
+}
+
+export interface SheetElement extends BaseElement {
+    type: ElementType.sheet;
+    content: UIElement[];
+    description?: Binding;
+    direction?: 'left' | 'right' | 'top' | 'bottom';
+    footer?: UIElement[];
+    isOpen?: boolean | Binding;
+    onOpenChange?: EventHandler;
+    showCloseButton?: boolean;
+    shortcuts?: Array<{ key: string; action: 'close' | 'toggle' }>;
+    title?: Binding;
+    trigger?: UIElement;
+}
+
+export interface SidebarElement extends BaseElement {
+    type: ElementType.sidebar;
+    footer?: UIElement;
+    groups: Array<{
+        id: string;
+        items: UIElement[];
+        label: Binding;
+    }>;
+    header?: UIElement;
+}
+export interface SignaturePadElement extends BaseElement {
+    type: ElementType.signature_pad;
+    exportType?: 'png' | 'jpeg' | 'svg';
+    strokeColor?: string;
+    backgroundColor?: string;
+    onChange?: EventHandler;
+    onClear?: EventHandler;
+}
+export interface Step {
+    id: string;
+    content?: UIElement[];
+    onComplete?: EventHandler;
+    onNext?: EventHandler;
+    onPrev?: EventHandler;
+    shouldShow?: Binding;
+    title: Binding;
+    validate?: boolean;
+    validateAction?: EventHandler;
+}
+
+export interface StepWizardElement extends BaseElement {
+    type: ElementType.step_wizard;
+    current?: number;
+    id: string;
+    steps: Step[];
+    zIndex?: number;
+}
+
+export interface TableElement extends BaseElement {
+    type: ElementType.table;
+    crudActions?: EventHandler[];
+    headers: Binding[];
+    pagination?: boolean;
+    rows: Binding | { cells: Binding[] }[];
+    sortable?: boolean;
+}
+
+export interface TabsElement extends BaseElement {
+    type: ElementType.tabs;
+    activeTab: string;
+    onChange?: EventHandler;
+    tabs: { id: string; label: string; content: UIElement[] }[];
+}
+
+export interface TextElement extends BaseElement {
+    type: ElementType.text;
+    alignment: Alignment;
+    content: Binding;
+    contentFormat?: 'markdown' | 'html' | 'rich' | 'plain';
+    fontWeight?: string;
+    tag: string;
+}
+
+export interface ThreeDModelElement extends BaseElement {
+    type: ElementType.three_d_model;
+    autoplay?: boolean;
+    environment?: {
+        ground?: boolean;
+        groundColor?: string;
+        sky?: Binding;
+    };
+    hud?: {
+        call?: CallElement;
+        voice?: VoiceElement;
+    };
+
+    inSceneVideo?: {
+        enabled: boolean;
+        position?: [number, number, number];
+        rotation?: [number, number, number];
+        scale?: [number, number, number];
+        size?: [number, number];
+        transparent?: boolean;
+        videoId?: string;
+    };
+    loop?: boolean;
+    multiPeerSpawn?: {
+        enabled: boolean;
+        layout?: "circle" | "grid" | "spiral";
+        shape?: "plane" | "sphere" | "avatar";  // NEW: avatar option
+        size?: [number, number];                // for plane
+        radius?: number;                        // for sphere
+        transparent?: boolean;
+        distance?: number;                      // spacing from center
+        height?: number;                        // base Y position
+        gridCols?: number;                      // for grid layout
+        spiralStep?: number;                    // vertical step for spiral
+        avatarModel?: string;                   // GLTF avatar model path
+        faceAttachment?: [number, number, number]; // offset for video-textured face
+    };
+
+    mode?: '3d' | 'vr' | 'ar' | '360_video' | 'ar_marker';
+    portals?: {
+        color: string;
+        onEvent?: EventHandler;
+        opacity: number;
+        position: [number, number, number];
+    }[];
+    position?: [number, number, number];
+    rotation?: [number, number, number];
+    scale?: [number, number, number];
+    src?: Binding;
+}
+export interface TimelineElement extends BaseElement {
+    type: ElementType.timeline;
+    items: {
+        id: string;
+        title: Binding;
+        description?: Binding;
+        timestamp?: Binding;
+        icon?: string;
+        color?: string;
+    }[];
+    orientation?: 'horizontal' | 'vertical';
+}
+export interface TreeElement extends BaseElement {
+    type: ElementType.tree;
+    nodes: {
+        id: string;
+        label: Binding;
+        children?: TreeElement['nodes'];
+        icon?: string;
+        expanded?: boolean;
+        onSelect?: EventHandler;
+    }[];
+    selectable?: boolean;
+    multiple?: boolean;
+}
+
+export interface ToggleElement extends BaseElement {
+    type: ElementType.toggle;
+    icon?: string;
+    label?: Binding;
+    onToggle?: EventHandler;
+    pressed?: Binding | boolean;
+    size?: 'default' | 'sm' | 'lg';
+    variant?: 'default' | 'outline';
+}
+
+export interface ToggleGroupElement extends BaseElement {
+    type: ElementType.toggle_group;
+    multiple?: boolean;
+    onChange?: EventHandler;
+    options: ToggleElement[];
+    value: Binding | string[];
+}
+
+export interface TooltipElement extends BaseElement {
+    type: ElementType.tooltip;
+    content: Binding;
+    delayDuration?: number;
+    side?: 'top' | 'bottom' | 'left' | 'right';
+    sideOffset?: number;
+    trigger: UIElement;
+}
+
+export interface VideoElement extends BaseElement {
+    type: ElementType.video;
+    ads?: {
+        midRoll?: Array<{ time: number; src: Binding }>;
+        postRoll?: Binding[];
+        preRoll?: Binding[];
+        skippableAfter?: number;
+    };
+    analytics?: boolean;
+    autoPlay?: boolean;
+    caching?: boolean;
+    captions?: Array<{
+        default?: boolean;
+        label: string;
+        src: Binding;
+        srclang: string;
+    }>;
+    chapters?: Array<{ start: number; title: string }>;
+    controls?: boolean;
+    description?: Binding;
+    generation?: GenerationSpec;
+    height?: number | string;
+    hotkeys?: boolean;
+    loop?: boolean;
+    onNextEpisode?: EventHandler;
+    pictureInPicture?: boolean;
+    qualitySelector?: boolean;
+    resumePosition?: boolean;
+    showCaptions?: boolean;
+    showFullscreen?: boolean;
+    showMiniPlayer?: boolean;
+    showNextEpisode?: boolean;
+    showPlaybackRate?: boolean;
+    showSkipIntro?: boolean;
+    showThumbnails?: boolean;
+    src: Binding;
+    streaming?: 'hls' | 'dash';
+    thumbnails?: {
+        height: number;
+        interval: number;
+        sheetWidth?: number;
+        spriteUrl: string;
+        width: number;
+    };
+    tracking?: {
+        dataSourceId?: string;
+        events?: Array<
+            | 'play'
+            | 'pause'
+            | 'seeked'
+            | 'ended'
+            | 'error'
+            | 'ratechange'
+            | 'fullscreen'
+            | 'pip'
+            | 'volumechange'
+            | 'ad_impression'
+            | 'ad_quartile'
+            | 'ad_complete'
+            | 'ad_skip'
+        >;
+        heartbeatInterval?: number;
+    };
+    width?: number | string;
+}
+
+export interface VoiceElement extends BaseElement {
+    type: ElementType.voice;
+    apiMode?: 'browser' | 'azure';
+    avatar?: {
+        character: string;
+        enabled: boolean;
+        region: string;
+        style?: string;
+        subscriptionKey: Binding;
+        transparentBackground?: boolean;
+        voice?: string;
+    };
+    language: string;
+    onAIResponse?: EventHandler;
+    onRecognize?: EventHandler;
+    onSpeak?: EventHandler;
+    onTranslate?: EventHandler;
+    outputText?: Binding;
+    targetLanguage?: string;
+    voiceModel?: string;
+}
+
+export interface WalletElement extends BaseElement {
+    type: ElementType.wallet;
+    chainId: number;
+    contracts?: {
+        abi: string[];
+        address: string | Binding;
+        events?: {
+            name: string;
+            onEvent: EventHandler;
+        }[];
+        functions: {
+            inputs?: Array<{ name: string; placeholder?: string; type: string }>;
+            label?: string;
+            name: string;
+            onResult?: EventHandler;
+            type: 'view' | 'write';
+        }[];
+    }[];
+    mode?: 'full' | 'button';
+    onConnect?: EventHandler;
+    onDisconnect?: EventHandler;
+    onError?: EventHandler;
+    projectId?: string;
+    provider: 'metamask' | 'walletconnect';
+}
+
+export type UIElement =
+    | AccordionElement
+    | AlertElement
+    | AlertDialogElement
+    | AudioElement
+    | AvatarElement
+    | BadgeElement
+    | BreadcrumbElement
+    | ButtonElement
+    | CalendarElement
+    | CalendarEventElement
+    | CallElement
+    | CardElement
+    | CarouselElement
+    | ChartElement
+    | ChatElement
+    | CollapsibleElement
+    | CommandElement
+    | CommentsElement
+    | ContainerElement
+    | ContextMenuElement
+    | CustomElement
+    | DataGridElement
+    | DrawerElement
+    | DropdownElement
+    | EditorElement
+    | FileUploadElement
+    | FooterElement
+    | FormElement
+    | HeaderElement
+    | IconElement
+    | ImageElement
+    | ListElement
+    | ListItemElement
+    | LottieElement
+    | MapElement
+    | MenuElement
+    | ModalElement
+    | PaginationElement
+    | PaymentElement
+    | PopoverElement
+    | ProgressElement
+    | QRReaderElement
+    | RadioGroupElement
+    | RatingElement
+    | ResizableElement
+    | ScrollAreaElement
+    | SearchElement
+    | SheetElement
+    | SidebarElement
+    | SignaturePadElement
+    | SkeletonElement
+    | StepWizardElement
+    | TableElement
+    | TabsElement
+    | TextElement
+    | ThreeDModelElement
+    | TimelineElement
+    | ToggleElement
+    | ToggleGroupElement
+    | TooltipElement
+    | TreeElement
+    | VideoElement
+    | VoiceElement
+    | WalletElement;
+
+
+export interface AuthGlobalConfig {
+    audience?: string;
+    cookieName?: string;
+    loginHref?: string;
+    logoutHref?: string;
+    oidc?: OIDCConfig;
+    postLoginHref?: string;
+    providers?: OAuthProviderConfig[];
+    saml?: SAMLConfig;
+    strategy?: 'oauth' | 'oidc' | 'saml' | 'jwt' | 'custom';
+    tenant?: string;
+    tokenStorage?: 'cookie' | 'memory' | 'localStorage';
 }
 
 export interface BackgroundSpec {
+    generation?: GenerationSpec;
+    overlayClass?: string;
     type?: 'image' | 'video' | 'color' | 'gradient';
     value?: string | Binding;
-    overlayClass?: string;
-    generation?: GenerationSpec;
 }
 
-export interface AnimationSpec {
-    entrance?: string;
-    exit?: string;
-    duration?: number;
-    delay?: number;
-    repeat?: number | 'infinite';
-    easing?: string;
-    lottieUrl?: string;
-    framework?: 'animate.css' | 'css' | 'framer-motion' | 'gsap';
+export interface GenerationSpec {
+    aiModel?: string;
+    aspect?: string;
+    captions?: boolean;
+    durationSeconds?: number;
+    maxChunkSeconds?: number;
+    priority?: number;
+    prompt?: string;
+    segments?: SegmentSpec[];
+    style?: string;
+}
+
+export interface MapsGlobalConfig {
+    defaultProvider?: 'google' | 'mapbox' | 'osm';
+    googleApiKey?: string | Binding;
+    mapId?: string;
+    mapboxToken?: string | Binding;
+    styleId?: string;
+}
+
+export interface OAuthProviderConfig {
+    authUrl?: string;
+    clientId?: string | Binding;
+    extraParams?: Record<string, string>;
+    id: 'google' | 'microsoft' | 'github' | 'okta' | 'custom';
+    pkce?: boolean;
+    redirectUri?: string;
+    scopes?: string[];
+    tokenUrl?: string;
+}
+
+export interface OIDCConfig {
+    clientId?: string | Binding;
+    discoveryUrl?: string;
+    issuer: string;
+    redirectUri?: string;
+    scopes?: string[];
+}
+
+export interface SAMLConfig {
+    idpMetadataUrl: string;
+    spAcsUrl?: string;
+}
+
+export interface SegmentSpec {
+    continuation?: boolean;
+    durationSeconds: number;
+    index: number;
+    prompt?: string;
+}
+
+export interface SeriesSpec {
+    color?: string;
+    dot?: boolean | object;
+    key: string;
+    label?: string;
+    opacity?: number;
+    stackId?: string;
+    strokeWidth?: number;
+    type?: 'bar' | 'line' | 'area' | 'scatter' | 'radar';
+    yAxisId?: string;
 }
 
 export interface StyleProps {
-    className: string;
-    responsiveClasses?: Record<string, string>;
-    customCss?: string;
-    background?: BackgroundSpec | null;
     animation?: AnimationSpec;
+    background?: BackgroundSpec | null;
+    className: string;
+    customCss?: string;
+    responsiveClasses?: Record<string, string>;
 }
 
-export interface AccessibilityProps {
-    ariaLabel?: Binding;
-    ariaRole?: string;
-    ariaHidden?: boolean;
-    tabIndex?: number;
-    screenReaderText?: Binding;
-    focusable?: boolean;
-    voiceSupport?: boolean;
+// === Data and Navigation Types ===
+export interface ConditionExpr {
+    key: Binding;
+    op: ConditionOp;
+    value?: any;
+}
+
+export interface DataMapping {
+    crudOperation?: ActionType;
+    outputKey: string;
+    sourceIds: string[];
+    transform?: string;
+}
+
+export interface DataSource {
+    auth?: { type: 'basic' | 'bearer' | 'api_key'; value: Binding };
+    baseUrl?: string | Binding;
+    body?: Record<string, any> | Binding;
+    credentials?: 'include' | 'omit' | 'same-origin';
+    errorKey?: string;
+    graphql_operation?: 'query' | 'mutation' | 'subscription';
+    headers?: Record<string, string | Binding>;
+    heartbeat?: { interval: number; message: Binding };
+    id: string;
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'WEBSOCKET' | 'GRAPHQL';
+    path?: string | Binding;
+    pollingInterval?: number;
+    protocol?: 'graphql-ws' | 'subscriptions-transport-ws' | 'graphql-transport-ws';
+    query?: string;
+    queryParams?: Record<string, string | Binding>;
+    refId?: string;
+    retry?: { attempts: number; delay: number; strategy?: 'exponential' | 'linear' | 'jitter' };
+}
+
+export interface DataSourceRef {
+    auth?: { type: 'basic' | 'bearer' | 'api_key'; value: Binding };
+    baseUrl?: string | Binding;
+    body?: Record<string, any> | Binding;
+    headers?: Record<string, string | Binding>;
+    heartbeat?: { interval: number; message: Binding };
+    id: string;
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'WEBSOCKET' | 'GRAPHQL';
+    path?: string | Binding;
+    pollingInterval?: number;
+    query?: string | Binding;
+    queryParams?: Record<string, string | Binding>;
+    retry?: { attempts: number; delay: number };
+}
+
+export interface EndpointEnvironments {
+    default: string;
+    values: Record<string, {
+        baseUrl?: string | Binding;
+        headers?: Record<string, string | Binding>;
+    }>;
+}
+
+export interface GuardRule {
+    conditions?: ConditionExpr[];
+    dataSourceId?: string;
+    mode?: 'all' | 'any';
+    onFail: RedirectSpec;
+    requireAuth?: boolean;
+    requireConsents?: string[];
+    requireOrganization?: boolean;
+    requireOtp?: boolean;
+}
+
+export interface IRoute {
+    file: string;
+    guard?: GuardRule;
+    href: string;
+    icon: string;
+    isDynamic: boolean;
+    label: string;
+    metadata: {
+        dateModified?: string;
+        datePublished?: string;
+        description?: string;
+        formatDetection?: {
+            address?: boolean;
+            date?: boolean;
+            email?: boolean;
+            telephone?: boolean;
+            url?: boolean;
+        };
+        keywords?: string[];
+        openGraph?: {
+            description?: string;
+            siteName?: string;
+            title?: string;
+            url?: string;
+        };
+        pagination?: {
+            next?: null | string | URL | undefined;
+            previous?: null | string | URL | undefined;
+        };
+        title?: string;
+        twitter?: {
+            card?: string;
+            description?: string;
+            title?: string;
+        };
+    };
+    nested?: IRoute[];
+    requiresAuth: boolean;
+    screenConfigUrl?: string;
+    screenId?: string;
+    screenVersion?: string;
+    showInBottomBar: boolean;
+    showInNavigation: boolean;
+    visibility?: VisibilityControl;
+}
+
+export interface IRouteList {
+    desktopNavType?: 'top' | 'side';
+    layout?: string;
+    metadata: {
+        basePath: string;
+        generatedAt: string;
+        totalRoutes: number;
+        version?: string;
+    };
+    navStyle: NavStyle;
+    responsiveNavType?: 'bottom' | 'burger';
+    routes: IRoute[];
+}
+
+export interface NavStyle {
+    activeStyle?: StyleProps;
+    containerStyle?: StyleProps;
+    inactiveStyle?: StyleProps;
+    overlayStyle?: StyleProps;
+    sheetStyle?: StyleProps;
 }
 
 export interface RedirectSpec {
     href?: string;
-    screenId?: string;
     reasonKey?: Binding;
+    screenId?: string;
+}
+
+export interface TransitionSpec {
+    href?: string;
+    modal?: {
+        closeId?: string;
+        openId?: string;
+    };
+    replace?: boolean;
+    screenId?: string;
+    statePatches?: Array<{ key: string; value: any | Binding }>;
+}
+
+export interface UIScreenDef {
+    dataMappings?: DataMapping[];
+    dataSources?: DataSource[];
+    elements: UIElement[];
+    guard?: GuardRule;
+    id: string;
+    layoutType: LayoutType;
+    lifecycle?: {
+        onEnter?: EventHandler;
+        onLeave?: EventHandler;
+    };
+    metadata: Record<string, string | number | boolean | Record<string, any>>;
+    name: Binding;
+    route: string;
+    styles?: StyleProps;
+    transition?: { type: string; direction?: string; duration: number };
+    version: string;
+}
+
+export interface UIDefinition {
+    id: string;
+    initialData?: Record<string, any>;
+    screens: UIScreenDef[];
+    state?: {
+        keys?: Record<string, {
+            binding?: Binding;
+            dataType: 'string' | 'number' | 'boolean' | 'object' | 'array';
+            defaultValue: any;
+            validation?: {
+                max?: number;
+                maxLength?: number;
+                min?: number;
+                minLength?: number;
+                regex?: string;
+                required?: boolean;
+            };
+        }>;
+        persist?: boolean;
+        persistStorage?: 'localStorage' | 'sessionStorage' | 'cookie';
+        webSocketEndpoint?: {
+            auth?: { type: 'basic' | 'bearer' | 'api_key'; value: Binding };
+            protocol?: 'graphql-ws' | 'subscriptions-transport-ws' | 'graphql-transport-ws';
+            url: string | Binding;
+        };
+        webSocketKeys?: string[];
+    };
+    translations: Record<string, Record<string, string>>;
+    version: string;
 }
 
 export interface VisibilityControl {
@@ -298,1593 +1746,188 @@ export interface VisibilityControl {
     show: boolean;
 }
 
-export interface AuthGlobalConfig {
-    strategy?: 'oauth' | 'oidc' | 'saml' | 'jwt' | 'custom';
-    providers?: OAuthProviderConfig[];
-    oidc?: OIDCConfig;
-    saml?: SAMLConfig;
-    loginHref?: string;
-    postLoginHref?: string;
-    logoutHref?: string;
-    tokenStorage?: 'cookie' | 'memory' | 'localStorage';
-    cookieName?: string;
-    audience?: string;
-    tenant?: string;
-}
-
-export interface MapsGlobalConfig {
-    defaultProvider?: 'google' | 'mapbox' | 'osm';
-    googleApiKey?: string | Binding;
-    mapboxToken?: string | Binding;
-    mapId?: string;
-    styleId?: string;
-}
-
-export interface BaseElement {
-    id: string;
-    name: string;
-    value?: Binding;
-    type: ElementType;
-    styles?: StyleProps;
-    accessibility?: AccessibilityProps;
-    zIndex?: number;
-    animations?: AnimationSpec;
-    visibility?: VisibilityControl;
+// === Utility Types ===
+export interface EventHandler {
+    action: ActionType;
+    aiPrompt?: string;
     dataSourceId?: string;
-    onEvent?: Record<string, EventHandler>;
-    children?: UIElement[];
-}
-
-export interface TextElement extends BaseElement {
-    type: ElementType.text;
-    content: Binding;
-    contentFormat?: 'markdown' | 'html' | 'rich' | 'plain';
-    tag: string;
-    alignment: Alignment;
-    fontWeight?: string;
-}
-
-export interface ButtonElement extends BaseElement {
-    type: ElementType.button;
-    text: Binding;
-    variant: ButtonVariant;
-    size?: "default" | "sm" | "lg" | "icon"
-    onClick?: EventHandler
-    disabled?: boolean | Binding
-    iconLeft?: IconElement
-    iconRight?: IconElement
-    asChild?: boolean
-}
-export interface BadgeElement extends BaseElement {
-    type: ElementType.badge
-
-    /** Main text/label binding */
-    text?: Binding
-
-    /** Optional value (e.g. for counts or dynamic binding) */
-    value?: Binding
-
-    /** Badge style variant */
-    variant?: "default" | "secondary" | "destructive" | "outline"
-
-    /** Render as child (useful when badge is wrapping a link/button) */
-    asChild?: boolean
-
-    /** Optional icon to render before/after text */
-    iconLeft?: IconElement
-    iconRight?: IconElement
-
-    /** Optional click handler (badges can be interactive) */
-    onClick?: EventHandler
-
-    /** Optional tooltip text */
-    tooltip?: Binding
-
-    /** Optional max length (truncate text beyond this) */
-    maxLength?: number
-
-    /** Show a dot badge (no text, just a small circle) */
-    isDot?: boolean
-
-    /** Size variant (smaller or larger badges) */
-    size?: "sm" | "md" | "lg"
-}
-
-export interface InputElement extends BaseElement {
-    type: ElementType.input;
-    inputType: InputType;
-    placeholder?: Binding;
-    label?: Binding;
-    value?: Binding;
-    name: string;
-    min?: number;
-    max?: number;
-    step?: number;
-    accept?: string;
-    options?: Binding | { value: string; label: Binding }[];
-    multiple?: boolean;
-
-    /** Currency-only props — used when inputType === 'currency' */
-    currency?: string | Binding;
-    minFractionDigits?: number;
-    maxFractionDigits?: number;
-
-    validation?: {
-        regex?: string;
-        regexErrorMessage?: Binding;
-        required?: boolean;
-        errorMessage?: Binding;
-        min?: number;
-        max?: number;
-    };
-    onChange?: EventHandler;
-    onCreate?: EventHandler; // for createselect
-    maxSize?: number;
-}
-
-export interface ModalElement extends BaseElement {
-    type: ElementType.modal;
-    title: Binding;
-    description: Binding;
-    content: UIElement[];
-    isOpen: boolean | Binding;
-    onClose: EventHandler;
-    closeButton?: ButtonElement;
-}
-
-export interface IconElement extends BaseElement {
-    type: ElementType.icon;
-    name: string;
-    size: number;
-    label?: Binding;
-}
-
-export interface ImageElement extends BaseElement {
-    type: ElementType.image;
-    src: string;
-    alt: Binding;
-    width?: number | string;
-    height?: number | string;
-    generation?: GenerationSpec;
-}
-export type ContextMenuItem =
-    | { id: string; type: "item"; label: Binding; onSelect?: EventHandler; shortcut?: string; disabled?: boolean; variant?: "default" | "destructive"; icon?: string }
-    | { id: string; type: "checkbox"; label: Binding; checked?: Binding; onSelect?: EventHandler; disabled?: boolean }
-    | { id: string; type: "radio"; label: Binding; value: string; group: string; checked?: Binding; onSelect?: EventHandler }
-    | { id: string; type: "label"; label: Binding; inset?: boolean }
-    | { id: string; type: "separator" }
-    | { id: string; type: "sub"; label: Binding; items: ContextMenuItem[]; icon?: string }
-
-export interface ContextMenuElement extends BaseElement {
-    type: ElementType.context_menu;
-    trigger: UIElement;
-    items: ContextMenuItem[]
-}
-export interface VideoElement extends BaseElement {
-    type: ElementType.video;
-    src: Binding;
-    description?: Binding;
-    width?: number | string;
-    height?: number | string;
-    autoPlay?: boolean;
-    loop?: boolean;
-    controls?: boolean; // native controls; custom controls overlay always available
-    generation?: GenerationSpec;
-    streaming?: "hls" | "dash"; // dash ignored (Shaka removed)
-
-    // Navigation
-    onNextEpisode?: EventHandler;
-
-    // UX flags
-    showSkipIntro?: boolean;
-    showNextEpisode?: boolean;
-    showThumbnails?: boolean;
-    showPlaybackRate?: boolean;
-    showFullscreen?: boolean;
-    showMiniPlayer?: boolean; // Picture-in-Picture
-    showCaptions?: boolean;
-    analytics?: boolean; // enable analytics hooks
-    caching?: boolean; // use preload=auto, allow SW caching
-    resumePosition?: boolean; // persist last position in localStorage
-
-    // Thumbnails sprite
-    thumbnails?: {
-        spriteUrl: string;
-        width: number;
-        height: number;
-        interval: number; // seconds per thumb
-        sheetWidth?: number; // px, default 1000 for grid calc
-    };
-
-    // Captions/subtitles
-    captions?: Array<{
-        src: Binding;
-        srclang: string;
-        label: string;
-        default?: boolean;
-    }>;
-
-    // Ads
-    ads?: {
-        preRoll?: Binding[];
-        midRoll?: Array<{ time: number; src: Binding }>;
-        postRoll?: Binding[];
-        skippableAfter?: number; // seconds until Skip Ad is shown
-    };
-
-    // Analytics / tracking
-    tracking?: {
-        heartbeatInterval?: number; // seconds
-        events?: Array<
-            | "play"
-            | "pause"
-            | "seeked"
-            | "ended"
-            | "error"
-            | "ratechange"
-            | "fullscreen"
-            | "pip"
-            | "volumechange"
-            | "ad_impression"
-            | "ad_quartile"
-            | "ad_complete"
-            | "ad_skip"
-        >;
-        dataSourceId?: string; // send to this DataSource via Actions api_call
-        // If omitted, we'll still call runEventHandler with payload only
-    };
-
-    // Advanced
-    qualitySelector?: boolean; // allow manual HLS level selection
-    pictureInPicture?: boolean; // alias of showMiniPlayer
-    hotkeys?: boolean; // keyboard shortcuts like YouTube
-    chapters?: Array<{ start: number; title: string }>;
-}
-
-
-export interface CardElement extends BaseElement {
-    type: ElementType.card
-    header?: UIElement
-    title?: UIElement
-    description?: UIElement
-    action?: UIElement
-    content: UIElement[]
-    footer?: UIElement[]
-    variant?: "default" | "outline" | "ghost" | "elevated" | "borderless"
-    clickable?: boolean | Binding         // whole card clickable
-    href?: Binding                        // navigation target
-    media?: UIElement                     // image, chart, video in header
-    badge?: UIElement                     // e.g. “New”, “Premium”
-}
-
-export interface ContainerElement extends BaseElement {
-    type: ElementType.container;
-
-    /** Layout mode */
-    layout: "flex" | "grid" | "block" | "row" | "column";
-
-    /** Gap between children (px, rem, etc.) */
-    gap?: number | string;
-
-    /** Flexbox-specific props */
-    justify?:
-    | "start"
-    | "center"
-    | "end"
-    | "between"
-    | "around"
-    | "evenly";
-    align?: "start" | "center" | "end" | "stretch" | "baseline";
-    wrap?: boolean;
-
-    /** Grid-specific props */
-    cols?: number; // Tailwind grid-cols-x
-    rows?: number; // Tailwind grid-rows-x
-    autoCols?: "auto" | "min" | "max" | "fr";
-    autoRows?: "auto" | "min" | "max" | "fr";
-
-    /** Responsive layout overrides (optional, not in BaseElement) */
-    responsiveLayout?: {
-        sm?: Partial<Omit<ContainerElement, "id" | "name" | "type" | "children">>;
-        md?: Partial<Omit<ContainerElement, "id" | "name" | "type" | "children">>;
-        lg?: Partial<Omit<ContainerElement, "id" | "name" | "type" | "children">>;
-        xl?: Partial<Omit<ContainerElement, "id" | "name" | "type" | "children">>;
-    };
-}
-
-export interface DrawerElement extends BaseElement {
-    type: ElementType.drawer;
-    title?: Binding;
-    description?: Binding;
-    isOpen?: boolean | Binding;
-    trigger?: UIElement;
-    content: UIElement[];
-    footer?: UIElement[];
-    onOpenChange?: EventHandler;
-    direction?: "top" | "bottom" | "left" | "right";
-    size?: "sm" | "md" | "lg" | string;
-    showCloseButton?: boolean;
-}
-
-export interface FormElement extends BaseElement {
-    type: ElementType.form;
-
-    formGroupType: FormGroupType;
-    formFields: FormField[];
-
-    title?: Binding;
-    description?: Binding;
-
-    onSubmit: EventHandler;
-    onCancel?: EventHandler;
-    submitLabel?: Binding;
-    cancelLabel?: Binding;
-
-    validationSchema?: Record<string, any>;
-
-    wizardConfig?: {
-        steps: { id: string; title: Binding; description?: Binding }[];
-        showProgress?: boolean;
-        linear?: boolean;
-    };
-    tabsConfig?: {
-        tabPosition?: 'top' | 'left' | 'right';
-        variant?: 'default' | 'outline' | 'pills';
-    };
-}
-
-export interface TableElement extends BaseElement {
-    type: ElementType.table;
-    headers: Binding[];
-    rows: Binding | { cells: Binding[] }[];
-    sortable?: boolean;
-    pagination?: boolean;
-    crudActions?: EventHandler[];
-}
-
-export type DatagGridCol = {
-    key: string;
-    header: string | Binding;
-    width?: number | string;
-    minWidth?: number | string;
-    maxWidth?: number | string;
-    sortable?: boolean;
-    filterable?: boolean;
-    filterType?: 'text' | 'select' | 'multi-select' | 'date' | 'datetime' | 'time' | 'number' | 'range' | 'bool';
-    options?: { value: any; label: string | Binding }[] | Binding; // for select/multi-select
-    renderer?: 'text' | 'image' | 'link' | 'badge' | 'progress' | 'chart' | 'checkbox' | 'custom';
-    chartConfig?: {
-        type: 'bar' | 'line' | 'pie' | 'sparkline';
-        dataKey: string;
-        options?: Record<string, any>;
-    };
-    customRender?: string; // component name or script
-    editable?: boolean;
-    editorType?: InputType;
-    cellClass?: string | Binding | { condition: Binding; class: string }[] | ((row: any) => string);
-    headerClass?: string | Binding;
-    align?: Alignment;
-    footer?: string | Binding | { aggregate: 'sum' | 'avg' | 'count' | 'min' | 'max' | 'custom'; customScript?: string };
-    resizable?: boolean;
-    pinned?: 'left' | 'right' | false;
-    hidden?: boolean;
-};
-
-export interface DataGridElement extends BaseElement {
-    type: ElementType.datagrid;
-    id: string;
-    columns: DatagGridCol[];
-    rows?: any[]; // Client-side data
-    totalCount?: number | Binding; // For server-side pagination
-    pageSize?: number;
-    currentPage?: number | Binding;
-    infinite?: boolean; // Infinite scrolling instead of pagination
-    virtualization?: boolean;
-    virtualRowHeight?: number;
-    height?: number | string;
-    autoHeight?: boolean;
-    selectable?: boolean;
-    selectionMode?: 'single' | 'multiple';
-    serverSide?: boolean;
-    sorting?: { column: string; direction: 'asc' | 'desc' }[] | Binding; // Multi-sort support
-    filters?: Record<string, any> | Binding; // Column filters
-    globalFilter?: string | Binding; // Global search
-    reorderable?: boolean; // Column reordering
-    resizableColumns?: boolean;
-    columnVisibility?: Record<string, boolean> | Binding;
-    subRowsKey?: string; // Key for nested/child rows
-    expansionTemplate?: UIElement | string; // Custom renderer for expanded rows
-    rowActions?: Array<{
-        id: string;
-        label: Binding;
-        icon?: string;
-        variant?: ButtonVariant;
-        onClick: EventHandler;
-        condition?: Binding; // Visibility condition
-    }>;
-    groupActions?: Array<{
-        id: string;
-        label: Binding;
-        icon?: string;
-        variant?: ButtonVariant;
-        onClick: EventHandler;
-    }>;
-    editingMode?: 'none' | 'cell' | 'row' | 'modal';
-    editForm?: FormElement; // For modal editing
-    rowClass?: string | Binding | { condition: Binding; class: string }[] | ((row: any) => string);
-    loading?: boolean | Binding;
-    emptyMessage?: Binding;
-    onSortChange?: EventHandler;
-    onFilterChange?: EventHandler;
-    onGlobalFilterChange?: EventHandler;
-    onPageChange?: EventHandler;
-    onLoadMore?: EventHandler; // For infinite load
-    onSelectionChange?: EventHandler;
-    onRowClick?: EventHandler;
-    onCellEdit?: EventHandler;
-    onColumnReorder?: EventHandler;
-    onColumnVisibilityChange?: EventHandler;
-    onRowExpand?: EventHandler;
-    onRowCollapse?: EventHandler;
-    zIndex?: number;
-}
-
-export type Step = {
-    id: string;
-    title: string;
-    shouldShow?: Binding
-    content?: UIElement[];
-    onNext?: EventHandler;
-    onPrev?: EventHandler;
-    onComplete?: EventHandler;
-    validateAction?: EventHandler;
-    validate?: boolean;
-};
-
-export interface StepWizardElement extends BaseElement {
-    type: ElementType.step_wizard;
-    id: string;
-    steps: Step[];
-    current?: number;
-    zIndex?: number;
-}
-
-export interface MapElement extends BaseElement {
-    type: ElementType.map;
-    id: string;
-    provider?: 'google' | 'mapbox' | 'osm';
-    center: [number, number];
-    zoom?: number;
-    markers?: Array<{ id?: string | number; lat: number; lng: number; popup?: string; iconUrl?: string }>;
-    markerCluster?: boolean;
-    controls?: {
-        zoom?: boolean;
-        fullscreen?: boolean;
-        streetView?: boolean;
-        geolocate?: boolean;
-        scale?: boolean;
-    };
-    dataSourceId?: string;
-    heatmap?: Array<[number, number, number?]>;
-    routes?: Array<{ id?: string | number; coords: Array<[number, number]> }>;
-    tile?: 'osm' | 'mapbox';
-    mapbox?: { accessToken?: string; styleId?: string };
-    google?: { apiKey?: string | Binding; mapId?: string };
-    height?: number;
-}
-
-export interface FileUploadElement extends BaseElement {
-    type: ElementType.file_upload
-    accept?: string
-    multiple?: boolean
-    maxSize?: number
-    presignUrl: Binding
-    headers?: Record<string, string | Binding>
-    onUploaded?: EventHandler
-    onError?: EventHandler
-    onComplete?: EventHandler
-    onQueueChange?: EventHandler
-}
-
-
-export interface Step {
-    id: string;
-    title: Binding;
-    content?: UIElement[];
-    onNext?: EventHandler;
-    onPrev?: EventHandler;
-    onComplete?: EventHandler;
-    validate?: boolean;
-    validateAction?: EventHandler;
-}
-
-export interface StepWizardElement extends BaseElement {
-    type: ElementType.step_wizard;
-    id: string;
-    steps: Step[];
-    current?: number;
-    zIndex?: number;
-}
-
-export interface AlertElement extends BaseElement {
-    type: ElementType.alert;
-    message: Binding;
-    dismissible?: boolean;
-    variant: | "default"
-    | "primary"
-    | "success"
-    | "danger"
-    | "warning"
-    | "info"
-    | "destructive";
-    dismissible?: boolean;
-}
-
-export type DropdownItem = {
-    id: string
-    label: Binding
-    heading?: Binding
-    icon?: string
-    shortcut?: string
-    variant?: "default" | "destructive"
-    onSelect?: EventHandler
-
-    // Submenu
-    children?: DropdownItem[]
-
-    // Checkbox
-    type?: "checkbox" | "radio" | "item" | "submenu" | 'separator' | 'label' | 'group'
-    checked?: boolean | Binding
-
-    // Radio group
-    value?: string
-    disabled?: boolean
-    group?: string // group id for radio
-}
-export interface DropdownElement extends BaseElement {
-    type: ElementType.dropdown
-    trigger: UIElement
-    items: DropdownItem[]
-}
-
-
-export interface TabsElement extends BaseElement {
-    type: ElementType.tabs;
-    tabs: { id: string; label: string; content: UIElement[] }[];
-    activeTab: string;
-    onChange?: EventHandler;
-}
-
-export interface AccordionElement extends BaseElement {
-    type: ElementType.accordion
-    items: {
-        id: string
-        title: Binding
-        content: UIElement[]
-    }[]
-    expandedItem?: string | string[] // single or multiple
-    onChange?: EventHandler
-    multiple?: boolean
-    collapsible?: boolean
-}
-
-
-export interface CarouselElement extends BaseElement {
-    type: ElementType.carousel
-    items: (UIElement & { interval?: number })[] | Binding
-    autoPlay?: boolean
-    interval?: number
-    orientation?: "horizontal" | "vertical"
-    loop?: boolean
-    showControls?: boolean
-    showIndicators?: boolean
-    showProgress?: boolean
-}
-
-export interface LoaderElement extends BaseElement {
-    type: ElementType.loader;
-    variant: string;
-    size: string;
-}
-
-export interface HeaderElement extends BaseElement {
-    type: ElementType.header;
-    alignment?: Alignment;
-}
-
-export interface FooterElement extends BaseElement {
-    type: ElementType.footer;
-    alignment?: Alignment;
-}
-export interface SeriesSpec {
-    key: string
-    type?: "bar" | "line" | "area" | "scatter" | "radar"
-    color?: string
-    stackId?: string
-    label?: string
-    yAxisId?: string
-    opacity?: number
-    strokeWidth?: number
-    dot?: boolean | object
-}
-export interface AnimationSpec {
-    /** initial state */
-    initial?: Record<string, any>
-    /** animate to */
-    animate?: Record<string, any>
-    /** exit state */
-    exit?: Record<string, any>
-    /** hover effect */
-    whileHover?: Record<string, any>
-    /** tap/click effect */
-    whileTap?: Record<string, any>
-    /** framer-motion transition */
-    transition?: Record<string, any>
-    /** whether to animate layout changes */
-    layout?: boolean
-}
-
-
-export interface ChartElement extends BaseElement {
-    type: ElementType.chart
-    chartType:
-    | "bar"
-    | "line"
-    | "area"
-    | "pie"
-    | "radar"
-    | "radialBar"
-    | "scatter"
-    | "composed"
-    | "candlestick"
-
-    data: Binding | any[]
-
-    options?: {
-        xKey?: string
-        yKey?: string
-        valueKey?: string
-        openKey?: string
-        highKey?: string
-        lowKey?: string
-        closeKey?: string
-
-        stacked?: boolean
-        series?: SeriesSpec[]
-
-        colors?: string[]
-        donut?: boolean
-        radius?: number | string
-
-        legend?: boolean
-        tooltip?: boolean
-        responsive?: boolean
-        grid?: boolean | Record<string, any>
-
-        xDomain?: any
-        yDomain?: any
-        syncId?: string
-
-        xFormatter?: string | Binding
-        yFormatter?: string | Binding
-        tooltipFormatter?: string | Binding
-
-        lineStrokeWidth?: number
-        lineDot?: boolean | Record<string, any>
-        areaOpacity?: number
-
-        animation?: boolean | Record<string, any>
-        brush?: boolean | Record<string, any>
-        referenceLines?: {
-            x?: number[] | string[]
-            y?: number[]
-        }
-
-        ariaLabel?: string | Binding
-        description?: string | Binding
-    }
-}
-export interface CommandElement extends BaseElement {
-    type: ElementType.command
-    placeholder?: string
-    title?: string
-    description?: string
-    global?: boolean
-    showMobileButton?: boolean
-    emptyMessage?: string
-    groups?: {
-        heading: string
-        items: {
-            id: string
-            label: string
-            icon?: string
-            shortcut?: string
-            disabled?: boolean
-            onSelect?: EventHandler
-        }[]
-    }[]
-}
-
-export interface CustomElement extends BaseElement {
-    type: ElementType.custom;
-
-    /** Single component name OR array of component names */
-    component: string | string[];
-
-    /** Arbitrary props to inject (resolved via bindings) */
-    props?: Record<string, any>;
-
-    /** Whether to render as group wrapper or individually */
-    groupLayout?: "stack" | "inline" | "fragment";
-}
-
-export interface CollapsibleElement extends BaseElement {
-    type: ElementType.collapsible
-    open?: boolean | Binding
-    onOpenChange?: EventHandler
-    trigger?: UIElement
-    content?: UIElement[]
-}
-
-export interface AvatarElement extends BaseElement {
-    type: ElementType.avatar
-    src?: Binding
-    alt?: Binding
-    size?: number | string
-    fallback?: Binding
-    generation?: GenerationSpec
-    onlineStatus?: boolean | "online" | "offline" | "away" | Binding
-    shape?: "circle" | "square" | "rounded"
-    showRing?: boolean
-}
-
-export interface VoiceElement extends BaseElement {
-    type: ElementType.voice;
-    mode: 'input' | 'output' | 'both';
-    language: string;
-    voiceModel?: string;
-    onRecognize?: EventHandler;
-    onSpeak?: EventHandler;
-    outputText?: Binding;
-}
-
-export interface CallElement extends BaseElement {
-    type: "call";
-    callType: "video" | "audio";
-    /**
-     * Room/peer identity – can be a roomId for conference or a peerId for 1:1
-     */
-    peerId: Binding;                   // string
-    /**
-     * WebSocket signaling server URL (wss://...). Your server should relay JSON
-     * messages between room participants (join/offer/answer/candidate/leave).
-     */
-    signalingServer: Binding;          // string
-    /**
-     * Optional TURN/STUN config. Defaults provided below.
-     */
-    iceServers?: Array<{ urls: string | string[], username?: string, credential?: string }>;
-
-    // UX flags & defaults
-    autoplay?: boolean;                 // auto start local cam/mic
-    mirrorLocal?: boolean;              // mirror local video
-    showGridNames?: boolean;
-    maxPeers?: number;                  // safety cap for mesh rooms
-    screenShare?: boolean;              // allow screen share button
-    devicesMenu?: boolean;              // show cam/mic/speaker selection
-    stats?: boolean;                    // show connection stats per tile
-
-    // Media constraints
-    videoConstraints?: MediaTrackConstraints; // e.g., { width: { ideal: 1280 }, frameRate: { ideal: 30 } }
-    audioConstraints?: MediaTrackConstraints; // e.g., { echoCancellation: true }
-
-    // Hooks
-    onConnect?: EventHandler;
-    onDisconnect?: EventHandler;
-    onError?: EventHandler;
-    onPeerJoin?: EventHandler;          // payload: { peerId }
-    onPeerLeave?: EventHandler;         // payload: { peerId }
-    onStats?: EventHandler;             // periodic stats payload
-
-    // in your CallElement (add fields)
-    mode?: "mesh" | "sfu";            // default "mesh"
-    sfu?: {
-        // Generic SFU signaling over the SAME ws used by signalingServer.
-        // If you use a separate SFU ws, pass it here and I'll open a 2nd WS.
-        url?: Binding;                  // optional (defaults to signalingServer)
-        authToken?: Binding;            // optional bearer or custom
-        autoSubscribe?: boolean;        // default true
-    };
-
-    // Analytics
-    tracking?: {
-        dataSourceId?: string;            // send analytics via Actions api_call
-        heartbeatInterval?: number;       // seconds
-        events?: Array<"join" | "leave" | "mute" | "unmute" | "camera_on" | "camera_off" | "screenshare_on" | "screenshare_off" | "device_change" | "error">;
-    };
-}
-
-export interface WalletElement extends BaseElement {
-    type: ElementType.wallet;
-    provider: "metamask" | "walletconnect";
-    chainId: number;
-    projectId?: string;
-    mode?: "full" | "button";
-
-    onConnect?: EventHandler;
-    onDisconnect?: EventHandler;
-    onError?: EventHandler;
-
-    contracts?: {
-        address: string | Binding;
-        abi: string[];
-        functions: {
-            name: string;
-            type: "view" | "write";
-            label?: string;
-            inputs?: Array<{
-                name: string;         // param name (for UI label)
-                type: string;         // Solidity type: "address", "uint256", "string"
-                placeholder?: string; // optional UI hint
-            }>;
-            onResult?: EventHandler;
-        }[];
-    }[];
-}
-
-
-export interface EditorElement extends BaseElement {
-    type: ElementType.editor
-
-    /** Initial or bound content */
-    content: Binding | string
-
-    /** Optional placeholder */
-    placeholder?: Binding | string
-
-    /** Event when content changes */
-    onChange?: EventHandler
-
-    /** Toolbar controls */
-    toolbar?: {
-        bold?: boolean
-        italic?: boolean
-        underline?: boolean
-        bulletList?: boolean
-        orderedList?: boolean
-        codeBlock?: boolean
-    }
-}
-
-export interface QuizElement extends BaseElement {
-    type: ElementType.quiz;
-    questions: {
-        id: string;
-        question: Binding;
-        options: { value: string; label: Binding }[];
-        correctAnswer: string;
-    }[];
-    onSubmit: EventHandler;
-}
-
-export interface CalendarElement extends BaseElement {
-    type: ElementType.calendar
-    events: { id: string; title: Binding; start: Binding; end: Binding }[]
-    selectedDate?: Binding
-    selectionMode?: "single" | "multiple" | "range"
-    onSelect: EventHandler
-}
-
-export interface QRReaderlement extends BaseElement {
-    type: ElementType.qr_reader;
-    value: Binding;             // text/URL encoded into QR
-    size?: number;              // px size (default 128)
-    mode?: "generate" | "scan"; // choose generate or scan
-    onScan?: EventHandler;      // callback when QR scanned
-}
-
-export interface PaymentElement extends BaseElement {
-    type: ElementType.payment;
-    provider: 'stripe' | 'paypal' | 'razorpay' | 'custom';
-    amount: number | Binding;
-    currency: string;
-    description?: Binding;
-    publicKey?: string;
-    clientSecret?: string;
-    connectId?: string;
-    metadata?: Record<string, string | number | boolean | Binding>;
-    onSuccess?: EventHandler;
-    onFailure?: EventHandler;
-    onCancel?: EventHandler;
-}
-
-export interface ThreeDModelElement extends BaseElement {
-    type: ElementType.three_d_model;
-    src: Binding;
-    alt?: Binding;
-}
-
-export interface BreadcrumbElement extends BaseElement {
-    type: ElementType.breadcrumb
-    items: {
-        id: string
-        label: Binding
-        href?: string | Binding
-        iconLeft?: UIElement
-        iconRight?: UIElement
-        onClick?: EventHandler
-    }[]
-    separator?: "chevron" | "slash" | "dot" | "custom"
-    ellipsisAfter?: number // collapse middle items if too many
-    tooltip?: boolean // show tooltips on hover for truncated labels
-}
-
-export interface AlertDialogElement extends BaseElement {
-    type: ElementType.alert_dialog;
-
-    title: Binding;
-    description?: Binding;
-    content: UIElement[];
-
-    isOpen: boolean | Binding;
-    onOpenChange?: EventHandler;
-
-    /** Optional trigger button (opens dialog) */
-    trigger?: UIElement;
-
-    /** Primary / secondary actions */
-    cancelButton?: ButtonElement;
-    actionButton?: ButtonElement;
-
-    /** Extended actions (for >2 buttons) */
-    actions?: Array<ButtonElement & { role?: "default" | "destructive" | "cancel" }>;
-
-    /** Visual variants for tone */
-    variant?: "default" | "info" | "warning" | "danger" | "success" | "destructive";
-
-    /** Whether clicking outside or pressing ESC closes dialog */
-    dismissible?: boolean;
-
-    /** Layout control */
-    size?: "sm" | "md" | "lg" | "xl" | "full";
-    position?: "center" | "top" | "bottom";
-}
-
-
-
-export interface HoverCardElement extends BaseElement {
-    type: ElementType.hover_card;
-    trigger: UIElement;
-    content: UIElement[];
-}
-export interface MenuElement extends BaseElement {
-    type: ElementType.menu;
-
-    /** Variant controls which renderer to use */
-    variant: "dropdown" | "context" | "menubar" | "navigation";
-
-    /** Optional menu label/title (e.g. for navigation) */
-    label?: Binding;
-
-    /** Trigger element (button, icon, text, etc.) */
-    trigger?: UIElement;
-
-    /** Items for dropdown, context, navigation */
-    items: MenuItem[];
-
-    /** Only used for menubar */
-    menus?: Array<{
-        id: string;
-        label: Binding;
-        items: MenuItem[];
-    }>;
-}
-
-export type MenuItem =
-    | {
-        id: string;
-        type: "item";
-        label: Binding;
-        icon?: string;
-        shortcut?: string;
-        variant?: "default" | "destructive";
-        href?: string; // for navigation links
-        onSelect?: EventHandler;
-    }
-    | {
-        id: string;
-        type: "checkbox";
-        label: Binding;
-        checked?: Binding;
-        onSelect?: EventHandler;
-    }
-    | {
-        id: string;
-        type: "radio";
-        label: Binding;
-        value: string;
-        onSelect?: EventHandler;
-    }
-    | {
-        id: string;
-        type: "label";
-        label: Binding;
-    }
-    | {
-        id: string;
-        type: "separator";
-    }
-    | {
-        id: string;
-        type: "sub";
-        label: Binding;
-        icon?: string;
-        items: MenuItem[];
-    };
-
-
-export interface NavigationMenuElement extends BaseElement {
-    type: ElementType.navigation_menu;
-    items: Array<{
-        id: string;
-        label: Binding;
-        content: UIElement[];
-    }>;
-}
-export interface PaginationElement extends BaseElement {
-    type: ElementType.pagination;
-    pages: Array<{ number: number; active: boolean }>;
-    totalPages?: number | Binding;
-    currentPage?: number | Binding;
-    showEllipsis?: boolean;
-    onPrevious?: EventHandler;
-    onNext?: EventHandler;
-    onPageChange?: EventHandler;
-}
-
-
-export interface PopoverElement extends BaseElement {
-    type: ElementType.popover;
-    trigger: UIElement;          // the button / element that opens the popover
-    content: UIElement[];        // children inside the popover
-    side?: "top" | "bottom" | "left" | "right";
-    align?: "start" | "center" | "end";
-    open?: boolean | Binding;    // controlled or bound open state
-    onOpenChange?: EventHandler; // callback when popover toggles
-}
-
-export interface ProgressElement extends BaseElement {
-    type: ElementType.progress;
-    value: number | Binding;
-    indeterminate?: boolean | Binding;
-    label?: Binding;
-    /** where to place the label */
-    labelPosition?: "inside" | "outside" | "none";
-    /** if true → hide visually but keep for screen readers */
-    srOnlyLabel?: boolean | Binding;
-}
-
-export interface RadioGroupElement extends BaseElement {
-    type: ElementType.radio_group;
-
-    /** Currently selected value */
-    value: Binding;
-
-    /** List of options */
-    options: Array<{ value: string; label: Binding; disabled?: boolean }>;
-
-    /** Event handler for value change */
-    onChange?: EventHandler;
-
-    /** Layout orientation (default = vertical) */
-    orientation?: "horizontal" | "vertical";
-
-    /** Disable the entire group */
-    disabled?: boolean;
-}
-export interface ScrollAreaElement extends BaseElement {
-    type: ElementType.scroll_area
-
-    /** Direction of scrolling */
-    orientation?: "vertical" | "horizontal" | "both"
-
-    /** Scrollbar visibility */
-    scrollHide?: boolean // auto-hide when not scrolling
-
-    /** Scrollbar size */
-    size?: "sm" | "md" | "lg"
-
-    /** Child content */
-    children?: UIElement[]
-}
-
-export interface ResizableElement extends BaseElement {
-    type: ElementType.resizable;
-
-    /** Layout direction */
-    direction: "horizontal" | "vertical";
-
-    /** Panels with nested UI */
-    panels: Array<{
-        id: string;
-        content: UIElement[];
-        defaultSize?: number;   // % width or height depending on direction
-        minSize?: number;       // minimum size in %
-        maxSize?: number;       // maximum size in %
-        collapsible?: boolean;  // allow collapse
-    }>;
-
-    /** Show draggable handle icon */
-    withHandle?: boolean;
-}
-
-export interface SheetElement extends BaseElement {
-    type: ElementType.sheet
-    title?: Binding
-    description?: Binding
-    isOpen?: boolean | Binding
-    trigger?: UIElement
-    content: UIElement[]
-    footer?: UIElement[]
-    onOpenChange?: EventHandler
-    direction?: "left" | "right" | "top" | "bottom"
-    showCloseButton?: boolean
-    shortcuts?: Array<{ key: string; action: "close" | "toggle" }>
-}
-
-export interface SidebarElement extends BaseElement {
-    type: ElementType.sidebar;
-    header?: UIElement;
-    groups: Array<{
-        id: string;
-        label: Binding;
-        items: UIElement[];
-    }>;
-    footer?: UIElement;
-}
-export interface ToggleElement extends BaseElement {
-    type: ElementType.toggle
-    pressed?: Binding | boolean
-    onToggle?: EventHandler
-    variant?: "default" | "outline"
-    size?: "default" | "sm" | "lg"
-    label?: Binding
-    icon?: string
-}
-export interface ToggleGroupElement extends BaseElement {
-    type: ElementType.toggle_group
-    value: Binding | string[] // single or multiple selection
-    multiple?: boolean        // default = false
-    options: ToggleElement[]  // reuse ToggleElement schema
-    onChange?: EventHandler
-}
-
-
-export interface TooltipElement extends BaseElement {
-    type: ElementType.tooltip;
-    trigger: UIElement;
-    content: Binding;
-    delayDuration?: number;
-    side?: "top" | "bottom" | "left" | "right";
-    sideOffset?: number;
-}
-
-
-export type UIElement =
-    | ButtonElement | ModalElement | IconElement | BadgeElement
-    | TextElement | ImageElement | VideoElement | CardElement | CommandElement
-    | ContainerElement | FormElement | TableElement | DataGridElement | MapElement
-    | StepWizardElement | AlertElement | DropdownElement | TabsElement | AccordionElement
-    | CarouselElement | LoaderElement | ChartElement | CustomElement | AvatarElement
-    | VoiceElement | CallElement | WalletElement
-    | FileUploadElement | EditorElement | QuizElement | CalendarElement
-    | QRCodeElement | ThreeDModelElement | PaymentElement | ToggleElement
-    | DrawerElement | ContextMenuElement | BreadcrumbElement | AlertDialogElement
-    | HoverCardElement | MenuElement | NavigationMenuElement | PaginationElement | PopoverElement | RadioGroupElement
-    | ProgressElement | RadioGroupElement | ResizableElement | SheetElement | SidebarElement | ToggleGroupElement | TooltipElement;
-
-export interface DataSource {
-    id: string;
-    refId?: string;
-    baseUrl?: string | Binding;
-    path?: string | Binding;
-    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'WEBSOCKET' | 'GRAPHQL';
-    headers?: Record<string, string | Binding>;
-    body?: Record<string, any> | Binding;
-    credentials?: 'include' | 'omit' | 'same-origin';
-    errorKey?: string;
-    query?: string;
-    protocol?: 'graphql-ws' | 'subscriptions-transport-ws' | 'graphql-transport-ws';
-    graphql_operation?: 'query' | 'mutation' | 'subscription';
-    queryParams?: Record<string, string | Binding>;
-    pollingInterval?: number;
-    retry?: { attempts: number; delay: number; strategy?: 'exponential' | 'linear' | 'jitter' };
-    heartbeat?: { interval: number; message: Binding };
-    auth?: { type: 'basic' | 'bearer' | 'api_key'; value: Binding };
-}
-
-export interface DataSourceRef {
-    id: string;
-    baseUrl?: string | Binding;
-    path?: string | Binding;
-    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'WEBSOCKET' | 'GRAPHQL';
-    headers?: Record<string, string | Binding>;
-    body?: Record<string, any> | Binding;
-    query?: string | Binding;
-    queryParams?: Record<string, string | Binding>;
-    pollingInterval?: number;
-    retry?: { attempts: number; delay: number };
-    heartbeat?: { interval: number; message: Binding };
-    auth?: { type: 'basic' | 'bearer' | 'api_key'; value: Binding };
-}
-
-export interface EndpointEnvironments {
-    default: string;
-    values: Record<string, {
-        baseUrl?: string | Binding;
-        headers?: Record<string, string | Binding>;
-    }>;
+    errorAction?: EventHandler;
+    errorTransition?: TransitionSpec;
+    exportConfig?: ExportConfig;
+    params?: Record<string, any | Binding>;
+    responseType?: 'ui' | 'data' | 'none' | 'voice' | 'call';
+    successAction?: EventHandler;
+    successTransition?: TransitionSpec;
 }
 
 export interface ExportConfig {
     format: 'pdf' | 'ppt' | 'word' | 'json';
-    resolution?: string;
     includeNotes?: boolean;
+    resolution?: string;
     template?: string;
 }
 
-export interface DataMapping {
-    sourceIds: string[];
-    transform?: string;
-    outputKey: string;
-    crudOperation?: ActionType;
-}
-
-export interface TransitionSpec {
-    href?: string;
-    screenId?: string;
-    replace?: boolean;
-    modal?: {
-        closeId?: string;
-        openId?: string;
-    };
-    statePatches?: Array<{ key: string; value: any | Binding }>;
-}
-
-export interface EventHandler {
-    action: ActionType;
-    params?: Record<string, any | Binding>;
-    responseType?: 'ui' | 'data' | 'none' | 'voice' | 'call';
-    dataSourceId?: string;
-    successAction?: EventHandler;
-    errorAction?: EventHandler;
-    successTransition?: TransitionSpec;
-    errorTransition?: TransitionSpec;
-    exportConfig?: ExportConfig;
-    aiPrompt?: string;
-}
-
-export interface UIScreenDef {
-    id: string;
-    version: string;
-    layoutType: LayoutType;
-    name: Binding;
-    route: string;
-    elements: UIElement[];
-    dataSources?: DataSource[];
-    dataMappings?: DataMapping[];
-    transition?: { type: string; direction?: string; duration: number };
-    metadata: Record<string, string | number | boolean | Record<string, any>>;
-    styles?: StyleProps;
-    guard?: GuardRule;
-    lifecycle?: {
-        onEnter?: EventHandler;
-        onLeave?: EventHandler;
-    };
-}
-
-export interface UIDefinition {
-    id: string;
-    version: string;
-    screens: UIScreenDef[];
-    translations: Record<string, Record<string, string>>;
-    initialData?: Record<string, any>;
-    state?: {
-        keys?: Record<string, {
-            defaultValue: any;
-            dataType: 'string' | 'number' | 'boolean' | 'object' | 'array';
-            binding?: Binding;
-            validation?: {
-                required?: boolean;
-                regex?: string;
-                minLength?: number;
-                maxLength?: number;
-                min?: number;
-                max?: number;
-            };
-        }>;
-        persist?: boolean;
-        persistStorage?: 'localStorage' | 'sessionStorage' | 'cookie';
-        webSocketKeys?: string[];
-        webSocketEndpoint?: {
-            url: string | Binding;
-            protocol?: 'graphql-ws' | 'subscriptions-transport-ws' | 'graphql-transport-ws';
-            auth?: { type: 'basic' | 'bearer' | 'api_key'; value: Binding };
-        };
-    };
-}
-
-export interface ConditionExpr {
-    key: Binding;
-    op: ConditionOp;
-    value?: any;
-}
-
-export interface GuardRule {
-    conditions?: ConditionExpr[];
-    mode?: 'all' | 'any';
-    dataSourceId?: string;
-    onFail: RedirectSpec;
-    requireAuth?: boolean;
-    requireOrganization?: boolean;
-    requireOtp?: boolean;
-    requireConsents?: string[];
-}
-
-export type ConditionOp = '==' | '!=' | '>' | '<' | '>=' | '<=' | 'exists' | 'not_exists' | 'matches' | 'in' | 'not_in';
-
-export interface NavStyle {
-    activeStyle?: StyleProps;
-    inactiveStyle?: StyleProps;
-    containerStyle?: StyleProps;
-    overlayStyle?: StyleProps;
-    sheetStyle?: StyleProps;
-}
-
-export interface IRouteList {
-    routes: IRoute[];
-    layout?: string;
-    desktopNavType?: 'top' | 'side';
-    responsiveNavType?: 'bottom' | 'burger';
-    metadata: {
-        basePath: string;
-        totalRoutes: number;
-        generatedAt: string;
-        version?: string;
-    };
-    navStyle: NavStyle;
-}
-
-export interface IRoute {
-    label: string;
-    href: string;
-    icon: string;
-    showInBottomBar: boolean;
-    showInNavigation: boolean;
-    file: string;
-    guard?: GuardRule;
-    metadata: {
-        title?: string;
-        description?: string;
-        datePublished?: string;
-        dateModified?: string;
-        pagination?: {
-            previous?: null | string | URL | undefined;
-            next?: null | string | URL | undefined;
-        };
-        openGraph?: {
-            title?: string;
-            description?: string;
-            url?: string;
-            siteName?: string;
-        };
-        twitter?: {
-            card?: string;
-            title?: string;
-            description?: string;
-        };
-        keywords?: string[];
-        formatDetection?: {
-            email?: boolean;
-            address?: boolean;
-            telephone?: boolean;
-            date?: boolean;
-            url?: boolean;
-        };
-    };
-    isDynamic: boolean;
-    requiresAuth: boolean;
-    nested?: IRoute[];
-    visibility?: VisibilityControl;
-    screenId?: string;
-    screenVersion?: string;
-    screenConfigUrl?: string;
-}
-
-export interface OAuthProviderConfig {
-    id: 'google' | 'microsoft' | 'github' | 'okta' | 'custom';
-    clientId?: string | Binding;
-    authUrl?: string;
-    tokenUrl?: string;
-    redirectUri?: string;
-    scopes?: string[];
-    pkce?: boolean;
-    extraParams?: Record<string, string>;
-}
-
-export interface OIDCConfig {
-    issuer: string;
-    clientId?: string | Binding;
-    redirectUri?: string;
-    scopes?: string[];
-    discoveryUrl?: string;
-}
-
-export interface SAMLConfig {
-    idpMetadataUrl: string;
-    spAcsUrl?: string;
-}
-
-export interface I18nConfig {
-    defaultLocale?: string;
-    supportedLocales?: string[];
-    rtlLocales?: string[];
-    formats?: {
-        date?: string;
-        time?: string;
-        number?: { grouping?: boolean; minFrac?: number; maxFrac?: number };
-        currency?: { style?: 'symbol' | 'code' | 'name' };
-    };
-}
-
+// === Project Configuration Types ===
 export interface AccessibilityConfig {
-    reducedMotion?: boolean;
-    highContrast?: boolean;
     focusRingAlways?: boolean;
+    highContrast?: boolean;
     keyboardOnlyMode?: boolean;
-}
-
-export interface SecurityConfig {
-    csrfHeaderName?: string;
-    nonceKey?: string;
-    maskKeys?: string[];
-}
-
-export interface SocialMediaLinks {
-    twitter?: string;
-    linkedin?: string;
-    facebook?: string;
-    instagram?: string;
-    youtube?: string;
-    github?: string;
-    discord?: string;
-    tiktok?: string;
-    medium?: string;
-    website?: string;
-    [platform: string]: string | undefined;
+    reducedMotion?: boolean;
 }
 
 export interface Brand {
-    href: string;
-    name?: string;
-    logoUrl?: string;
     faviconUrl?: string;
+    href: string;
+    logoUrl?: string;
+    name?: string;
     slogan?: string;
     socialMedia?: SocialMediaLinks;
 }
 
-export interface UIProject {
-    projectId?: string;
-    version: string;
-    routeList: IRouteList;
-    header?: HeaderElement;
-    footer?: FooterElement;
-    brand: Brand;
-    routeBase?: string;
-    telemetry?: {
-        ingestUrl?: string;
-        errorUrl?: string;
-        sampleRate?: number;
+export interface I18nConfig {
+    defaultLocale?: string;
+    formats?: {
+        currency?: { style?: 'symbol' | 'code' | 'name' };
+        date?: string;
+        number?: { grouping?: boolean; maxFrac?: number; minFrac?: number };
+        time?: string;
     };
+    rtlLocales?: string[];
+    supportedLocales?: string[];
+}
+
+export interface SecurityConfig {
+    csrfHeaderName?: string;
+    maskKeys?: string[];
+    nonceKey?: string;
+}
+
+export interface SocialMediaLinks {
+    discord?: string;
+    facebook?: string;
+    github?: string;
+    instagram?: string;
+    linkedin?: string;
+    medium?: string;
+    tiktok?: string;
+    twitter?: string;
+    website?: string;
+    youtube?: string;
+    [platform: string]: string | undefined;
+}
+
+export interface UIProject {
+    brand: Brand;
+    footer?: FooterElement;
     globalConfig?: {
-        paymentCheckoutAPIUrl?: string;
-        paypalUrl?: string;
-        walletConnectUrl?: string;
-        auth?: AuthGlobalConfig;
-        maps?: MapsGlobalConfig;
-        endpoints?: {
-            registry?: DataSource[];
-            environments?: EndpointEnvironments;
-            defaultHeaders?: Record<string, string | Binding>;
-            auth?: { type: 'basic' | 'bearer' | 'api_key'; value: Binding };
-            dataMappings?: DataMapping[];
-        };
-        translateConfig: I18nConfig;
-        security?: SecurityConfig;
         accessibilityConfig?: AccessibilityConfig;
+        auth?: AuthGlobalConfig;
+        endpoints?: {
+            dataMappings?: DataMapping[];
+            auth?: { type: 'basic' | 'bearer' | 'api_key'; value: Binding };
+            defaultHeaders?: Record<string, string | Binding>;
+            environments?: EndpointEnvironments;
+            registry?: DataSource[];
+        };
+        maps?: MapsGlobalConfig;
         metadata?: {
-            category?: string;
-            license?: string;
-            schemaType?: string;
-            language?: string;
-            classification?: string;
-            search?: { enabled?: boolean; path?: string };
-            viewport?: {
-                width?: string | number;
-                height?: string | number;
-                initialScale?: number;
-                maximumScale?: number;
-                minimumScale?: number;
-                userScalable?: string;
-                viewportFit?: 'auto' | 'cover' | 'contain';
-                interactiveWidget?: 'resizes-visual' | 'resizes-content' | 'overlays-content';
-                themeColor?: string;
-                colorScheme?: 'normal' | 'light' | 'dark' | 'light dark' | 'dark light' | 'only light';
-            };
-            verification?: {
-                google?: string | number | (string | number)[];
-                yahoo?: string | number | (string | number)[];
-                yandex?: string | number | (string | number)[];
-                me?: string | number | (string | number)[];
-                other?: { [name: string]: string | number | (string | number)[] };
-            };
-            pinterest?: { richPin: string | boolean };
-            facebook?: { appId: string; admins?: never };
-            twitter?: { site?: string };
-            itunes?: { appId: string; appArgument?: string };
             appLinks?: {
+                android?: { app_name?: string; class?: string; package: string; url: string };
                 ios?: { app_name?: string; app_store_id?: string; url: string };
-                iphone?: { app_name?: string; app_store_id?: string; url: string };
                 ipad?: { app_name?: string; app_store_id?: string; url: string };
-                android?: { package: string; app_name?: string; url: string; class?: string };
-                web?: { url: string; should_fallback?: boolean };
+                iphone?: { app_name?: string; app_store_id?: string; url: string };
+                web?: { should_fallback?: boolean; url: string };
                 windows?: { app_id: string; app_name?: string; url: string };
                 windows_phone?: { app_id: string; app_name?: string; url: string };
                 windows_universal?: { app_id: string; app_name: string; url: string };
             };
             bookmarks?: string | Array<string>;
+            category?: string;
+            classification?: string;
+            facebook?: { appId: string; admins?: never };
+            itunes?: { appId: string; appArgument?: string };
+            language?: string;
+            license?: string;
+            pinterest?: { richPin: string | boolean };
+            schemaType?: string;
+            search?: { enabled?: boolean; path?: string };
+            twitter?: { site?: string };
+            verification?: {
+                google?: string | number | (string | number)[];
+                me?: string | number | (string | number)[];
+                other?: { [name: string]: string | number | (string | number)[] };
+                yahoo?: string | number | (string | number)[];
+                yandex?: string | number | (string | number)[];
+            };
+            viewport?: {
+                colorScheme?: 'normal' | 'light' | 'dark' | 'light dark' | 'dark light' | 'only light';
+                height?: string | number;
+                initialScale?: number;
+                interactiveWidget?: 'resizes-visual' | 'resizes-content' | 'overlays-content';
+                maximumScale?: number;
+                minimumScale?: number;
+                themeColor?: string;
+                userScalable?: string;
+                viewportFit?: 'auto' | 'cover' | 'contain';
+                width?: string | number;
+            };
         };
+        paymentCheckoutAPIUrl?: string;
+        paypalUrl?: string;
+        security?: SecurityConfig;
+        translateConfig: I18nConfig;
+        walletConnectUrl?: string;
     };
     globalStyles?: {
+        animationFramework?: string;
+        tailwindConfig?: {
+            customClasses?: Record<string, string>;
+            important?: boolean;
+            prefix?: string;
+        };
         theme?: {
-            primaryColorLight?: string;
-            primaryColorDark?: string;
-            secondaryColorLight?: string;
-            secondaryColorDark?: string;
+            colorScheme?: 'normal' | 'light' | 'dark' | 'light dark' | 'dark light' | 'only light';
             fontFamily?: string;
             fontSizeBase?: string;
-            colorScheme?: 'normal' | 'light' | 'dark' | 'light dark' | 'dark light' | 'only light';
+            primaryColorDark?: string;
+            primaryColorLight?: string;
+            secondaryColorDark?: string;
+            secondaryColorLight?: string;
         };
-        tailwindConfig?: {
-            prefix?: string;
-            important?: boolean;
-            customClasses?: Record<string, string>;
-        };
-        animationFramework?: string;
     };
-    translations?: Record<string, Record<string, string>>;
+    header?: HeaderElement;
     initialData?: Record<string, any>;
+    projectId?: string;
+    routeBase?: string;
+    routeList: IRouteList;
     state?: {
         keys?: Record<string, {
-            defaultValue: any;
-            dataType: 'string' | 'number' | 'boolean' | 'object' | 'array';
             binding?: Binding;
+            dataType: 'string' | 'number' | 'boolean' | 'object' | 'array';
+            defaultValue: any;
             validation?: {
-                required?: boolean;
-                regex?: string;
-                minLength?: number;
+                max?: number;
                 maxLength?: number;
                 min?: number;
-                max?: number;
+                minLength?: number;
+                regex?: string;
+                required?: boolean;
             };
         }>;
         persist?: boolean;
         persistStorage?: 'localStorage' | 'sessionStorage' | 'cookie';
-        webSocketKeys?: string[];
         webSocketEndpoint?: {
-            url: string | Binding;
-            protocol?: 'graphql-ws' | 'subscriptions-transport-ws' | 'graphql-transport-ws';
             auth?: { type: 'basic' | 'bearer' | 'api_key'; value: Binding };
+            protocol?: 'graphql-ws' | 'subscriptions-transport-ws' | 'graphql-transport-ws';
+            url: string | Binding;
         };
+        webSocketKeys?: string[];
     };
+    telemetry?: {
+        errorUrl?: string;
+        ingestUrl?: string;
+        sampleRate?: number;
+    };
+    translations?: Record<string, Record<string, string>>;
+    version: string;
 }
