@@ -4,7 +4,10 @@ import * as React from "react"
 import * as ContextMenuPrimitive from "@radix-ui/react-context-menu"
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
 
-import { cn } from "@/src/lib/utils"
+import { cn, resolveBinding } from "@/src/lib/utils"
+import { DynamicIcon } from "./DynamicIcon"
+import { AnyObj, ContextMenuElement, EventHandler, ContextMenuItem as ContextMenuItemType } from "@/src/types"
+import { ElementResolver } from "@/src/schema/ElementResolver"
 
 function ContextMenu({
   ...props
@@ -233,7 +236,121 @@ function ContextMenuShortcut({
   )
 }
 
+function renderContextMenuItems(
+  items: ContextMenuItemType[],
+  state: AnyObj,
+  t: (s: string) => string,
+  runEventHandler: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+): React.ReactNode {
+  // group radios by group name
+  const groupedRadios = items.filter(i => i.type === "radio").reduce<Record<string, ContextMenuItemType[]>>((acc, item: any) => {
+    acc[item.group] = acc[item.group] || []
+    acc[item.group].push(item)
+    return acc
+  }, {})
+
+  return items.map(item => {
+    const label = "label" in item ? resolveBinding(item.label, state, t) : null
+
+    switch (item.type) {
+      case "separator":
+        return <ContextMenuSeparator key={item.id} />
+
+      case "label":
+        return (
+          <ContextMenuLabel key={item.id} inset={item.inset}>
+            {label}
+          </ContextMenuLabel>
+        )
+
+      case "checkbox":
+        return (
+          <ContextMenuCheckboxItem
+            key={item.id}
+            checked={resolveBinding(item.checked, state, t) ?? false}
+            onCheckedChange={val => runEventHandler(item.onSelect, { checked: val })}
+          >
+            {label}
+          </ContextMenuCheckboxItem>
+        )
+
+      case "radio":
+        // only render group container once
+        if (!groupedRadios[item.group] || groupedRadios[item.group][0].id !== item.id) return null
+        const radioGrpup: any = groupedRadios[item.group].find((r: any) => resolveBinding(r.checked, state, t));
+        return (
+          <ContextMenuRadioGroup
+            key={item.group}
+            value={radioGrpup}
+            onValueChange={val => {
+              const selected: any = groupedRadios[item.group].find((r: any) => r.value === val)
+              if (selected?.onSelect) runEventHandler(selected.onSelect)
+            }}
+          >
+            {groupedRadios[item.group].map((radio: any) => (
+              <ContextMenuRadioItem key={radio.id} value={radio.value}>
+                {resolveBinding(radio.label, state, t)}
+              </ContextMenuRadioItem>
+            ))}
+          </ContextMenuRadioGroup>
+        )
+
+      case "sub":
+        return (
+          <ContextMenuSub key={item.id}>
+            <ContextMenuSubTrigger>
+              {item.icon && <DynamicIcon name={item.icon} className="size-4" />}
+              {label}
+            </ContextMenuSubTrigger>
+            <ContextMenuSubContent>
+              {renderContextMenuItems(item.items, state, t, runEventHandler)}
+            </ContextMenuSubContent>
+          </ContextMenuSub>
+        )
+
+      case "item":
+      default:
+        return (
+          <ContextMenuItem
+            key={item.id}
+            onSelect={() => runEventHandler(item.onSelect)}
+            data-variant={item.variant}
+            disabled={item.disabled}
+          >
+            {item.icon && <DynamicIcon name={item.icon} className="size-4" />}
+            {label}
+            {item.shortcut && <ContextMenuShortcut>{item.shortcut}</ContextMenuShortcut>}
+          </ContextMenuItem>
+        )
+    }
+  })
+}
+
+function ContextMenuRenderer({
+  element,
+  state,
+  t,
+  runEventHandler,
+}: {
+  element: ContextMenuElement
+  state: AnyObj
+  t: (s: string) => string
+  runEventHandler: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+}) {
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <ElementResolver element={element.trigger} runtime={{}} />
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        {renderContextMenuItems(element.items, state, t, runEventHandler)}
+      </ContextMenuContent>
+    </ContextMenu>
+  )
+}
+
 export {
+  ContextMenuRenderer,
   ContextMenu,
   ContextMenuTrigger,
   ContextMenuContent,

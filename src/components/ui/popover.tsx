@@ -3,7 +3,10 @@
 import * as React from "react"
 import * as PopoverPrimitive from "@radix-ui/react-popover"
 
-import { cn } from "@/src/lib/utils"
+import { cn, resolveBinding } from "@/src/lib/utils"
+import wrapWithMotion from "./wrapWithMotion"
+import { RenderChildren } from "@/src/schema/RenderChildren"
+import { AnyObj, EventHandler, PopoverElement } from "@/src/types"
 
 function Popover({
   ...props
@@ -45,4 +48,35 @@ function PopoverAnchor({
   return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />
 }
 
-export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor }
+function PopoverRenderer({
+  element,
+  runEventHandler,
+  state,
+  t,
+  runtime,
+}: {
+  element: PopoverElement
+  runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+  state: AnyObj
+  t: (key: string) => string
+  runtime: any
+}) {
+  const open = resolveBinding(element.open, state, t) ?? undefined
+
+  const handleOpenChange = (next: boolean) => {
+    runEventHandler(element.onOpenChange, { open: next })
+  }
+
+  return wrapWithMotion(
+    element,
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        {element.trigger && <RenderChildren children={[element.trigger]} />}
+      </PopoverTrigger>
+      <PopoverContent side={element.side} align={element.align}>
+        <RenderChildren children={element.content} />
+      </PopoverContent>
+    </Popover>
+  )
+}
+export { PopoverRenderer, Popover, PopoverTrigger, PopoverContent, PopoverAnchor }

@@ -2,7 +2,10 @@ import * as React from "react"
 import { GripVerticalIcon } from "lucide-react"
 import * as ResizablePrimitive from "react-resizable-panels"
 
-import { cn } from "@/src/lib/utils"
+import { cn, resolveBinding } from "@/src/lib/utils"
+import { RenderChildren } from "@/src/schema/RenderChildren"
+import { AnyObj, ResizableElement } from "@/src/types"
+import wrapWithMotion from "./wrapWithMotion"
 
 function ResizablePanelGroup({
   className,
@@ -50,5 +53,44 @@ function ResizableHandle({
     </ResizablePrimitive.PanelResizeHandle>
   )
 }
+function ResizableRenderer({
+  element,
+  state,
+  t,
+}: {
+  element: ResizableElement
+  state: AnyObj
+  t: (key: string) => string
+}) {
+  const direction = element.direction || "horizontal"
 
-export { ResizablePanelGroup, ResizablePanel, ResizableHandle }
+  return wrapWithMotion(
+    element,
+    <ResizablePanelGroup direction={direction} className="h-full w-full">
+      {element.panels.map((panel, i) => {
+        const defaultSize = resolveBinding(panel.defaultSize, state, t)
+        const minSize = resolveBinding(panel.minSize, state, t)
+        const maxSize = resolveBinding(panel.maxSize, state, t)
+
+        return (
+          <React.Fragment key={panel.id}>
+            <ResizablePanel
+              defaultSize={defaultSize}
+              minSize={minSize}
+              maxSize={maxSize}
+              collapsible={panel.collapsible}
+            >
+              <RenderChildren children={panel.content} />
+            </ResizablePanel>
+
+            {/* Insert handle between panels */}
+            {i < element.panels.length - 1 && (
+              <ResizableHandle withHandle={element.withHandle} />
+            )}
+          </React.Fragment>
+        )
+      })}
+    </ResizablePanelGroup>
+  )
+}
+export { ResizableRenderer, ResizablePanelGroup, ResizablePanel, ResizableHandle }

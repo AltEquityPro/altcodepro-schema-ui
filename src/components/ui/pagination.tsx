@@ -5,8 +5,10 @@ import {
   MoreHorizontalIcon,
 } from "lucide-react"
 
-import { cn } from "@/src/lib/utils"
+import { cn, resolveBinding } from "@/src/lib/utils"
 import { Button, buttonVariants } from "./button"
+import wrapWithMotion from "./wrapWithMotion"
+import { AnyObj, EventHandler, PaginationElement } from "@/src/types"
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   return (
@@ -116,7 +118,111 @@ function PaginationEllipsis({
   )
 }
 
+
+interface PageRendererProps {
+  element: PaginationElement;
+  runEventHandler: (
+    handler?: EventHandler,
+    dataOverride?: AnyObj
+  ) => Promise<void>;
+  state: AnyObj;
+  t: (key: string) => string;
+}
+
+function PageRenderer({
+  element,
+  runEventHandler,
+  state,
+  t,
+}: PageRendererProps) {
+  const pagination = element;
+  const total = resolveBinding(pagination.totalPages, state, t);
+  const current = resolveBinding(pagination.currentPage, state, t);
+
+  // Keyboard navigation
+  const navRef = React.useRef<HTMLUListElement>(null);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!navRef.current) return;
+    const focusable = Array.from(
+      navRef.current.querySelectorAll<HTMLAnchorElement>(
+        "[role='link'][tabindex='0']"
+      )
+    );
+
+    const currentIndex = focusable.findIndex(
+      (el) => el === document.activeElement
+    );
+
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      const next = focusable[(currentIndex + 1) % focusable.length];
+      next?.focus();
+    }
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      const prev =
+        focusable[(currentIndex - 1 + focusable.length) % focusable.length];
+      prev?.focus();
+    }
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      (document.activeElement as HTMLAnchorElement)?.click();
+    }
+  };
+
+  return wrapWithMotion(
+    element,
+    <Pagination>
+      <PaginationContent ref={navRef} onKeyDown={handleKeyDown}>
+        {/* Previous */}
+        <PaginationItem>
+          <PaginationPrevious
+            role="link"
+            tabIndex={0}
+            onClick={() => runEventHandler(pagination.onPrevious)}
+          />
+        </PaginationItem>
+
+        {/* Pages */}
+        {pagination.pages.map((page, i) => (
+          <PaginationItem key={i}>
+            <PaginationLink
+              role="link"
+              tabIndex={0}
+              isActive={page.active}
+              aria-current={page.active ? "page" : undefined}
+              onClick={() =>
+                runEventHandler(pagination.onPageChange, { page: page.number })
+              }
+            >
+              {page.number}
+            </PaginationLink>
+          </PaginationItem>
+        ))}
+
+        {/* Optional ellipsis */}
+        {pagination.showEllipsis && total && total > pagination.pages.length && (
+          <PaginationItem>
+            <PaginationEllipsis />
+          </PaginationItem>
+        )}
+
+        {/* Next */}
+        <PaginationItem>
+          <PaginationNext
+            role="link"
+            tabIndex={0}
+            onClick={() => runEventHandler(pagination.onNext)}
+          />
+        </PaginationItem>
+      </PaginationContent>
+    </Pagination>
+  );
+}
+
 export {
+  PageRenderer,
   Pagination,
   PaginationContent,
   PaginationLink,

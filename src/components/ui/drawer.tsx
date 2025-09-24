@@ -3,8 +3,11 @@
 import * as React from "react"
 import { Drawer as DrawerPrimitive } from "vaul"
 
-import { cn } from "@/src/lib/utils"
-
+import { cn, resolveBinding } from "@/src/lib/utils"
+import { RenderChildren } from "@/src/schema/RenderChildren"
+import { useAppState } from "@/src/schema/StateContext"
+import { AnyObj, DrawerElement, EventHandler } from "@/src/types"
+import wrapWithMotion from "./wrapWithMotion"
 function Drawer({
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
@@ -120,8 +123,87 @@ function DrawerDescription({
     />
   )
 }
+interface DrawerRendererProps {
+  element: DrawerElement
+  runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+}
 
+function DrawerRenderer({ element, runEventHandler }: DrawerRendererProps) {
+  const { state, t } = useAppState()
+  const drawer = element
+
+  // resolve bindings
+  const open = resolveBinding(drawer.isOpen, state, t) ?? false
+  const title = resolveBinding(drawer.title, state, t)
+  const description = resolveBinding(drawer.description, state, t)
+
+  const handleOpenChange = (next: boolean) => {
+    runEventHandler(drawer.onOpenChange, { open: next })
+  }
+
+  // map size → Tailwind classes
+  const sizeClass = {
+    sm: "sm:max-w-sm",
+    md: "sm:max-w-md",
+    lg: "sm:max-w-lg",
+  }[drawer.size || ""] || (typeof drawer.size === "string" ? drawer.size : "")
+
+  return wrapWithMotion(element,
+    <DrawerPrimitive.Root
+      data-slot="drawer"
+      direction={drawer.direction || "right"}
+      open={open}
+      onOpenChange={handleOpenChange}
+    >
+      {/* Trigger */}
+      {drawer.trigger && (
+        <DrawerTrigger asChild>
+          <RenderChildren children={[drawer.trigger]} />
+        </DrawerTrigger>
+      )}
+
+      {/* Portal + Content */}
+      <DrawerPortal>
+        <DrawerOverlay />
+        <DrawerContent
+          className={cn(sizeClass, drawer.styles?.className)}
+          style={{ zIndex: drawer.zIndex }}
+          aria-label={resolveBinding(drawer.accessibility?.ariaLabel, state, t)}
+          aria-hidden={!drawer.visibility?.show}
+        >
+          {/* Header */}
+          {(title || description) && (
+            <DrawerHeader>
+              {title && <DrawerTitle>{title}</DrawerTitle>}
+              {description && <DrawerDescription>{description}</DrawerDescription>}
+            </DrawerHeader>
+          )}
+
+          {/* Body */}
+          <RenderChildren children={drawer.content} />
+
+          {/* Footer */}
+          {drawer.footer && drawer.footer.length > 0 && (
+            <DrawerFooter>
+              <RenderChildren children={drawer.footer} />
+            </DrawerFooter>
+          )}
+
+          {/* Optional close button */}
+          {drawer.showCloseButton && (
+            <div className="absolute top-2 right-2">
+              <DrawerClose className="text-muted-foreground hover:text-foreground">
+                ✕
+              </DrawerClose>
+            </div>
+          )}
+        </DrawerContent>
+      </DrawerPortal>
+    </DrawerPrimitive.Root>
+  )
+}
 export {
+  DrawerRenderer,
   Drawer,
   DrawerPortal,
   DrawerOverlay,

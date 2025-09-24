@@ -239,7 +239,22 @@ function CarouselRenderer({
   const items =
     (resolveBinding(element.items, state, t) as (UIElement & { interval?: number })[]) || []
 
-  // 🔹 AutoPlay + Progress with pause support
+  // 🔹 Pause on swipe
+  React.useEffect(() => {
+    if (!api) return
+    const handlePointerDown = () => setPaused(true)
+    const handlePointerUp = () => setPaused(false)
+
+    api.on("pointerDown", handlePointerDown)
+    api.on("pointerUp", handlePointerUp)
+
+    return () => {
+      api.off("pointerDown", handlePointerDown)
+      api.off("pointerUp", handlePointerUp)
+    }
+  }, [api])
+
+  // 🔹 AutoPlay + Progress with pause
   React.useEffect(() => {
     if (!autoplayEnabled || !api || paused) return
 

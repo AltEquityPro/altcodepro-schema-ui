@@ -2,7 +2,12 @@ import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { XIcon } from "lucide-react"
 
-import { cn } from "@/src/lib/utils"
+import { cn, resolveBinding } from "@/src/lib/utils"
+import { ElementResolver } from "@/src/schema/ElementResolver"
+import { RenderChildren } from "@/src/schema/RenderChildren"
+import { useAppState } from "@/src/schema/StateContext"
+import { ModalElement, AnyObj, EventHandler } from "@/src/types"
+import wrapWithMotion from "./wrapWithMotion"
 
 function Dialog({
   ...props
@@ -126,8 +131,64 @@ function DialogDescription({
     />
   )
 }
+interface ModalRendererProps {
+  element: ModalElement
+  runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+  runtime: AnyObj
+}
 
+function ModalRenderer({ element, runEventHandler, runtime }: ModalRendererProps) {
+  const { state, t } = useAppState()
+  const modal = element
+
+  // resolve bindings
+  const open = resolveBinding(modal.isOpen, state, t) ?? false
+  const title = resolveBinding(modal.title, state, t)
+  const description = resolveBinding(modal.description, state, t)
+
+  return wrapWithMotion(
+    element,
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) runEventHandler(modal.onClose)
+      }}
+    >
+      <DialogContent
+        className={cn(modal.styles?.className)}
+        style={{ zIndex: modal.zIndex }}
+        showCloseButton={!modal.closeButton}
+      >
+        {/* Header */}
+        {(title || description) && (
+          <DialogHeader>
+            {title && <DialogTitle>{title}</DialogTitle>}
+            {description && <DialogDescription>{description}</DialogDescription>}
+          </DialogHeader>
+        )}
+
+        {/* Body */}
+        <RenderChildren children={modal.content} />
+
+        {/* Footer */}
+        {modal.closeButton && (
+          <DialogFooter>
+            <ElementResolver element={modal.closeButton} runtime={runtime} />
+          </DialogFooter>
+        )}
+
+        {/* Built-in Close Button (if schema doesn't override) */}
+        {!modal.closeButton && (
+          <DialogClose className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+            <XIcon className="size-4" />
+          </DialogClose>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
 export {
+  ModalRenderer,
   Dialog,
   DialogClose,
   DialogContent,

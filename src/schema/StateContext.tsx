@@ -18,7 +18,7 @@ export function StateProvider({
     project,
     children,
     initialState = {},
-    defaultLocale = "en-GB",
+    defaultLocale = "en",
 }: {
     project: UIProject;
     children: ReactNode;

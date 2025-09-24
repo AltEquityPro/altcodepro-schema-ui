@@ -1,15 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useDropzone } from "react-dropzone";
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
 
 import {
     AnyObj,
-    ElementType,
     FormElement,
     InputElement,
     UIElement,
@@ -50,11 +48,12 @@ import { CreditCardInput } from "./credit-cart-input";
 import { RatingInput } from "./rating-input";
 import { SignatureInput } from "./signature-input";
 import { TagsInput } from "./tags-input";
-import { RichTextInput } from "./richtext-input";
+import { RichTextEditor } from "./richtext-input";
 import { CodeInput } from "./code-input";
 import { MarkdownInput } from "./markdown-input";
 import { CurrencyInput } from "./currency-input";
 import { TabGroup, WizardGroup } from "./form-group";
+import { FileUpload } from "./FileUpload";
 
 /** ---------- Helpers ---------- */
 type SelectOption = { value: string; label: string };
@@ -407,7 +406,6 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
     };
 
     const renderInputField = (field: UIElement) => {
-        if (field.type !== ElementType.input) return null;
         const input = field as InputElement;
         const name = input.name as keyof FormValues;
 
@@ -527,7 +525,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
 
                                         case InputType.file: {
                                             return (
-                                                <DropzoneField
+                                                <FileUpload
                                                     multiple={!!input.multiple}
                                                     accept={input.accept}
                                                     maxSize={input.maxSize}
@@ -708,7 +706,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
 
                                         case InputType.image: {
                                             return (
-                                                <DropzoneField
+                                                <FileUpload
                                                     multiple={!!input.multiple}
                                                     accept="image/*"
                                                     maxSize={input.maxSize}
@@ -749,7 +747,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
 
                                         case InputType.richtext:
                                             return (
-                                                <RichTextInput
+                                                <RichTextEditor
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
                                                     placeholder={placeholder}
@@ -890,63 +888,4 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
     );
 }
 
-/** ---------- Dropzone Field for File Upload ---------- */
-function DropzoneField({
-    onFiles,
-    files,
-    multiple,
-    accept,
-    maxSize,
-}: {
-    onFiles: (files: File[]) => void;
-    files: File[];
-    multiple?: boolean;
-    accept?: string;
-    maxSize?: number;
-}) {
-    const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
-        multiple,
-        maxSize,
-        accept: accept
-            ? Object.fromEntries(accept.split(",").map((t) => [t.trim(), []]))
-            : undefined,
-        onDrop: (accepted) => onFiles(accepted),
-    });
 
-    return (
-        <div className="space-y-2">
-            <div
-                {...getRootProps()}
-                className="border-input hover:bg-accent/30 dark:hover:bg-accent/10 flex cursor-pointer items-center justify-center rounded-md border border-dashed p-4 text-sm transition-colors"
-            >
-                <input {...getInputProps()} />
-                {isDragActive ? (
-                    <p>Drop files here...</p>
-                ) : (
-                    <p>Drag &amp; drop files here, or click to select</p>
-                )}
-            </div>
-
-            {files?.length > 0 && (
-                <ul className="mt-1 space-y-1 text-sm">
-                    {files.map((f, i) => (
-                        <li key={`${f.name}-${i}`} className="truncate">
-                            {f.name}{" "}
-                            <span className="text-muted-foreground">({Math.round(f.size / 1024)} KB)</span>
-                        </li>
-                    ))}
-                </ul>
-            )}
-
-            {fileRejections.length > 0 && (
-                <div className="text-destructive text-xs">
-                    {fileRejections.map((rej, i) => (
-                        <div key={i}>
-                            {rej.file.name}: {rej.errors.map((e) => e.message).join(", ")}
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}

@@ -6,7 +6,7 @@ import { cva, VariantProps } from "class-variance-authority"
 import { PanelLeftIcon } from "lucide-react"
 
 import { useIsMobile } from "@/src/hooks/use-mobile"
-import { cn } from "@/src/lib/utils"
+import { cn, resolveBinding } from "@/src/lib/utils"
 import { Button } from "./button"
 import { Input } from "./input"
 import { Separator } from "./separator"
@@ -24,6 +24,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "./tooltip"
+import { ElementResolver } from "@/src/schema/ElementResolver"
+import wrapWithMotion from "./wrapWithMotion"
+import { AnyObj, EventHandler, SidebarElement } from "@/src/types"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -193,7 +196,6 @@ function Sidebar({
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
             } as React.CSSProperties
           }
-          side={side}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>
@@ -698,7 +700,66 @@ function SidebarMenuSubButton({
   )
 }
 
+function SidebarRenderer({
+  element,
+  runEventHandler,
+  state,
+  t,
+  runtime,
+}: {
+  element: SidebarElement
+  runEventHandler: (h?: EventHandler, d?: AnyObj) => Promise<void>
+  state: AnyObj
+  t: (key: string) => string
+  runtime: AnyObj
+}) {
+  return wrapWithMotion(
+    element,
+    <Sidebar>
+      {/* Header */}
+      {element.header && (
+        <SidebarHeader>
+          <ElementResolver element={element.header} runtime={runtime} />
+        </SidebarHeader>
+      )}
+
+      {/* Content Groups */}
+      <SidebarContent>
+        {element.groups.map((group) => (
+          <SidebarGroup key={group.id}>
+            <SidebarGroupLabel>
+              {resolveBinding(group.label, state, t)}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => (
+                  <SidebarMenuItem key={item.id}>
+                    <SidebarMenuButton asChild>
+                      <ElementResolver element={item} runtime={runtime} />
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
+
+      {/* Footer */}
+      {element.footer && (
+        <SidebarFooter>
+          <ElementResolver element={element.footer} runtime={runtime} />
+        </SidebarFooter>
+      )}
+
+      {/* Optional UI helpers */}
+      <SidebarRail />
+    </Sidebar>
+  )
+}
+
 export {
+  SidebarRenderer,
   Sidebar,
   SidebarContent,
   SidebarFooter,

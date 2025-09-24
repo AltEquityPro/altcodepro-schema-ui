@@ -279,7 +279,7 @@ export function useDataSources({
             resolvedDs.headers = { ...defaultHeaders, ...resolvedDs.headers };
             if (!resolvedDs.auth && globalAuth) resolvedDs.auth = globalAuth;
 
-            return deepResolveBindings(resolvedDs, state, t, resolveBinding) as DataSource;
+            return deepResolveBindings(resolvedDs, state, t) as DataSource;
         });
     }, [dataSources, state, t, globalConfig]);
 

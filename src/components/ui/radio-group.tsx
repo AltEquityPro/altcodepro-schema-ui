@@ -4,7 +4,10 @@ import * as React from "react"
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group"
 import { CircleIcon } from "lucide-react"
 
-import { cn } from "@/src/lib/utils"
+import { cn, resolveBinding } from "@/src/lib/utils"
+import { AnyObj, EventHandler, RadioGroupElement } from "@/src/types"
+import wrapWithMotion from "./wrapWithMotion"
+import { Label } from "@radix-ui/react-label"
 
 function RadioGroup({
   className,
@@ -42,4 +45,42 @@ function RadioGroupItem({
   )
 }
 
-export { RadioGroup, RadioGroupItem }
+function RadioGroupRenderer({
+  element,
+  state,
+  t,
+  runEventHandler,
+}: {
+  element: RadioGroupElement
+  state: AnyObj
+  t: (key: string) => string
+  runEventHandler: (
+    handler?: EventHandler,
+    dataOverride?: AnyObj
+  ) => Promise<void>
+}) {
+  const value = resolveBinding(element.value, state, t)
+  const options = resolveBinding(element.options, state, t) || []
+
+  return wrapWithMotion(
+    element,
+    <RadioGroup
+      value={value}
+      onValueChange={(v) =>
+        runEventHandler(element.onChange, { value: v })
+      }
+      className={element.styles?.className}
+    >
+      {options.map((opt: any) => {
+        const id = `${element.id}-${opt.value}`
+        return (
+          <div key={opt.value} className="flex items-center space-x-2">
+            <RadioGroupItem value={opt.value} id={id} />
+            <Label htmlFor={id}>{resolveBinding(opt.label, state, t)}</Label>
+          </div>
+        )
+      })}
+    </RadioGroup>
+  )
+}
+export { RadioGroupRenderer, RadioGroup, RadioGroupItem }

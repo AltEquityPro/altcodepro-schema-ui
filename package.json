@@ -57,6 +57,7 @@
     "embla-carousel-react": "^8.6.0",
     "ethers": "^6.15.0",
     "framer-motion": "^12.23.16",
+    "hls.js": "^1.6.13",
     "input-otp": "^1.4.2",
     "jsonpath-plus": "^10.3.0",
     "lucide-react": "^0.544.0",

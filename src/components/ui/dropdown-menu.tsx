@@ -2,7 +2,11 @@ import * as React from "react"
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
 
-import { cn } from "@/src/lib/utils"
+import { cn, resolveBinding } from "@/src/lib/utils"
+import wrapWithMotion from "./wrapWithMotion"
+import { RenderChildren } from "@/src/schema/RenderChildren"
+import { AnyObj, DropdownElement, DropdownItem, EventHandler } from "@/src/types"
+import { DynamicIcon } from "./DynamicIcon"
 
 function DropdownMenu({
   ...props
@@ -236,7 +240,163 @@ function DropdownMenuSubContent({
   )
 }
 
+function renderDropdownItems(
+  items: DropdownItem[],
+  runEventHandler: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>,
+  state: AnyObj,
+  t: (key: string) => string
+): React.ReactNode {
+  const groups = items.reduce<Record<string, DropdownItem[]>>((acc, item) => {
+    if (item.type === "radio" && item.group) {
+      acc[item.group] = acc[item.group] || []
+      acc[item.group].push(item)
+    }
+    return acc
+  }, {})
+
+  return items.map((item) => {
+    const label = item.label ? resolveBinding(item.label, state, t) : null
+    const heading = item.heading ? resolveBinding(item.heading, state, t) : null
+
+    switch (item.type) {
+      case "separator":
+        return <DropdownMenuSeparator key={item.id} />
+
+      case "label":
+        return (
+          <DropdownMenuLabel key={item.id}>
+            {label}
+          </DropdownMenuLabel>
+        )
+
+      case "group":
+        return (
+          <DropdownMenuGroup key={item.id}>
+            {heading && (
+              <DropdownMenuLabel inset>{heading}</DropdownMenuLabel>
+            )}
+            {item.children &&
+              renderDropdownItems(item.children, runEventHandler, state, t)}
+          </DropdownMenuGroup>
+        )
+
+      case "checkbox": {
+        const checked = resolveBinding(item.checked, state, t) ?? false
+        return (
+          <DropdownMenuCheckboxItem
+            key={item.id}
+            checked={checked}
+            disabled={item.disabled}
+            onCheckedChange={(val) =>
+              runEventHandler(item.onSelect, { checked: val })
+            }
+          >
+            {item.icon && <DynamicIcon name={item.icon} className="size-4" />}
+            {label}
+            {item.shortcut && (
+              <DropdownMenuShortcut>{item.shortcut}</DropdownMenuShortcut>
+            )}
+          </DropdownMenuCheckboxItem>
+        )
+      }
+
+      case "radio": {
+        if (!item.group || groups[item.group][0].id !== item.id) return null
+        return (
+          <DropdownMenuRadioGroup
+            key={item.group}
+            value={
+              groups[item.group].find((r) =>
+                resolveBinding(r.checked, state, t)
+              )?.value
+            }
+            onValueChange={(val) => {
+              const selected = item.group ? groups[item.group].find((r) => r.value === val) : null
+              if (selected?.onSelect) runEventHandler(selected.onSelect)
+            }}
+          >
+            {groups[item.group].map((radio) => (
+              <DropdownMenuRadioItem
+                key={radio.id}
+                value={radio.value || ""}
+                disabled={radio.disabled}
+              >
+                {radio.icon && (
+                  <DynamicIcon name={radio.icon} className="size-4" />
+                )}
+                {resolveBinding(radio.label, state, t)}
+                {radio.shortcut && (
+                  <DropdownMenuShortcut>{radio.shortcut}</DropdownMenuShortcut>
+                )}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        )
+      }
+
+      case "submenu":
+        return (
+          <DropdownMenuSub key={item.id}>
+            <DropdownMenuSubTrigger inset>
+              {item.icon && <DynamicIcon name={item.icon} className="size-4" />}
+              {label}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              {item.children &&
+                renderDropdownItems(item.children, runEventHandler, state, t)}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )
+
+      case "item":
+      default:
+        return (
+          <DropdownMenuItem
+            key={item.id}
+            disabled={item.disabled}
+            onSelect={() =>
+              item.onSelect ? runEventHandler(item.onSelect) : undefined
+            }
+            className={item.variant === "destructive" ? "text-red-600" : ""}
+          >
+            {item.icon && <DynamicIcon name={item.icon} className="size-4" />}
+            {label}
+            {item.shortcut && (
+              <DropdownMenuShortcut>{item.shortcut}</DropdownMenuShortcut>
+            )}
+          </DropdownMenuItem>
+        )
+    }
+  })
+}
+
+
+function DropdownRenderer({
+  dropdown,
+  runEventHandler,
+  state,
+  t,
+}: {
+  dropdown: DropdownElement
+  state: AnyObj
+  t: (key: string) => string
+  runEventHandler: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+}) {
+  return wrapWithMotion(dropdown,
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <RenderChildren children={[dropdown.trigger]} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        {renderDropdownItems(dropdown.items, runEventHandler, state, t)}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+
 export {
+  DropdownRenderer,
   DropdownMenu,
   DropdownMenuPortal,
   DropdownMenuTrigger,

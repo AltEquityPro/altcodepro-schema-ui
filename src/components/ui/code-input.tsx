@@ -9,7 +9,7 @@ import 'codemirror/theme/monokai.css';
 
 interface CodeInputProps {
     value: string;
-    onChange: (val: string) => void;
+    onChange?: (val: string) => void;
     language?: string;
     placeholder?: string;
     className?: string;
@@ -21,7 +21,7 @@ export function CodeInput({ value, onChange, placeholder, className }: CodeInput
             <CodeMirror
                 value={value}
                 height="300px"
-                onChange={(val) => onChange(val)}
+                onChange={(val) => onChange?.(val)}
                 basicSetup={{ autocompletion: true, lineNumbers: true, highlightActiveLine: true }}
             />
             {placeholder && !value && (

@@ -9,6 +9,9 @@ import { useAppState } from "./StateContext";
 import { Toaster, toast } from "../components/ui/sonner";
 import { ActionRuntime } from "./actions";
 import { useActionHandler } from "./useActionHandler";
+import { TooltipProvider } from "../components/ui/tooltip";//delayDuration={element.delayDuration ?? 0}
+import { SidebarProvider } from "../components/ui/sidebar";
+
 export function ScreenRenderer({
     screen, definition, locale = "en", runtime
 }: {

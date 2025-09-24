@@ -89,14 +89,14 @@ export function useActionHandler({
     const runEventHandler = async (handler?: EventHandler, dataOverride?: AnyObj): Promise<void> => {
         if (!handler) return;
 
-        const h = deepResolveBindings(handler, state, t, resolveBinding) as EventHandler & { params?: ActionParams };
+        const h = deepResolveBindings(handler, state, t) as EventHandler & { params?: ActionParams };
         const controller = new AbortController();
         const actionId = `${h.action}-${Date.now()}`;
         abortControllers.current[actionId] = controller;
 
         const executeTransition = async (transition?: TransitionSpec) => {
             if (!transition) return;
-            const resolvedTransition = deepResolveBindings(transition, state, t, resolveBinding) as TransitionSpec;
+            const resolvedTransition = deepResolveBindings(transition, state, t) as TransitionSpec;
             if (resolvedTransition.href && runtime.navigate) {
                 runtime.navigate(resolvedTransition.href, !!resolvedTransition.replace);
             }
@@ -147,7 +147,7 @@ export function useActionHandler({
         };
 
         const executeApiAction = async (ds: DataSource, bodyOverride?: AnyObj | FormData) => {
-            const resolvedDs = deepResolveBindings(ds, state, t, resolveBinding) as DataSource;
+            const resolvedDs = deepResolveBindings(ds, state, t) as DataSource;
             const baseUrl = String(resolveBinding(resolvedDs.baseUrl || '', state, t));
             const path = String(resolveBinding(resolvedDs.path || '', state, t));
             let url = new URL(path, baseUrl).toString();
@@ -221,7 +221,7 @@ export function useActionHandler({
         };
 
         const executeGraphqlAction = async (ds: DataSource, queryOverride?: string, variablesOverride?: AnyObj) => {
-            const resolvedDs = deepResolveBindings(ds, state, t, resolveBinding) as DataSource;
+            const resolvedDs = deepResolveBindings(ds, state, t) as DataSource;
             const baseUrl = String(resolveBinding(resolvedDs.baseUrl || '', state, t));
             const path = String(resolveBinding(resolvedDs.path || '', state, t));
             let url = new URL(path, baseUrl).toString();
@@ -428,7 +428,7 @@ export function useActionHandler({
                     const ds = inlineDs || globalDs;
                     if (!ds) throw new Error(`DataSource ${dsId} not found`);
 
-                    const resolvedDs = deepResolveBindings(ds, state, t, resolveBinding) as DataSource;
+                    const resolvedDs = deepResolveBindings(ds, state, t) as DataSource;
                     const baseUrl = String(resolveBinding(resolvedDs.baseUrl || '', state, t));
                     const path = String(resolveBinding(resolvedDs.path || '', state, t));
                     let url = new URL(path, baseUrl).toString();

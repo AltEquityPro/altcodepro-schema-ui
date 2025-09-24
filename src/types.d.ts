@@ -28,53 +28,68 @@ export enum ActionType {
     ai_generate = 'ai_generate',
     navigation = 'navigation',
 }
-
 export enum ElementType {
-    header = 'header',
-    footer = 'footer',
-    button = 'button',
-    three_d_model = 'three_d_model',
-    modal = 'modal',
-    icon = 'icon',
-    text = 'text',
-    image = 'image',
-    card = 'card',
-    map = 'map',
-    container = 'container',
-    collapsible = 'collapsible',
-    command = 'command',
-    form = 'form',
-    table = 'table',
-    datagrid = 'datagrid',
+    accordion = 'accordion',
     alert = 'alert',
     alert_dialog = 'alert_dialog',
+    avatar = 'avatar',
     badge = 'badge',
     breadcrumb = 'breadcrumb',
-    dropdown = 'dropdown',
-    drawer = 'drawer',
-    dropdown_menu = 'dropdown_menu',
-    context_menu = 'context_menu',
-    tabs = 'tabs',
-    accordion = 'accordion',
-    carousel = 'carousel',
-    loader = 'loader',
-    video = 'video',
-    payment = 'payment',
-    chart = 'chart',
-    custom = 'custom',
-    avatar = 'avatar',
-    voice = 'voice',
-    call = 'call',
-    slider = 'slider',
-    wallet = 'wallet',
-    editor = 'editor',
-    quiz = 'quiz',
+    button = 'button',
     calendar = 'calendar',
-    qr_code = 'qr_code',
-    step_wizard = 'step_wizard',
-    wallet_connect_button = 'wallet_connect_button',
+    call = 'call',
+    card = 'card',
+    carousel = 'carousel',
+    chart = 'chart',
+    code = 'code',
+    collapsible = 'collapsible',
+    command = 'command',
+    container = 'container',
+    context_menu = 'context_menu',
+    custom = 'custom',
+    datagrid = 'datagrid',
+    drawer = 'drawer',
+    dropdown = 'dropdown',
+    editor = 'editor',
     file_upload = 'file_upload',
+    footer = 'footer',
+    form = 'form',
+    header = 'header',
+    icon = 'icon',
+    image = 'image',
+    loader = 'loader',
+    map = 'map',
+    menu = 'menu',
+    modal = 'modal',
+    pagination = 'pagination',
+    payment = 'payment',
+    popover = 'popover',
+    progress = 'progress',
+    qr_code = 'qr_code',
+    quiz = 'quiz',
+    radio_group = 'radio_group',
+    resizable = 'resizable',
+    scroll_area = 'scroll_area',
+    separator = 'separator',
+    sheet = 'sheet',
+    sidebar = 'sidebar',
+    skeleton = 'skeleton',
+    step_wizard = 'step_wizard',
+    switch = 'switch',
+    table = 'table',
+    tabs = 'tabs',
+    text = 'text',
+    textarea = 'textarea',
+    three_d_model = 'three_d_model',
+    toggle = 'toggle',
+    toggle_group = 'toggle_group',
+    tooltip = 'tooltip',
+    video = 'video',
+    voice = 'voice',
+    wallet = 'wallet',
+    wallet_connect_button = 'wallet_connect_button',
 }
+
 
 export enum InputType {
     text = 'text',
@@ -89,7 +104,6 @@ export enum InputType {
     textarea = 'textarea',
     voice = 'voice',
     multiselect = 'multiselect',
-    slider = 'slider',
     datetime_local = 'datetime-local',
     time = 'time',
     image = 'image',
@@ -411,6 +425,7 @@ export interface InputElement extends BaseElement {
 export interface ModalElement extends BaseElement {
     type: ElementType.modal;
     title: Binding;
+    description: Binding;
     content: UIElement[];
     isOpen: boolean | Binding;
     onClose: EventHandler;
@@ -432,32 +447,100 @@ export interface ImageElement extends BaseElement {
     height?: number | string;
     generation?: GenerationSpec;
 }
+export type ContextMenuItem =
+    | { id: string; type: "item"; label: Binding; onSelect?: EventHandler; shortcut?: string; disabled?: boolean; variant?: "default" | "destructive"; icon?: string }
+    | { id: string; type: "checkbox"; label: Binding; checked?: Binding; onSelect?: EventHandler; disabled?: boolean }
+    | { id: string; type: "radio"; label: Binding; value: string; group: string; checked?: Binding; onSelect?: EventHandler }
+    | { id: string; type: "label"; label: Binding; inset?: boolean }
+    | { id: string; type: "separator" }
+    | { id: string; type: "sub"; label: Binding; items: ContextMenuItem[]; icon?: string }
 
 export interface ContextMenuElement extends BaseElement {
     type: ElementType.context_menu;
     trigger: UIElement;
-    items: Array<
-        | { id: string; type: 'item'; label: Binding; onSelect?: EventHandler; shortcut?: string }
-        | { id: string; type: 'checkbox'; label: Binding; checked?: Binding; onSelect?: EventHandler }
-        | { id: string; type: 'radio'; label: Binding; value: string; onSelect?: EventHandler }
-        | { id: string; type: 'label'; label: Binding }
-        | { id: string; type: 'separator' }
-        | { id: string; type: 'sub'; label: Binding; items: Array<{ id: string; label: Binding; onSelect?: EventHandler }> }
-    >;
+    items: ContextMenuItem[]
 }
-
 export interface VideoElement extends BaseElement {
     type: ElementType.video;
     src: Binding;
-    description: Binding;
+    description?: Binding;
     width?: number | string;
     height?: number | string;
     autoPlay?: boolean;
     loop?: boolean;
-    controls?: boolean;
+    controls?: boolean; // native controls; custom controls overlay always available
     generation?: GenerationSpec;
-    streaming?: 'hls' | 'dash';
+    streaming?: "hls" | "dash"; // dash ignored (Shaka removed)
+
+    // Navigation
+    onNextEpisode?: EventHandler;
+
+    // UX flags
+    showSkipIntro?: boolean;
+    showNextEpisode?: boolean;
+    showThumbnails?: boolean;
+    showPlaybackRate?: boolean;
+    showFullscreen?: boolean;
+    showMiniPlayer?: boolean; // Picture-in-Picture
+    showCaptions?: boolean;
+    analytics?: boolean; // enable analytics hooks
+    caching?: boolean; // use preload=auto, allow SW caching
+    resumePosition?: boolean; // persist last position in localStorage
+
+    // Thumbnails sprite
+    thumbnails?: {
+        spriteUrl: string;
+        width: number;
+        height: number;
+        interval: number; // seconds per thumb
+        sheetWidth?: number; // px, default 1000 for grid calc
+    };
+
+    // Captions/subtitles
+    captions?: Array<{
+        src: Binding;
+        srclang: string;
+        label: string;
+        default?: boolean;
+    }>;
+
+    // Ads
+    ads?: {
+        preRoll?: Binding[];
+        midRoll?: Array<{ time: number; src: Binding }>;
+        postRoll?: Binding[];
+        skippableAfter?: number; // seconds until Skip Ad is shown
+    };
+
+    // Analytics / tracking
+    tracking?: {
+        heartbeatInterval?: number; // seconds
+        events?: Array<
+            | "play"
+            | "pause"
+            | "seeked"
+            | "ended"
+            | "error"
+            | "ratechange"
+            | "fullscreen"
+            | "pip"
+            | "volumechange"
+            | "ad_impression"
+            | "ad_quartile"
+            | "ad_complete"
+            | "ad_skip"
+        >;
+        dataSourceId?: string; // send to this DataSource via Actions api_call
+        // If omitted, we'll still call runEventHandler with payload only
+    };
+
+    // Advanced
+    qualitySelector?: boolean; // allow manual HLS level selection
+    pictureInPicture?: boolean; // alias of showMiniPlayer
+    hotkeys?: boolean; // keyboard shortcuts like YouTube
+    chapters?: Array<{ start: number; title: string }>;
 }
+
 
 export interface CardElement extends BaseElement {
     type: ElementType.card
@@ -476,8 +559,37 @@ export interface CardElement extends BaseElement {
 
 export interface ContainerElement extends BaseElement {
     type: ElementType.container;
-    layout: 'flex' | 'grid' | 'block' | 'row' | 'column';
+
+    /** Layout mode */
+    layout: "flex" | "grid" | "block" | "row" | "column";
+
+    /** Gap between children (px, rem, etc.) */
     gap?: number | string;
+
+    /** Flexbox-specific props */
+    justify?:
+    | "start"
+    | "center"
+    | "end"
+    | "between"
+    | "around"
+    | "evenly";
+    align?: "start" | "center" | "end" | "stretch" | "baseline";
+    wrap?: boolean;
+
+    /** Grid-specific props */
+    cols?: number; // Tailwind grid-cols-x
+    rows?: number; // Tailwind grid-rows-x
+    autoCols?: "auto" | "min" | "max" | "fr";
+    autoRows?: "auto" | "min" | "max" | "fr";
+
+    /** Responsive layout overrides (optional, not in BaseElement) */
+    responsiveLayout?: {
+        sm?: Partial<Omit<ContainerElement, "id" | "name" | "type" | "children">>;
+        md?: Partial<Omit<ContainerElement, "id" | "name" | "type" | "children">>;
+        lg?: Partial<Omit<ContainerElement, "id" | "name" | "type" | "children">>;
+        xl?: Partial<Omit<ContainerElement, "id" | "name" | "type" | "children">>;
+    };
 }
 
 export interface DrawerElement extends BaseElement {
@@ -489,18 +601,9 @@ export interface DrawerElement extends BaseElement {
     content: UIElement[];
     footer?: UIElement[];
     onOpenChange?: EventHandler;
-}
-
-export interface DropdownMenuElement extends BaseElement {
-    type: ElementType.dropdown_menu;
-    trigger: UIElement;
-    items: {
-        id: string;
-        label: Binding;
-        icon?: string;
-        variant?: 'default' | 'destructive';
-        onSelect?: EventHandler;
-    }[];
+    direction?: "top" | "bottom" | "left" | "right";
+    size?: "sm" | "md" | "lg" | string;
+    showCloseButton?: boolean;
 }
 
 export interface FormElement extends BaseElement {
@@ -629,6 +732,7 @@ export interface DataGridElement extends BaseElement {
 export type Step = {
     id: string;
     title: string;
+    shouldShow?: Binding
     content?: UIElement[];
     onNext?: EventHandler;
     onPrev?: EventHandler;
@@ -670,13 +774,16 @@ export interface MapElement extends BaseElement {
 }
 
 export interface FileUploadElement extends BaseElement {
-    type: ElementType.file_upload;
-    accept?: string;
-    multiple?: boolean;
-    maxSize?: number;
-    presignUrl: Binding;
-    headers?: Record<string, string | Binding>;
-    onUploaded?: EventHandler;
+    type: ElementType.file_upload
+    accept?: string
+    multiple?: boolean
+    maxSize?: number
+    presignUrl: Binding
+    headers?: Record<string, string | Binding>
+    onUploaded?: EventHandler
+    onError?: EventHandler
+    onComplete?: EventHandler
+    onQueueChange?: EventHandler
 }
 
 export interface WalletConnectButtonElement extends BaseElement {
@@ -684,6 +791,24 @@ export interface WalletConnectButtonElement extends BaseElement {
     projectId?: string | Binding;
     chainId?: number;
     allowedChains?: number[];
+}
+export interface Step {
+    id: string;
+    title: Binding;
+    content?: UIElement[];
+    onNext?: EventHandler;
+    onPrev?: EventHandler;
+    onComplete?: EventHandler;
+    validate?: boolean;
+    validateAction?: EventHandler;
+}
+
+export interface StepWizardElement extends BaseElement {
+    type: ElementType.step_wizard;
+    id: string;
+    steps: Step[];
+    current?: number;
+    zIndex?: number;
 }
 
 export interface AlertElement extends BaseElement {
@@ -700,14 +825,33 @@ export interface AlertElement extends BaseElement {
     dismissible?: boolean;
 }
 
-export interface DropdownElement extends BaseElement {
-    type: ElementType.dropdown;
-    label: Binding;
-    options: Binding | { value: string; label: string }[];
-    selectedValue?: Binding;
-    onChange?: EventHandler;
-    required?: boolean;
+export type DropdownItem = {
+    id: string
+    label: Binding
+    heading?: Binding
+    icon?: string
+    shortcut?: string
+    variant?: "default" | "destructive"
+    onSelect?: EventHandler
+
+    // Submenu
+    children?: DropdownItem[]
+
+    // Checkbox
+    type?: "checkbox" | "radio" | "item" | "submenu" | 'separator' | 'label' | 'group'
+    checked?: boolean | Binding
+
+    // Radio group
+    value?: string
+    disabled?: boolean
+    group?: string // group id for radio
 }
+export interface DropdownElement extends BaseElement {
+    type: ElementType.dropdown
+    trigger: UIElement
+    items: DropdownItem[]
+}
+
 
 export interface TabsElement extends BaseElement {
     type: ElementType.tabs;
@@ -757,18 +901,134 @@ export interface FooterElement extends BaseElement {
     type: ElementType.footer;
     alignment?: Alignment;
 }
+export interface SeriesSpec {
+    key: string
+    type?: "bar" | "line" | "area" | "scatter" | "radar"
+    color?: string
+    stackId?: string
+    label?: string
+    yAxisId?: string
+    opacity?: number
+    strokeWidth?: number
+    dot?: boolean | object
+}
+export interface AnimationSpec {
+    /** initial state */
+    initial?: Record<string, any>
+    /** animate to */
+    animate?: Record<string, any>
+    /** exit state */
+    exit?: Record<string, any>
+    /** hover effect */
+    whileHover?: Record<string, any>
+    /** tap/click effect */
+    whileTap?: Record<string, any>
+    /** framer-motion transition */
+    transition?: Record<string, any>
+    /** whether to animate layout changes */
+    layout?: boolean
+}
+
 
 export interface ChartElement extends BaseElement {
-    type: ElementType.chart;
-    chartType: 'bar' | 'pie' | 'line';
-    data: Binding | any;
-    options?: Record<string, any>;
+    type: ElementType.chart
+    chartType:
+    | "bar"
+    | "line"
+    | "area"
+    | "pie"
+    | "radar"
+    | "radialBar"
+    | "scatter"
+    | "composed"
+    | "candlestick"
+
+    data: Binding | any[]
+
+    options?: {
+        xKey?: string
+        yKey?: string
+        valueKey?: string
+        openKey?: string
+        highKey?: string
+        lowKey?: string
+        closeKey?: string
+
+        stacked?: boolean
+        series?: SeriesSpec[]
+
+        colors?: string[]
+        donut?: boolean
+        radius?: number | string
+
+        legend?: boolean
+        tooltip?: boolean
+        responsive?: boolean
+        grid?: boolean | Record<string, any>
+
+        xDomain?: any
+        yDomain?: any
+        syncId?: string
+
+        xFormatter?: string | Binding
+        yFormatter?: string | Binding
+        tooltipFormatter?: string | Binding
+
+        lineStrokeWidth?: number
+        lineDot?: boolean | Record<string, any>
+        areaOpacity?: number
+
+        animation?: boolean | Record<string, any>
+        brush?: boolean | Record<string, any>
+        referenceLines?: {
+            x?: number[] | string[]
+            y?: number[]
+        }
+
+        ariaLabel?: string | Binding
+        description?: string | Binding
+    }
+}
+export interface CommandElement extends BaseElement {
+    type: ElementType.command
+    placeholder?: string
+    title?: string
+    description?: string
+    global?: boolean
+    showMobileButton?: boolean
+    emptyMessage?: string
+    groups?: {
+        heading: string
+        items: {
+            id: string
+            label: string
+            icon?: string
+            shortcut?: string
+            disabled?: boolean
+            onSelect?: EventHandler
+        }[]
+    }[]
 }
 
 export interface CustomElement extends BaseElement {
     type: ElementType.custom;
-    component: string;
-    props: Record<string, any | Binding>;
+
+    /** Single component name OR array of component names */
+    component: string | string[];
+
+    /** Arbitrary props to inject (resolved via bindings) */
+    props?: Record<string, any>;
+
+    /** Whether to render as group wrapper or individually */
+    groupLayout?: "stack" | "inline" | "fragment";
+}
+
+export interface CollapsibleElement extends BaseElement {
+    type: ElementType.collapsible
+    open?: boolean | Binding
+    onOpenChange?: EventHandler
+    trigger?: UIElement
+    content?: UIElement[]
 }
 
 export interface AvatarElement extends BaseElement {
@@ -794,13 +1054,49 @@ export interface VoiceElement extends BaseElement {
 }
 
 export interface CallElement extends BaseElement {
-    type: ElementType.call;
-    callType: 'video' | 'audio';
-    peerId: Binding;
-    signalingServer?: Binding;
+    type: "call";
+    callType: "video" | "audio";
+    /**
+     * Room/peer identity – can be a roomId for conference or a peerId for 1:1
+     */
+    peerId: Binding;                   // string
+    /**
+     * WebSocket signaling server URL (wss://...). Your server should relay JSON
+     * messages between room participants (join/offer/answer/candidate/leave).
+     */
+    signalingServer: Binding;          // string
+    /**
+     * Optional TURN/STUN config. Defaults provided below.
+     */
+    iceServers?: Array<{ urls: string | string[], username?: string, credential?: string }>;
+
+    // UX flags & defaults
+    autoplay?: boolean;                 // auto start local cam/mic
+    mirrorLocal?: boolean;              // mirror local video
+    showGridNames?: boolean;
+    maxPeers?: number;                  // safety cap for mesh rooms
+    screenShare?: boolean;              // allow screen share button
+    devicesMenu?: boolean;              // show cam/mic/speaker selection
+    stats?: boolean;                    // show connection stats per tile
+
+    // Media constraints
+    videoConstraints?: MediaTrackConstraints; // e.g., { width: { ideal: 1280 }, frameRate: { ideal: 30 } }
+    audioConstraints?: MediaTrackConstraints; // e.g., { echoCancellation: true }
+
+    // Hooks
     onConnect?: EventHandler;
     onDisconnect?: EventHandler;
-    controls?: boolean;
+    onError?: EventHandler;
+    onPeerJoin?: EventHandler;          // payload: { peerId }
+    onPeerLeave?: EventHandler;         // payload: { peerId }
+    onStats?: EventHandler;             // periodic stats payload
+
+    // Analytics
+    tracking?: {
+        dataSourceId?: string;            // send analytics via Actions api_call
+        heartbeatInterval?: number;       // seconds
+        events?: Array<"join" | "leave" | "mute" | "unmute" | "camera_on" | "camera_off" | "screenshare_on" | "screenshare_off" | "device_change" | "error">;
+    };
 }
 
 export interface WalletElement extends BaseElement {
@@ -813,9 +1109,26 @@ export interface WalletElement extends BaseElement {
 }
 
 export interface EditorElement extends BaseElement {
-    type: ElementType.editor;
-    content: Binding;
-    onChange: EventHandler;
+    type: ElementType.editor
+
+    /** Initial or bound content */
+    content: Binding | string
+
+    /** Optional placeholder */
+    placeholder?: Binding | string
+
+    /** Event when content changes */
+    onChange?: EventHandler
+
+    /** Toolbar controls */
+    toolbar?: {
+        bold?: boolean
+        italic?: boolean
+        underline?: boolean
+        bulletList?: boolean
+        orderedList?: boolean
+        codeBlock?: boolean
+    }
 }
 
 export interface QuizElement extends BaseElement {
@@ -842,17 +1155,6 @@ export interface QRCodeElement extends BaseElement {
     value: Binding;
     size: number;
 }
-
-export interface SliderElement extends BaseElement {
-    type: ElementType.slider;
-    transition?: { type: string; direction?: string; duration: number };
-    styles?: StyleProps;
-    autoPlay?: boolean;
-    elements: UIElement[];
-    interval?: number;
-    exportOptions?: { pdf: boolean; ppt: boolean };
-}
-
 export interface PaymentElement extends BaseElement {
     type: ElementType.payment;
     provider: 'stripe' | 'paypal' | 'razorpay' | 'custom';
@@ -927,19 +1229,71 @@ export interface HoverCardElement extends BaseElement {
     trigger: UIElement;
     content: UIElement[];
 }
+export interface MenuElement extends BaseElement {
+    type: ElementType.menu;
 
-export interface MenubarElement extends BaseElement {
-    type: ElementType.menubar;
-    menus: Array<{
+    /** Variant controls which renderer to use */
+    variant: "dropdown" | "context" | "menubar" | "navigation";
+
+    /** Optional menu label/title (e.g. for navigation) */
+    label?: Binding;
+
+    /** Trigger element (button, icon, text, etc.) */
+    trigger?: UIElement;
+
+    /** Items for dropdown, context, navigation */
+    items: MenuItem[];
+
+    /** Only used for menubar */
+    menus?: Array<{
         id: string;
         label: Binding;
-        items: Array<{
-            id: string;
-            label: Binding;
-            onSelect?: EventHandler;
-        }>;
+        items: MenuItem[];
     }>;
 }
+
+export type MenuItem =
+    | {
+        id: string;
+        type: "item";
+        label: Binding;
+        icon?: string;
+        shortcut?: string;
+        variant?: "default" | "destructive";
+        href?: string; // for navigation links
+        onSelect?: EventHandler;
+    }
+    | {
+        id: string;
+        type: "checkbox";
+        label: Binding;
+        checked?: Binding;
+        onSelect?: EventHandler;
+    }
+    | {
+        id: string;
+        type: "radio";
+        label: Binding;
+        value: string;
+        onSelect?: EventHandler;
+    }
+    | {
+        id: string;
+        type: "label";
+        label: Binding;
+    }
+    | {
+        id: string;
+        type: "separator";
+    }
+    | {
+        id: string;
+        type: "sub";
+        label: Binding;
+        icon?: string;
+        items: MenuItem[];
+    };
+
 
 export interface NavigationMenuElement extends BaseElement {
     type: ElementType.navigation_menu;
@@ -949,51 +1303,105 @@ export interface NavigationMenuElement extends BaseElement {
         content: UIElement[];
     }>;
 }
-
 export interface PaginationElement extends BaseElement {
     type: ElementType.pagination;
-    pages: Array<{
-        number: number;
-        active: boolean;
-    }>;
+    pages: Array<{ number: number; active: boolean }>;
+    totalPages?: number | Binding;
+    currentPage?: number | Binding;
+    showEllipsis?: boolean;
     onPrevious?: EventHandler;
     onNext?: EventHandler;
     onPageChange?: EventHandler;
 }
 
+
 export interface PopoverElement extends BaseElement {
     type: ElementType.popover;
-    trigger: UIElement;
-    content: UIElement[];
+    trigger: UIElement;          // the button / element that opens the popover
+    content: UIElement[];        // children inside the popover
+    side?: "top" | "bottom" | "left" | "right";
+    align?: "start" | "center" | "end";
+    open?: boolean | Binding;    // controlled or bound open state
+    onOpenChange?: EventHandler; // callback when popover toggles
 }
 
 export interface ProgressElement extends BaseElement {
     type: ElementType.progress;
     value: number | Binding;
+    indeterminate?: boolean | Binding;
+    label?: Binding;
+    /** where to place the label */
+    labelPosition?: "inside" | "outside" | "none";
+    /** if true → hide visually but keep for screen readers */
+    srOnlyLabel?: boolean | Binding;
 }
 
 export interface RadioGroupElement extends BaseElement {
     type: ElementType.radio_group;
+
+    /** Currently selected value */
     value: Binding;
-    options: Array<{ value: string; label: Binding }>;
+
+    /** List of options */
+    options: Array<{ value: string; label: Binding; disabled?: boolean }>;
+
+    /** Event handler for value change */
     onChange?: EventHandler;
+
+    /** Layout orientation (default = vertical) */
+    orientation?: "horizontal" | "vertical";
+
+    /** Disable the entire group */
+    disabled?: boolean;
+}
+export interface ScrollAreaElement extends BaseElement {
+    type: ElementType.scroll_area
+
+    /** Direction of scrolling */
+    orientation?: "vertical" | "horizontal" | "both"
+
+    /** Scrollbar visibility */
+    scrollHide?: boolean // auto-hide when not scrolling
+
+    /** Scrollbar size */
+    size?: "sm" | "md" | "lg"
+
+    /** Child content */
+    children?: UIElement[]
 }
 
 export interface ResizableElement extends BaseElement {
     type: ElementType.resizable;
-    direction: 'horizontal' | 'vertical';
-    panels: Array<{ id: string; content: UIElement[] }>;
+
+    /** Layout direction */
+    direction: "horizontal" | "vertical";
+
+    /** Panels with nested UI */
+    panels: Array<{
+        id: string;
+        content: UIElement[];
+        defaultSize?: number;   // % width or height depending on direction
+        minSize?: number;       // minimum size in %
+        maxSize?: number;       // maximum size in %
+        collapsible?: boolean;  // allow collapse
+    }>;
+
+    /** Show draggable handle icon */
+    withHandle?: boolean;
 }
 
 export interface SheetElement extends BaseElement {
-    type: ElementType.sheet;
-    title: Binding;
-    description?: Binding;
-    content: UIElement[];
-    footer?: UIElement[];
-    isOpen: boolean | Binding;
-    trigger?: UIElement;
-    onOpenChange?: EventHandler;
+    type: ElementType.sheet
+    title?: Binding
+    description?: Binding
+    isOpen?: boolean | Binding
+    trigger?: UIElement
+    content: UIElement[]
+    footer?: UIElement[]
+    onOpenChange?: EventHandler
+    direction?: "left" | "right" | "top" | "bottom"
+    showCloseButton?: boolean
+    shortcuts?: Array<{ key: string; action: "close" | "toggle" }>
 }
 
 export interface SidebarElement extends BaseElement {
@@ -1006,30 +1414,45 @@ export interface SidebarElement extends BaseElement {
     }>;
     footer?: UIElement;
 }
-
-export interface ToggleGroupElement extends BaseElement {
-    type: ElementType.toggle_group;
-    value: Binding;
-    options: Array<{ value: string; label: Binding }>;
-    onChange?: EventHandler;
+export interface ToggleElement extends BaseElement {
+    type: ElementType.toggle
+    pressed?: Binding | boolean
+    onToggle?: EventHandler
+    variant?: "default" | "outline"
+    size?: "default" | "sm" | "lg"
+    label?: Binding
+    icon?: string
 }
+export interface ToggleGroupElement extends BaseElement {
+    type: ElementType.toggle_group
+    value: Binding | string[] // single or multiple selection
+    multiple?: boolean        // default = false
+    options: ToggleElement[]  // reuse ToggleElement schema
+    onChange?: EventHandler
+}
+
 
 export interface TooltipElement extends BaseElement {
     type: ElementType.tooltip;
     trigger: UIElement;
     content: Binding;
+    delayDuration?: number;
+    side?: "top" | "bottom" | "left" | "right";
+    sideOffset?: number;
 }
+
+
 export type UIElement =
     | ButtonElement | ModalElement | IconElement | BadgeElement
-    | TextElement | ImageElement | VideoElement | CardElement
+    | TextElement | ImageElement | VideoElement | CardElement | CommandElement
     | ContainerElement | FormElement | TableElement | DataGridElement | MapElement
     | StepWizardElement | AlertElement | DropdownElement | TabsElement | AccordionElement
     | CarouselElement | LoaderElement | ChartElement | CustomElement | AvatarElement
     | VoiceElement | CallElement | WalletElement | WalletConnectButtonElement
     | FileUploadElement | EditorElement | QuizElement | CalendarElement
-    | QRCodeElement | ThreeDModelElement | PaymentElement | SliderElement
-    | DrawerElement | ContextMenuElement | DropdownMenuElement | BreadcrumbElement | AlertDialogElement
-    | HoverCardElement | MenubarElement | NavigationMenuElement | PaginationElement | PopoverElement | RadioGroupElement
+    | QRCodeElement | ThreeDModelElement | PaymentElement | ToggleElement
+    | DrawerElement | ContextMenuElement | BreadcrumbElement | AlertDialogElement
+    | HoverCardElement | MenuElement | NavigationMenuElement | PaginationElement | PopoverElement | RadioGroupElement
     | ProgressElement | RadioGroupElement | ResizableElement | SheetElement | SidebarElement | ToggleGroupElement | TooltipElement;
 
 export interface DataSource {
