@@ -1111,21 +1111,23 @@ export interface WalletElement extends BaseElement {
     projectId?: string;
     mode?: "full" | "button";
 
-    // Hooks
     onConnect?: EventHandler;
     onDisconnect?: EventHandler;
     onError?: EventHandler;
 
-    // 👇 NEW: Contract interactions
     contracts?: {
         address: string | Binding;
-        abi: string[];   // JSON ABI or subset
+        abi: string[];
         functions: {
-            name: string;                       // e.g. "balanceOf"
+            name: string;
             type: "view" | "write";
-            inputs?: Array<{ name: string; type: string }>;
-            label?: string;                     // Button label
-            onResult?: EventHandler;            // Hook with return value
+            label?: string;
+            inputs?: Array<{
+                name: string;         // param name (for UI label)
+                type: string;         // Solidity type: "address", "uint256", "string"
+                placeholder?: string; // optional UI hint
+            }>;
+            onResult?: EventHandler;
         }[];
     }[];
 }
