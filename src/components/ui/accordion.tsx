@@ -2,11 +2,11 @@ import * as React from "react"
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
 import { ChevronDownIcon } from "lucide-react"
 
-import { cn, resolveBinding } from "@/src/lib/utils"
-import { useActionHandler } from "@/src/schema/Actions"
-import { ElementResolver } from "@/src/schema/ElementResolver"
-import { useAppState } from "@/src/schema/StateContext"
-import { AccordionElement, UIElement } from "@/src/types"
+import { cn, resolveBinding } from "../../lib/utils"
+import { useActionHandler } from "../../schema/Actions"
+import { ElementResolver } from "../../schema/ElementResolver"
+import { useAppState } from "../../schema/StateContext"
+import { AccordionElement, UIElement } from "../../types"
 
 function Accordion({
   className,

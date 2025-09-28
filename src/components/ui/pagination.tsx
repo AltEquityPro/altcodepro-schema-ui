@@ -5,10 +5,10 @@ import {
   MoreHorizontalIcon,
 } from "lucide-react"
 
-import { cn, resolveBinding } from "@/src/lib/utils"
+import { cn, resolveBinding } from "../../lib/utils"
 import { Button, buttonVariants } from "./button"
 import wrapWithMotion from "./wrapWithMotion"
-import { AnyObj, EventHandler, PaginationElement } from "@/src/types"
+import { AnyObj, EventHandler, PaginationElement } from "../../types"
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   return (

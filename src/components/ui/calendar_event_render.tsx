@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { AnyObj, CalendarEventElement, EventHandler } from "@/src/types"
-import { resolveBinding, cn } from "@/src/lib/utils"
+import { AnyObj, CalendarEventElement, EventHandler } from "../../types"
+import { resolveBinding, cn } from "../../lib/utils"
 import { Button } from "./button"
 
 interface CalendarEventRendererProps {

@@ -4,8 +4,8 @@ import * as React from "react"
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group"
 import { CircleIcon } from "lucide-react"
 
-import { cn, resolveBinding } from "@/src/lib/utils"
-import { AnyObj, EventHandler, RadioGroupElement } from "@/src/types"
+import { cn, resolveBinding } from "../../lib/utils"
+import { AnyObj, EventHandler, RadioGroupElement } from "../../types"
 import wrapWithMotion from "./wrapWithMotion"
 import { Label } from "@radix-ui/react-label"
 

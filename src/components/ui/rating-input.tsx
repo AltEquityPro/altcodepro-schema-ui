@@ -1,7 +1,7 @@
 "use client";
 
 import { Star, Heart } from "lucide-react";
-import { cn } from "@/src/lib/utils";
+import { cn } from "../../lib/utils";
 
 interface RatingInputProps {
     value: number;

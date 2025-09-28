@@ -2,8 +2,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MapElement } from "@/src/types";
-import { resolveBinding, classesFromStyleProps, cn } from "@/src/lib/utils";
+import { MapElement } from "../../types";
+import { resolveBinding, classesFromStyleProps, cn } from "../../lib/utils";
 import { Loader } from "@googlemaps/js-api-loader";
 import mapboxgl from "mapbox-gl";
 import * as L from "leaflet";

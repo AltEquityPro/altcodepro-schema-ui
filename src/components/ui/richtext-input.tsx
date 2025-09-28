@@ -3,8 +3,8 @@
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
-import { cn } from "@/src/lib/utils"
-import { EditorElement } from "@/src/types"
+import { cn } from "../../lib/utils"
+import { EditorElement } from "../../types"
 
 interface RichTextEditorProps {
     value: string

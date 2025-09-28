@@ -2,10 +2,10 @@
 
 import * as React from "react"
 import { useMemo, useRef, useEffect, useState } from "react"
-import { cn, resolveBinding } from "@/src/lib/utils"
-import type { AnyObj, EventHandler, TimelineElement } from "@/src/types"
-import { useAppState } from "@/src/schema/StateContext"
-import { useActionHandler } from "@/src/schema/Actions"
+import { cn, resolveBinding } from "../../lib/utils"
+import type { AnyObj, EventHandler, TimelineElement } from "../../types"
+import { useAppState } from "../../schema/StateContext"
+import { useActionHandler } from "../../schema/Actions"
 import {
     CalendarClock,
     CheckCircle2,

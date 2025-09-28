@@ -1,8 +1,8 @@
 import * as React from "react"
 import * as CollapsiblePrimitive from "@radix-ui/react-collapsible"
-import { cn, resolveBinding } from "@/src/lib/utils"
-import { ElementResolver } from "@/src/schema/ElementResolver"
-import { CollapsibleElement, UIElement } from "@/src/types"
+import { cn, resolveBinding } from "../../lib/utils"
+import { ElementResolver } from "../../schema/ElementResolver"
+import { CollapsibleElement, UIElement } from "../../types"
 
 function Collapsible({
   className,

@@ -7,9 +7,9 @@ import * as Menubar from "@radix-ui/react-menubar"
 import * as Navigation from "@radix-ui/react-navigation-menu"
 import { MenuIcon, ChevronRightIcon, ChevronDownIcon, XIcon } from "lucide-react"
 
-import { cn, resolveBinding } from "@/src/lib/utils"
-import { RenderChildren } from "@/src/schema/RenderChildren"
-import { AnyObj, MenuElement, EventHandler } from "@/src/types"
+import { cn, resolveBinding } from "../../lib/utils"
+import { RenderChildren } from "../../schema/RenderChildren"
+import { AnyObj, MenuElement, EventHandler } from "../../types"
 import wrapWithMotion from "./wrapWithMotion"
 import { DynamicIcon } from "./dynamic-icon"
 import {

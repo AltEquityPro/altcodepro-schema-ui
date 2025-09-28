@@ -4,7 +4,7 @@ import * as React from "react"
 import { Command as CommandPrimitive } from "cmdk"
 import { SearchIcon } from "lucide-react"
 
-import { cn } from "@/src/lib/utils"
+import { cn } from "../../lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./dialog"
-import { AnyObj, CommandElement, EventHandler } from "@/src/types"
-import { RenderChildren } from "@/src/schema/RenderChildren"
+import { AnyObj, CommandElement, EventHandler } from "../../types"
+import { RenderChildren } from "../../schema/RenderChildren"
 import { DynamicIcon } from "./dynamic-icon"
 
 /* ------------------------------------------------------------------

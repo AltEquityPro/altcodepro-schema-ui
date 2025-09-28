@@ -4,9 +4,9 @@ import React, { useEffect, useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { jsPDF } from "jspdf"; // for PDF export
 import { Button } from "./button";
-import { cn } from "@/src/lib/utils";
-import { AnyObj, SignaturePadElement, EventHandler } from "@/src/types";
-import { useAppState } from "@/src/schema/StateContext";
+import { cn } from "../../lib/utils";
+import { AnyObj, SignaturePadElement, EventHandler } from "../../types";
+import { useAppState } from "../../schema/StateContext";
 
 interface SignaturePadRendererProps {
     element: SignaturePadElement;

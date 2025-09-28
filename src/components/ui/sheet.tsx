@@ -2,11 +2,11 @@
 
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { cn, resolveBinding } from "@/src/lib/utils"
-import { AnyObj, EventHandler, SheetElement } from "@/src/types"
+import { cn, resolveBinding } from "../../lib/utils"
+import { AnyObj, EventHandler, SheetElement } from "../../types"
 import wrapWithMotion from "./wrapWithMotion"
-import { ElementResolver } from "@/src/schema/ElementResolver"
-import { RenderChildren } from "@/src/schema/RenderChildren"
+import { ElementResolver } from "../../schema/ElementResolver"
+import { RenderChildren } from "../../schema/RenderChildren"
 import { XIcon } from "lucide-react"
 
 function useSheetShortcuts(

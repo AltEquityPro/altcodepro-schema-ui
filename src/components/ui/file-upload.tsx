@@ -1,11 +1,11 @@
 "use client"
 
-import { resolveBinding } from "@/src/lib/utils"
-import { useAppState } from "@/src/schema/StateContext"
+import { resolveBinding } from "../../lib/utils"
+import { useAppState } from "../../schema/StateContext"
 import * as React from "react"
 import { useDropzone } from "react-dropzone"
 import wrapWithMotion from "./wrapWithMotion"
-import { EventHandler, FileUploadElement } from "@/src/types"
+import { EventHandler, FileUploadElement } from "../../types"
 
 type UploadStatus = "idle" | "queued" | "uploading" | "success" | "error" | "canceled"
 type AnyObj = Record<string, any>

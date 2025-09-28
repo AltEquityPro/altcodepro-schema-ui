@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { cn, resolveBinding } from "@/src/lib/utils"
-import { AnyObj, AudioElement, EventHandler } from "@/src/types"
+import { cn, resolveBinding } from "../../lib/utils"
+import { AnyObj, AudioElement, EventHandler } from "../../types"
 
 interface AudioRendererProps {
     element: AudioElement

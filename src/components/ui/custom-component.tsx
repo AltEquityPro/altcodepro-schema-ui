@@ -1,6 +1,6 @@
-import { resolveBinding } from '@/src/lib/utils';
-import { RenderChildren } from '@/src/schema/RenderChildren';
-import { AnyObj, CustomElement } from '@/src/types';
+import { resolveBinding } from '../../lib/utils';
+import { RenderChildren } from '../../schema/RenderChildren';
+import { AnyObj, CustomElement } from '../../types';
 import wrapWithMotion from './wrapWithMotion';
 
 export default function CustomComponentRender({ element, runtime, state, t }: {

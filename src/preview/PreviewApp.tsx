@@ -2,9 +2,9 @@
 "use client";
 
 import { useState } from "react";
-import { ElementType, UIProject, AnyObj, ActionType } from "@/src/types";
-import { Button } from "@/src/components/ui/button";
-import { ScrollArea } from "@/src/components/ui/scroll-area";
+import { ElementType, UIProject, AnyObj, ActionType } from "../types";
+import { Button } from "../components/ui/button";
+import { ScrollArea } from "../components/ui/scroll-area";
 import { ScreenRuntime } from "../schema/ScreenRenderer";
 import { StateProvider } from "../schema/StateContext";
 import { ElementResolver } from "../schema/ElementResolver";

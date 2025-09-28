@@ -1,12 +1,12 @@
 import * as React from "react"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 
-import { cn, resolveBinding } from "@/src/lib/utils"
+import { cn, resolveBinding } from "../../lib/utils"
 import { buttonVariants } from "./button"
-import { ElementResolver } from "@/src/schema/ElementResolver"
-import { AlertDialogElement, UIElement } from "@/src/types"
-import { useAppState } from "@/src/schema/StateContext"
-import { useActionHandler } from "@/src/schema/Actions"
+import { ElementResolver } from "../../schema/ElementResolver"
+import { AlertDialogElement, UIElement } from "../../types"
+import { useAppState } from "../../schema/StateContext"
+import { useActionHandler } from "../../schema/Actions"
 
 function AlertDialog({
   ...props

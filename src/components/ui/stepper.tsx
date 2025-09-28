@@ -1,8 +1,8 @@
-import { AnyObj, EventHandler, StepWizardElement } from "@/src/types"
+import { AnyObj, EventHandler, StepWizardElement } from "../../types"
 import wrapWithMotion from "./wrapWithMotion"
 import React from "react"
-import { cn, resolveBinding } from "@/src/lib/utils"
-import { RenderChildren } from "@/src/schema/RenderChildren"
+import { cn, resolveBinding } from "../../lib/utils"
+import { RenderChildren } from "../../schema/RenderChildren"
 import { Button } from "./button"
 import { Progress } from "./progress"
 

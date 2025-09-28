@@ -2,11 +2,11 @@ import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { XIcon } from "lucide-react"
 
-import { cn, resolveBinding } from "@/src/lib/utils"
-import { ElementResolver } from "@/src/schema/ElementResolver"
-import { RenderChildren } from "@/src/schema/RenderChildren"
-import { useAppState } from "@/src/schema/StateContext"
-import { ModalElement, AnyObj, EventHandler } from "@/src/types"
+import { cn, resolveBinding } from "../../lib/utils"
+import { ElementResolver } from "../../schema/ElementResolver"
+import { RenderChildren } from "../../schema/RenderChildren"
+import { useAppState } from "../../schema/StateContext"
+import { ModalElement, AnyObj, EventHandler } from "../../types"
 import wrapWithMotion from "./wrapWithMotion"
 
 function Dialog({

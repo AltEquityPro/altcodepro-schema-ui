@@ -3,10 +3,10 @@
 import * as React from "react"
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 
-import { cn } from "@/src/lib/utils"
-import { AnyObj, ScrollAreaElement, UIElement } from "@/src/types"
+import { cn } from "../../lib/utils"
+import { AnyObj, ScrollAreaElement, UIElement } from "../../types"
 import wrapWithMotion from "./wrapWithMotion"
-import { RenderChildren } from "@/src/schema/RenderChildren"
+import { RenderChildren } from "../../schema/RenderChildren"
 
 function ScrollArea({
   className,

@@ -9,11 +9,11 @@ import {
     isHexString,
 } from "ethers";
 import WalletConnectProvider from "@walletconnect/ethereum-provider";
-import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
-import { cn, classesFromStyleProps, resolveBinding } from "@/src/lib/utils";
-import { WalletElement } from "@/src/types";
-import { Checkbox } from "@/src/components/ui/checkbox";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { cn, classesFromStyleProps, resolveBinding } from "../../lib/utils";
+import { WalletElement } from "../../types";
+import { Checkbox } from "../../components/ui/checkbox";
 
 type WalletContract = NonNullable<WalletElement["contracts"]>[number];
 type WalletFunction = WalletContract["functions"][number];

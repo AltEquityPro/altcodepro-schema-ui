@@ -1,6 +1,6 @@
 import stripJsonComments from 'strip-json-comments';
 import { BrowserProvider } from 'ethers';
-import { AnyObj, VisibilityControl, AccessibilityProps, StyleProps, AnimationSpec, IRoute, UIDefinition, ImageElement, UIProject, Brand } from '@/src/types';
+import { AnyObj, VisibilityControl, AccessibilityProps, StyleProps, AnimationSpec, IRoute, UIDefinition, ImageElement, UIProject, Brand } from '../types';
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 

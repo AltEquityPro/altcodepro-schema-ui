@@ -2,10 +2,10 @@ import * as React from "react"
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
 
-import { cn, resolveBinding } from "@/src/lib/utils"
+import { cn, resolveBinding } from "../../lib/utils"
 import wrapWithMotion from "./wrapWithMotion"
-import { RenderChildren } from "@/src/schema/RenderChildren"
-import { AnyObj, DropdownElement, DropdownItem, EventHandler } from "@/src/types"
+import { RenderChildren } from "../../schema/RenderChildren"
+import { AnyObj, DropdownElement, DropdownItem, EventHandler } from "../../types"
 import { DynamicIcon } from "./dynamic-icon"
 
 function DropdownMenu({

@@ -1,9 +1,9 @@
 import * as React from "react"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
 
-import { cn, resolveBinding } from "@/src/lib/utils"
-import { useAppState } from "@/src/schema/StateContext"
-import { AvatarElement } from "@/src/types"
+import { cn, resolveBinding } from "../../lib/utils"
+import { useAppState } from "../../schema/StateContext"
+import { AvatarElement } from "../../types"
 
 function Avatar({
   className,

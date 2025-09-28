@@ -2,9 +2,9 @@
 
 import * as React from "react"
 import Lottie, { LottieRefCurrentProps } from "lottie-react"
-import type { AnyObj, EventHandler, LottieElement } from "@/src/types"
-import { cn, resolveBinding } from "@/src/lib/utils"
-import { useAppState } from "@/src/schema/StateContext"
+import type { AnyObj, EventHandler, LottieElement } from "../../types"
+import { cn, resolveBinding } from "../../lib/utils"
+import { useAppState } from "../../schema/StateContext"
 
 
 export interface LottieRendererProps {

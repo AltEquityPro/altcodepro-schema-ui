@@ -1,11 +1,11 @@
 "use client"
 
 import * as React from "react"
-import type { AnyObj, EventHandler, IconElement, ListItemElement } from "@/src/types"
-import { cn, resolveBinding } from "@/src/lib/utils"
-import { useAppState } from "@/src/schema/StateContext"
-import { DynamicIcon } from "@/src/components/ui/dynamic-icon"
-import { RenderChildren } from "@/src/schema/RenderChildren"
+import type { AnyObj, EventHandler, IconElement, ListItemElement } from "../../types"
+import { cn, resolveBinding } from "../../lib/utils"
+import { useAppState } from "../../schema/StateContext"
+import { DynamicIcon } from "../../components/ui/dynamic-icon"
+import { RenderChildren } from "../../schema/RenderChildren"
 
 /** Small helper so this renderer works with or without explicit state/t props */
 function useStateAndT(

@@ -12,9 +12,9 @@ import {
     Square,
     MinusSquare,
 } from "lucide-react"
-import { cn, resolveBinding } from "@/src/lib/utils"
-import type { AnyObj, EventHandler, TreeElement, TreeNodeElement } from "@/src/types"
-import { useAppState } from "@/src/schema/StateContext"
+import { cn, resolveBinding } from "../../lib/utils"
+import type { AnyObj, EventHandler, TreeElement, TreeNodeElement } from "../../types"
+import { useAppState } from "../../schema/StateContext"
 
 /* -------------------------------------------------------------------------- */
 /*                                   Utils                                    */

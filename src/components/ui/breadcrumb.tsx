@@ -1,14 +1,14 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { ChevronRight, MoreHorizontal } from "lucide-react"
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/src/components/ui/tooltip"
-import { resolveBinding } from "@/src/lib/utils"
-import { useAppState } from "@/src/schema/StateContext"
-import { useActionHandler } from "@/src/schema/Actions"
-import { ElementResolver } from "@/src/schema/ElementResolver"
+import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip"
+import { resolveBinding } from "../../lib/utils"
+import { useAppState } from "../../schema/StateContext"
+import { useActionHandler } from "../../schema/Actions"
+import { ElementResolver } from "../../schema/ElementResolver"
 
-import { cn } from "@/src/lib/utils"
-import { BreadcrumbElement, UIElement } from "@/src/types"
+import { cn } from "../../lib/utils"
+import { BreadcrumbElement, UIElement } from "../../types"
 
 function Breadcrumb({ ...props }: React.ComponentProps<"nav">) {
   return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />

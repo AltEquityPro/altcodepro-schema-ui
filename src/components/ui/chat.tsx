@@ -4,8 +4,8 @@ import * as React from "react"
 import { RowComponentProps, List as VirtualList } from "react-window"
 import { Button } from "./button"
 import { Input } from "./input"
-import { cn, resolveBinding } from "@/src/lib/utils"
-import type { AnyObj, ChatElement, EventHandler } from "@/src/types"
+import { cn, resolveBinding } from "../../lib/utils"
+import type { AnyObj, ChatElement, EventHandler } from "../../types"
 
 /* ========== Types ========== */
 type RowProps = { items: Msg[] }

@@ -15,22 +15,22 @@ import {
     FieldType,
     FormField as FormFieldType,
     FormGroupType,
-} from "@/src/types";
-import { useAppState } from "@/src/schema/StateContext";
-import { useActionHandler } from "@/src/schema/Actions";
-import { resolveBinding, classesFromStyleProps, luhnCheck } from "@/src/lib/utils";
+} from "../../types";
+import { useAppState } from "../../schema/StateContext";
+import { useActionHandler } from "../../schema/Actions";
+import { resolveBinding, classesFromStyleProps, luhnCheck } from "../../lib/utils";
 
-import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
-import { Textarea } from "@/src/components/ui/textarea";
-import { Checkbox } from "@/src/components/ui/checkbox";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
+import { Checkbox } from "../../components/ui/checkbox";
 import {
     Select,
     SelectTrigger,
     SelectValue,
     SelectContent,
     SelectItem,
-} from "@/src/components/ui/select";
+} from "../../components/ui/select";
 import {
     Form,
     FormField,
@@ -38,9 +38,9 @@ import {
     FormLabel,
     FormControl,
     FormMessage,
-} from "@/src/components/ui/form";
-import { Slider } from "@/src/components/ui/slider";
-import { Multiselect, type MultiSelectOption } from "@/src/components/ui/multiselect";
+} from "../../components/ui/form";
+import { Slider } from "../../components/ui/slider";
+import { Multiselect, type MultiSelectOption } from "../../components/ui/multiselect";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "./input-otp";
 import { Calendar } from "./calendar";
 import { CreateSelect, CreateSelectOption } from "./create-select";

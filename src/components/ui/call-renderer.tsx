@@ -2,19 +2,19 @@
 
 import * as React from "react";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { WSClient } from "@/src/lib/webrtc/signaling";
-import { resolveBinding, classesFromStyleProps, cn } from "@/src/lib/utils";
-import { Button } from "@/src/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/src/components/ui/tooltip";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/src/components/ui/dropdown-menu";
-import { Badge } from "@/src/components/ui/badge";
-import { Separator } from "@/src/components/ui/separator";
+import { WSClient } from "../../lib/webrtc/signaling";
+import { resolveBinding, classesFromStyleProps, cn } from "../../lib/utils";
+import { Button } from "../../components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "../../components/ui/dropdown-menu";
+import { Badge } from "../../components/ui/badge";
+import { Separator } from "../../components/ui/separator";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     CameraIcon, CameraOffIcon, MicIcon, MicOffIcon, MonitorUpIcon,
     PhoneOffIcon, Settings2Icon, UsersIcon, SignalHighIcon, MaximizeIcon, Volume2Icon
 } from "lucide-react";
-import { CallElement, UIElement } from "@/src/types";
+import { CallElement, UIElement } from "../../types";
 
 type PeerId = string;
 

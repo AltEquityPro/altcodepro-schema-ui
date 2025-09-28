@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { cn, resolveBinding } from "@/src/lib/utils"
-import type { AnyObj, CommentsElement, EventHandler } from "@/src/types"
+import { cn, resolveBinding } from "../../lib/utils"
+import type { AnyObj, CommentsElement, EventHandler } from "../../types"
 import { Button } from "./button"
 import { Input } from "./input"
 import { Textarea } from "./textarea"

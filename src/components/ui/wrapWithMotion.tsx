@@ -1,7 +1,7 @@
-import { classesFromStyleProps, getAccessibilityProps, motionFromAnimation } from '@/src/lib/utils';
+import { classesFromStyleProps, getAccessibilityProps, motionFromAnimation } from '../../lib/utils';
 import React from 'react'
 import { motion } from "framer-motion";
-import { UIElement } from '@/src/types';
+import { UIElement } from '../../types';
 
 const wrapWithMotion = (element: UIElement, children: React.ReactNode) => {
     const animationProps = motionFromAnimation(element.animations);

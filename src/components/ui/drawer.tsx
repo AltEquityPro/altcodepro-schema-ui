@@ -3,10 +3,10 @@
 import * as React from "react"
 import { Drawer as DrawerPrimitive } from "vaul"
 
-import { cn, resolveBinding } from "@/src/lib/utils"
-import { RenderChildren } from "@/src/schema/RenderChildren"
-import { useAppState } from "@/src/schema/StateContext"
-import { AnyObj, DrawerElement, EventHandler } from "@/src/types"
+import { cn, resolveBinding } from "../../lib/utils"
+import { RenderChildren } from "../../schema/RenderChildren"
+import { useAppState } from "../../schema/StateContext"
+import { AnyObj, DrawerElement, EventHandler } from "../../types"
 import wrapWithMotion from "./wrapWithMotion"
 function Drawer({
   ...props

@@ -1,7 +1,7 @@
 import * as React from "react"
-import { cn } from "@/src/lib/utils"
-import { CardElement, UIElement } from "@/src/types"
-import { ElementResolver } from "@/src/schema/ElementResolver"
+import { cn } from "../../lib/utils"
+import { CardElement, UIElement } from "../../types"
+import { ElementResolver } from "../../schema/ElementResolver"
 
 function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { cn, resolveBinding, classesFromStyleProps } from "@/src/lib/utils";
-import { Button } from "@/src/components/ui/button";
-import { VoiceElement } from "@/src/types";
+import { cn, resolveBinding, classesFromStyleProps } from "../../lib/utils";
+import { Button } from "../../components/ui/button";
+import { VoiceElement } from "../../types";
 
 declare global {
     interface Window {

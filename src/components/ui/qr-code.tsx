@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { BrowserQRCodeReader } from "@zxing/browser";
-import { cn, resolveBinding, classesFromStyleProps } from "@/src/lib/utils";
-import { QRReaderlement } from "@/src/types";
+import { cn, resolveBinding, classesFromStyleProps } from "../../lib/utils";
+import { QRReaderlement } from "../../types";
 
 export function QRCodeRenderer({
     element,

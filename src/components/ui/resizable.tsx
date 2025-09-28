@@ -2,9 +2,9 @@ import * as React from "react"
 import { GripVerticalIcon } from "lucide-react"
 import * as ResizablePrimitive from "react-resizable-panels"
 
-import { cn, resolveBinding } from "@/src/lib/utils"
-import { RenderChildren } from "@/src/schema/RenderChildren"
-import { AnyObj, ResizableElement } from "@/src/types"
+import { cn, resolveBinding } from "../../lib/utils"
+import { RenderChildren } from "../../schema/RenderChildren"
+import { AnyObj, ResizableElement } from "../../types"
 import wrapWithMotion from "./wrapWithMotion"
 
 function ResizablePanelGroup({

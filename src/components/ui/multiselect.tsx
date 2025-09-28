@@ -2,14 +2,14 @@
 
 import * as React from "react"
 import { XIcon, ChevronDownIcon, CheckIcon } from "lucide-react"
-import { cn } from "@/src/lib/utils"
+import { cn } from "../../lib/utils"
 import {
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
     DropdownMenuCheckboxItem,
-} from "@/src/components/ui/dropdown-menu"
-import { Button } from "@/src/components/ui/button"
+} from "../../components/ui/dropdown-menu"
+import { Button } from "../../components/ui/button"
 
 export type MultiSelectOption = { label: string; value: string }
 

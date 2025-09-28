@@ -3,10 +3,10 @@
 import * as React from "react"
 import * as PopoverPrimitive from "@radix-ui/react-popover"
 
-import { cn, resolveBinding } from "@/src/lib/utils"
+import { cn, resolveBinding } from "../../lib/utils"
 import wrapWithMotion from "./wrapWithMotion"
-import { RenderChildren } from "@/src/schema/RenderChildren"
-import { AnyObj, EventHandler, PopoverElement } from "@/src/types"
+import { RenderChildren } from "../../schema/RenderChildren"
+import { AnyObj, EventHandler, PopoverElement } from "../../types"
 
 function Popover({
   ...props

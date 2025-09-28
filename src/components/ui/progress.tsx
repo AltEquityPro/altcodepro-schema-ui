@@ -2,9 +2,9 @@
 
 import * as React from "react"
 import * as ProgressPrimitive from "@radix-ui/react-progress"
-import { cn, resolveBinding } from "@/src/lib/utils"
+import { cn, resolveBinding } from "../../lib/utils"
 import wrapWithMotion from "./wrapWithMotion";
-import { AnyObj, ProgressElement } from "@/src/types";
+import { AnyObj, ProgressElement } from "../../types";
 function Progress({
   className,
   value,

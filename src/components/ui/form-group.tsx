@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { resolveBinding, classesFromStyleProps } from "@/src/lib/utils";
-import { useAppState } from "@/src/schema/StateContext";
-import { FieldType, AnyObj, FormElement, FormField as FormFieldType, } from "@/src/types";
+import { resolveBinding, classesFromStyleProps } from "../../lib/utils";
+import { useAppState } from "../../schema/StateContext";
+import { FieldType, AnyObj, FormElement, FormField as FormFieldType, } from "../../types";
 import { Button } from "./button";
 
 /** ---------- Group helpers (schema-driven) ---------- */

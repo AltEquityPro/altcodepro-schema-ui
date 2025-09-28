@@ -8,14 +8,14 @@ import {
 } from "lucide-react"
 import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker"
 
-import { cn, resolveBinding } from "@/src/lib/utils"
+import { cn, resolveBinding } from "../../lib/utils"
 import { Button, buttonVariants } from "./button"
 import {
   AnyObj,
   CalendarElement,
   CalendarEventElement,
   EventHandler,
-} from "@/src/types"
+} from "../../types"
 
 /** ---------------------------
  * Calendar wrapper (DayPicker)

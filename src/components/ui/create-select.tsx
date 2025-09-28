@@ -9,12 +9,12 @@ import {
     SelectValue,
     SelectContent,
     SelectItem,
-} from "@/src/components/ui/select";
-import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
-import { cn } from "@/src/lib/utils";
-import { EventHandler } from "@/src/types";
-import { useActionHandler } from "@/src/schema/Actions";
+} from "../../components/ui/select";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { cn } from "../../lib/utils";
+import { EventHandler } from "../../types";
+import { useActionHandler } from "../../schema/Actions";
 
 export type CreateSelectOption = { value: string; label: string };
 

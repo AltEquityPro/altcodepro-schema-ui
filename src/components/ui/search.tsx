@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { Search, X, Mic, Loader2 } from "lucide-react";
-import { cn, resolveBinding } from "@/src/lib/utils";
-import type { AnyObj, EventHandler, SearchElement } from "@/src/types";
+import { cn, resolveBinding } from "../../lib/utils";
+import type { AnyObj, EventHandler, SearchElement } from "../../types";
 import { Input } from "./input";
 import { Button } from "./button";
 

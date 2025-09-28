@@ -1,8 +1,8 @@
 "use client";
 
 import * as Recharts from "recharts";
-import { cn, resolveBinding } from "@/src/lib/utils";
-import type { AnyObj, ChartElement, SeriesSpec } from "@/src/types";
+import { cn, resolveBinding } from "../../lib/utils";
+import type { AnyObj, ChartElement, SeriesSpec } from "../../types";
 
 export function Chart({ element, state, t }: { element: ChartElement, state: AnyObj, t: (key: string) => string }) {
 

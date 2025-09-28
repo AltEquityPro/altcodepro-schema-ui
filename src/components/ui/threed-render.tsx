@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { cn, resolveBinding, classesFromStyleProps } from "@/src/lib/utils";
-import { ThreeDModelElement } from "@/src/types";
+import { cn, resolveBinding, classesFromStyleProps } from "../../lib/utils";
+import { ThreeDModelElement } from "../../types";
 import { CallRenderer } from "./call-renderer";
 import { VoiceRenderer } from "./voice-renderer";
 

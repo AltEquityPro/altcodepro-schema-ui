@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Hls, { Level } from "hls.js";
-import { cn, resolveBinding } from "@/src/lib/utils";
+import { cn, resolveBinding } from "../../lib/utils";
 import { Button } from "./button";
 import wrapWithMotion from "./wrapWithMotion";
 import {
@@ -15,7 +15,7 @@ import {
     Volume2Icon,
     VolumeXIcon,
 } from "lucide-react";
-import { VideoElement } from "@/src/types";
+import { VideoElement } from "../../types";
 
 export function VideoRenderer({
     element,

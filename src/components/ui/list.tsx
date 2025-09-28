@@ -1,14 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "@/src/lib/utils"
+import { cn } from "../../lib/utils"
 import type {
     AnyObj,
     EventHandler,
     ListElement,
     ListItemElement,
-} from "@/src/types"
-import { useAppState } from "@/src/schema/StateContext"
+} from "../../types"
+import { useAppState } from "../../schema/StateContext"
 
 /**
  * If you want virtualization, this imports your `react-window` List variant

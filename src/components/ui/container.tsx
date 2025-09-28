@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { cn, resolveBinding } from "@/src/lib/utils";
-import { ContainerElement, AnyObj } from "@/src/types";
-import { RenderChildren } from "@/src/schema/RenderChildren";
+import { cn, resolveBinding } from "../../lib/utils";
+import { ContainerElement, AnyObj } from "../../types";
+import { RenderChildren } from "../../schema/RenderChildren";
 
 /**
  * Build Tailwind classes for a container layout

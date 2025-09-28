@@ -3,8 +3,8 @@
 import { motion } from "framer-motion"
 import React, { useEffect, useMemo } from "react"
 import { loadStripe } from "@stripe/stripe-js"
-import { AnyObj, EventHandler, PaymentElement } from "@/src/types"
-import { resolveBinding } from "@/src/lib/utils"
+import { AnyObj, EventHandler, PaymentElement } from "../../types"
+import { resolveBinding } from "../../lib/utils"
 
 export const PaymentFormRenderer = React.memo(function PaymentFormRenderer({
     element,
