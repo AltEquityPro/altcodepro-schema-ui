@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 import { ActionType, AnyObj, Binding, EventHandler, UIProject, DataSource, TransitionSpec, ActionRuntime, UIScreenDef, ActionParams } from "../types";
-import { deepResolveBindings, resolveBinding } from "../lib/utils";
+import { anySignal, deepResolveBindings, resolveBinding } from "../lib/utils";
 import { JSONPath } from "jsonpath-plus";
 import { useAppState } from "./StateContext";
 
@@ -169,7 +169,7 @@ export function useActionHandler({
 
             const controllerWithTimeout = new AbortController();
             const timeoutId = h.params?.timeout ? setTimeout(() => controllerWithTimeout.abort(), h.params.timeout) : null;
-            const signal = AbortSignal.any([controller.signal, controllerWithTimeout.signal]);
+            const signal = anySignal([controller.signal, controllerWithTimeout.signal]);
 
             const fetchWithRetry = async () => {
                 const res = await fetch(url, {

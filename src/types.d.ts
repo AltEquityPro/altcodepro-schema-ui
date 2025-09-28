@@ -281,6 +281,7 @@ export enum InputType {
     rating = 'rating',
     richtext = 'richtext',
     search = 'search',
+    slider = 'slider',
     select = 'select',
     signature = 'signature',
     switch = 'switch',
@@ -712,8 +713,6 @@ export interface CommentsElement extends BaseElement {
     onModerateAction?: EventHandler;
 }
 
-
-
 export interface ContainerElement extends BaseElement {
     type: ElementType.container;
     align?: 'start' | 'center' | 'end' | 'stretch' | 'baseline';
@@ -1033,6 +1032,7 @@ export interface InputElement extends BaseElement {
     max?: number;
     maxFractionDigits?: number;
     maxSize?: number;
+    disabled?: boolean;
     min?: number;
     minFractionDigits?: number;
     multiple?: boolean;
@@ -1041,6 +1041,7 @@ export interface InputElement extends BaseElement {
     onCreate?: EventHandler;
     options?: Binding | { value: string; label: Binding }[];
     placeholder?: Binding;
+    uploadUrl?: string;
     step?: number;
     validation?: {
         errorMessage?: Binding;
@@ -1700,6 +1701,7 @@ export interface VideoElement extends BaseElement {
 export interface VoiceElement extends BaseElement {
     type: ElementType.voice;
     apiMode?: 'browser' | 'azure';
+    mode: 'output' | 'input';
     avatar?: {
         character: string;
         enabled: boolean;

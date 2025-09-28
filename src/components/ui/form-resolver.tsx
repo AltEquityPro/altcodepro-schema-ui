@@ -712,6 +712,8 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                     maxSize={input.maxSize}
                                                     files={(formField.value as File[]) || []}
                                                     onFiles={(files) => formField.onChange(files)}
+                                                    disabled={input.disabled}
+                                                    presignUrl={input.uploadUrl}
                                                 />
                                             );
                                         }

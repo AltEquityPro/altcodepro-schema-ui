@@ -4,7 +4,7 @@ import { ColumnDef, SortingState, ColumnFiltersState, VisibilityState, RowSelect
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { ArrowUpDown, MoreHorizontal, ChevronDown, Edit, Trash, Eye, Table } from "lucide-react"
 import { Calendar } from "../../components/ui/calendar"
-import { DatagGridCol, DataGridElement, InputType } from "../../types"
+import { DataGridElement, DataGridCol, ElementType, InputType } from "../../types"
 import { resolveBinding, deepResolveBindings, cn } from "../../lib/utils"
 import { useActionHandler } from "../../schema/Actions"
 import { useDataSources } from "../../schema/Datasource"
@@ -106,8 +106,8 @@ export function DataGrid({ element, runtime }: DataGridProps) {
             })
         }
 
-        element.columns.forEach((col: DatagGridCol) => {
-            const resolvedCol = deepResolveBindings(col, state, t) as DatagGridCol
+        element.columns.forEach((col: DataGridCol) => {
+            const resolvedCol = deepResolveBindings(col, state, t) as DataGridCol
             cols.push({
                 accessorKey: resolvedCol.key,
                 header: ({ column }) => {
@@ -268,7 +268,7 @@ export function DataGrid({ element, runtime }: DataGridProps) {
         setEditingCell(null)
     }
 
-    const startEditing = (row: Row<any>, col?: DatagGridCol) => {
+    const startEditing = (row: Row<any>, col?: DataGridCol) => {
         if (element.editingMode === 'modal' && element.editForm) {
             setCurrentEditData(row.original)
             setModalOpen(true)
@@ -286,10 +286,10 @@ export function DataGrid({ element, runtime }: DataGridProps) {
         setModalOpen(false)
     }
 
-    const renderCell = (col: DatagGridCol, value: any, rowData: any) => {
+    const renderCell = (col: DataGridCol, value: any, rowData: any) => {
         let cellValue = value
         const cellClass = typeof col.cellClass === 'function' ? col.cellClass(rowData) :
-            Array.isArray(col.cellClass) ? col.cellClass.find(c => resolveBinding(c.condition, { ...state, row: rowData }, t))?.class :
+            Array.isArray(col.cellClass) ? col.cellClass.find((c: { condition: any }) => resolveBinding(c.condition, { ...state, row: rowData }, t))?.class :
                 resolveBinding(col.cellClass, { ...state, row: rowData }, t)
 
         switch (col.renderer) {
@@ -302,7 +302,17 @@ export function DataGrid({ element, runtime }: DataGridProps) {
             case 'progress':
                 return <Progress value={Number(value)} className="w-[60%]" />
             case 'chart':
-                return <Chart chartType={col.chartConfig?.type || 'bar'} data={rowData[col.chartConfig?.dataKey || '']} options={col.chartConfig?.options} />
+                return <Chart
+                    state={state}
+                    t={t}
+                    element={{
+                        type: ElementType.chart,
+                        id: `${col.key}_chart`,
+                        name: `${col.key}_chart`,
+                        chartType: (col.chartConfig?.type || 'bar') as any,
+                        data: rowData[col.chartConfig?.dataKey || ''],
+                        options: col.chartConfig?.options
+                    }} />
             case 'checkbox':
                 return <Checkbox checked={!!value} disabled />
             case 'custom':
@@ -314,7 +324,7 @@ export function DataGrid({ element, runtime }: DataGridProps) {
         }
     }
 
-    const renderEditor = (col: DatagGridCol, value: any, rowData: any, colKey: string) => {
+    const renderEditor = (col: DataGridCol, value: any, rowData: any, colKey: string) => {
         const handleChange = (newValue: any) => handleCellEdit(rowData.id, colKey, newValue)
 
         switch (col.editorType || col.filterType || 'text') {
@@ -333,7 +343,10 @@ export function DataGrid({ element, runtime }: DataGridProps) {
                         </SelectTrigger>
                         <SelectContent>
                             {Array.isArray(col.options)
-                                ? col.options.map(opt => <SelectItem key={opt.value} value={opt.value}>{resolveBinding(opt.label, state, t)}</SelectItem>)
+                                ? col.options.map((opt: { value: string; label: any }) =>
+                                    <SelectItem key={opt.value}
+                                        value={opt.value}>{resolveBinding(opt.label, state, t)}
+                                    </SelectItem>)
                                 : null}
                         </SelectContent>
                     </Select>
@@ -368,7 +381,7 @@ export function DataGrid({ element, runtime }: DataGridProps) {
         }
     }
 
-    const renderFilter = (column: any, colDef: DatagGridCol) => {
+    const renderFilter = (column: any, colDef: DataGridCol) => {
         const filterValue = column.getFilterValue()
 
         switch (colDef.filterType) {
@@ -383,7 +396,8 @@ export function DataGrid({ element, runtime }: DataGridProps) {
                         </SelectTrigger>
                         <SelectContent>
                             {Array.isArray(colDef.options)
-                                ? colDef.options.map(opt => <SelectItem key={opt.value} value={opt.value}>{resolveBinding(opt.label, state, t)}</SelectItem>)
+                                ? colDef.options.map((opt: { value: string; label: any }) => <SelectItem key={opt.value}
+                                    value={opt.value}>{resolveBinding(opt.label, state, t)}</SelectItem>)
                                 : null}
                         </SelectContent>
                     </Select>
@@ -493,7 +507,7 @@ export function DataGrid({ element, runtime }: DataGridProps) {
                                         {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                                         {header.column.getCanFilter() ? (
                                             <div className="mt-2">
-                                                {renderFilter(header.column, element.columns.find(c => c.key === header.id) as DatagGridCol)}
+                                                {renderFilter(header.column, element.columns.find(c => c.key === header.id) as DataGridCol)}
                                             </div>
                                         ) : null}
                                     </TableHead>

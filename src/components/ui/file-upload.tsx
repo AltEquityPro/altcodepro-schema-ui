@@ -14,7 +14,7 @@ export type UploadedItem = { file: File; url?: string; meta?: AnyObj }
 
 export type FileUploadProps = {
     /** Presigned PUT url endpoint, or a function that returns the final URL to PUT to. */
-    presignUrl: string | ((file: File) => Promise<string> | string)
+    presignUrl?: string | ((file: File) => Promise<string> | string)
     /** Extra headers for the upload PUT (e.g., S3, GCS) */
     headers?: Record<string, string>
     /** Called when ALL current uploads in the batch complete (success or fail) */
@@ -32,7 +32,8 @@ export type FileUploadProps = {
     onError?: (file: File, error: string) => void
     /** Called whenever queue changes (add/remove/status change) */
     onQueueChange?: (queue: FileState[]) => void
-
+    files?: File[];                     // controlled files
+    onFiles?: (files: File[]) => void;  // notify parent
     /** Accept string like ".png,.jpg,application/pdf" */
     accept?: string
     /** Max size in bytes per file */
@@ -126,7 +127,7 @@ export function FileUpload({
     onProgress,
     onError,
     onQueueChange,
-
+    onFiles,
     accept,
     maxSize,
     maxFiles,
@@ -184,6 +185,12 @@ export function FileUpload({
         setQueue((prev) => {
             const next = updater(prev)
             notifyQueue(next)
+            if (onFiles) {
+                const currentFiles = next
+                    .filter(f => f.file && !f.readOnly)
+                    .map(f => f.file!)               // return raw File[]
+                onFiles(currentFiles)
+            }
             return next
         })
     }, [notifyQueue])
@@ -255,7 +262,8 @@ export function FileUpload({
                     typeof presignUrl === "function"
                         ? await presignUrl(next.file!)
                         : appendQuery(presignUrl, queryParams?.(next.file!) || {}, next.file?.name)
-
+                if (!signedUrl)
+                    return
                 const result = customUpload
                     ? await customUpload({
                         file: next.file!,
@@ -583,7 +591,9 @@ async function putWithProgress({
 }
 
 /** ---------- url helpers ---------- */
-function appendQuery(base: string, params: Record<string, string>, filename?: string) {
+function appendQuery(base?: string, params?: Record<string, string>, filename?: string) {
+    if (!base)
+        return
     const url = new URL(base, typeof window !== "undefined" ? window.location.href : undefined)
     Object.entries(params || {}).forEach(([k, v]) => url.searchParams.set(k, v))
     if (filename) url.searchParams.set("filename", filename)

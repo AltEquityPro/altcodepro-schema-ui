@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { BrowserQRCodeReader } from "@zxing/browser";
 import { cn, resolveBinding, classesFromStyleProps } from "../../lib/utils";
-import { QRReaderlement } from "../../types";
+import { QRReaderElement } from "../../types";
 
 export function QRCodeRenderer({
     element,
@@ -12,7 +12,7 @@ export function QRCodeRenderer({
     t,
     runEventHandler,
 }: {
-    element: QRReaderlement;
+    element: QRReaderElement;
     state: Record<string, any>;
     t: (k: string) => string;
     runEventHandler: (h?: any, d?: any) => Promise<void>;

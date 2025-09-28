@@ -709,3 +709,22 @@ export function luhnCheck(cardNumber: string): boolean {
 
     return sum % 10 === 0;
 }
+
+export function anySignal(signals: AbortSignal[]): AbortSignal {
+    const controller = new AbortController();
+
+    const onAbort = (event: Event) => {
+        controller.abort((event.target as AbortSignal).reason);
+        signals.forEach(sig => sig.removeEventListener("abort", onAbort));
+    };
+
+    for (const sig of signals) {
+        if (sig.aborted) {
+            controller.abort(sig.reason);
+            break;
+        }
+        sig.addEventListener("abort", onAbort);
+    }
+
+    return controller.signal;
+}
