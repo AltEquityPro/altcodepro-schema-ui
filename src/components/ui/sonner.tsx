@@ -1,3 +1,4 @@
+"use client";
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, ToasterProps, toast as sonnerToast } from "sonner"
 

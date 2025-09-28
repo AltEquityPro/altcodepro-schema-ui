@@ -1,3 +1,4 @@
+"use client";
 import { resolveBinding } from '../../lib/utils';
 import { RenderChildren } from '../../schema/RenderChildren';
 import { AnyObj, CustomElement } from '../../types';

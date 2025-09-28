@@ -1,3 +1,4 @@
+"use client";
 'use client';
 import { useRef, useEffect } from "react";
 import { ActionType, AnyObj, Binding, EventHandler, UIProject, DataSource, TransitionSpec, ActionRuntime, UIScreenDef, ActionParams } from "../types";

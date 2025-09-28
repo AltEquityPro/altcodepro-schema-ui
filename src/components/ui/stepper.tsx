@@ -1,3 +1,4 @@
+"use client";
 import { AnyObj, EventHandler, StepWizardElement } from "../../types"
 import wrapWithMotion from "./wrapWithMotion"
 import React from "react"

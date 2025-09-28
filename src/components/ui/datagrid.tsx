@@ -1,3 +1,4 @@
+"use client";
 import * as React from "react"
 import { useMemo, useState, useEffect } from "react"
 import { ColumnDef, SortingState, ColumnFiltersState, VisibilityState, RowSelectionState, PaginationState, Row, flexRender, getCoreRowModel, getExpandedRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table"

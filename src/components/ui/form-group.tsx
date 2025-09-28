@@ -1,3 +1,4 @@
+"use client";
 import { useState } from "react";
 import { resolveBinding, classesFromStyleProps } from "../../lib/utils";
 import { useAppState } from "../../schema/StateContext";

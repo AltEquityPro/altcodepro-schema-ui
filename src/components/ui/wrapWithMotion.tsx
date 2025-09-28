@@ -1,3 +1,4 @@
+"use client";
 import { classesFromStyleProps, getAccessibilityProps, motionFromAnimation } from '../../lib/utils';
 import React from 'react'
 import { motion } from "framer-motion";
