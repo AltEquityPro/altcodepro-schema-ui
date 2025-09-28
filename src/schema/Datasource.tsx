@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DataSource, AnyObj, UIProject, DataMapping, UIScreenDef } from "../types";
 import { useAppState } from "./StateContext";
-import { deepResolveBindings, resolveBinding } from "../lib/utils";
+import { deepResolveBindings, joinUrl, resolveBinding } from "../lib/utils";
 
 type Fetcher = (ds: DataSource, state: AnyObj, t: (k: string) => string, signal?: AbortSignal) => Promise<any>;
 
@@ -388,13 +388,4 @@ export function useDataSources({
     }, [resolved, fetcher, state, t, setState, mappings]);
 
     return data;
-}
-
-function joinUrl(base: string, path: string): string {
-    try {
-        return new URL(path, base).toString();
-    } catch (e) {
-        console.error('Invalid URL construction:', { base, path, error: e });
-        throw new Error(`Failed to construct URL from base: ${base} and path: ${path}`);
-    }
 }

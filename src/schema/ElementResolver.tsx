@@ -1,14 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import type {
-    AnyObj,
-    DropdownElement,
-    FormElement,
-    InputElement,
-    UIElement
-} from "./types-bridges";
-import { ElementType } from "./types-bridges";
 import {
     resolveBinding,
     isVisible,
@@ -92,6 +84,9 @@ import { FormResolver } from "../components/ui/form-resolver";
 import { DataGrid } from "../components/ui/datagrid";
 import { CodeInput } from "../components/ui/code-input";
 import {
+    AnyObj,
+    UIElement,
+    ElementType,
     AccordionElement,
     AlertElement,
     AvatarElement,
@@ -107,6 +102,8 @@ import {
     DataGridElement,
     ModalElement,
     DrawerElement,
+    DropdownElement,
+    FormElement,
     EditorElement,
     FileUploadElement,
     FooterElement,
@@ -119,6 +116,7 @@ import {
     TabsElement,
     TextElement,
     VideoElement,
+    InputElement,
     VoiceElement,
     WalletElement,
     AlertDialogElement,
@@ -170,6 +168,9 @@ import LottieRenderer from "../components/ui/lottie";
 import { RatingInput } from "../components/ui/rating-input";
 import { SearchRenderer } from "../components/ui/search";
 import { SignaturePadRenderer } from "../components/ui/signature";
+import { TimelineRenderer } from "../components/ui/timeline";
+import { TreeRenderer } from "../components/ui/tree";
+import { MapRenderer } from "../components/ui/map-renderer";
 
 interface ElementResolverProps {
     element: UIElement;
@@ -373,7 +374,7 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
 
         case ElementType.map:
             return wrapWithMotion(resolvedElement,
-                <div></div>
+                <MapRenderer element={resolvedElement} state={state} t={t} />
             );
         case ElementType.menu:
             const menubar = resolvedElement as MenuElement;
@@ -439,7 +440,7 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             const sidebar = resolvedElement as SidebarElement;
             return <SidebarRenderer element={resolvedElement} runtime={runtime} runEventHandler={runEventHandler} state={state} t={t} />
         case ElementType.signature_pad:
-            return <SignaturePadRenderer element={resolvedElement as SignaturePadElement} t={t} runEventHandler={runEventHandler} />;
+            return <SignaturePadRenderer element={resolvedElement as SignaturePadElement} runEventHandler={runEventHandler} />;
 
         case ElementType.skeleton:
             return wrapWithMotion(element,

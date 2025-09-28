@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
+import { jsPDF } from "jspdf"; // for PDF export
 import { Button } from "./button";
 import { cn } from "@/src/lib/utils";
 import { AnyObj, SignaturePadElement, EventHandler } from "@/src/types";
@@ -22,7 +23,6 @@ export function SignaturePadRenderer({
     const { state, t } = useAppState();
     const sigRef = useRef<SignatureCanvas | null>(null);
 
-    // ---- Config from schema ----
     const exportType = element.exportType || "png";
     const strokeColor = element.strokeColor || "#000";
     const backgroundColor = element.backgroundColor || "transparent";
@@ -46,14 +46,43 @@ export function SignaturePadRenderer({
         null
     );
 
-    // ---- Helpers ----
+    /* ====== Persistence: hydrate & resume ====== */
+    useEffect(() => {
+        if (!element.signatureDataSourceId) return;
+        const stored = state[element.signatureDataSourceId];
+        if (!stored) return;
+
+        if (multiSignatures && typeof stored === "object") {
+            setSignatures(stored);
+            if (element.resumeFromSaved && sigRef.current && activeParticipant) {
+                const sig = stored[activeParticipant];
+                if (sig) sigRef.current.fromDataURL(sig);
+            }
+        } else if (typeof stored === "string") {
+            setSignatures({ default: stored });
+            if (element.resumeFromSaved && sigRef.current) {
+                sigRef.current.fromDataURL(stored);
+            }
+        }
+    }, [
+        state,
+        element.signatureDataSourceId,
+        element.resumeFromSaved,
+        multiSignatures,
+        activeParticipant,
+    ]);
+
+    /* ====== Helpers ====== */
     const exportSignature = (): string | null => {
         if (!sigRef.current) return null;
         try {
             if (exportType === "svg")
                 return sigRef.current.toDataURL("image/svg+xml");
             if (exportType === "jpeg")
-                return sigRef.current.toDataURL("image/jpeg", element.exportQuality ?? 0.95);
+                return sigRef.current.toDataURL(
+                    "image/jpeg",
+                    element.exportQuality ?? 0.95
+                );
             return sigRef.current.toDataURL("image/png");
         } catch (e) {
             console.error("Export error", e);
@@ -65,8 +94,14 @@ export function SignaturePadRenderer({
         const dataUrl = exportSignature();
         if (!dataUrl) return;
 
-        const key = multiSignatures && activeParticipant ? activeParticipant : "default";
-        setSignatures((prev) => ({ ...prev, [key]: dataUrl }));
+        const key =
+            multiSignatures && activeParticipant ? activeParticipant : "default";
+        const updated = { ...signatures, [key]: dataUrl };
+        setSignatures(updated);
+
+        if (element.signatureDataSourceId) {
+            state[element.signatureDataSourceId] = multiSignatures ? updated : dataUrl;
+        }
 
         const handler = trigger === "save" ? element.onSave : element.onChange;
         await runEventHandler(handler, {
@@ -78,19 +113,16 @@ export function SignaturePadRenderer({
 
     const clearSignature = async () => {
         sigRef.current?.clear();
-        if (multiSignatures && activeParticipant) {
-            setSignatures((prev) => {
-                const next = { ...prev };
-                delete next[activeParticipant];
-                return next;
-            });
-        } else {
-            setSignatures((prev) => {
-                const next = { ...prev };
-                delete next.default;
-                return next;
-            });
+        const key =
+            multiSignatures && activeParticipant ? activeParticipant : "default";
+        const updated = { ...signatures };
+        delete updated[key];
+        setSignatures(updated);
+
+        if (element.signatureDataSourceId) {
+            state[element.signatureDataSourceId] = multiSignatures ? updated : "";
         }
+
         await runEventHandler(element.onClear, { id: element.id });
     };
 
@@ -102,7 +134,7 @@ export function SignaturePadRenderer({
         await runEventHandler(element.onUndo, { id: element.id });
     };
 
-    // ---- Auto-save with debounce ----
+    /* ====== Auto-save ====== */
     const handleChange = () => {
         if (element.autosave) {
             if (autosaveTimer) clearTimeout(autosaveTimer);
@@ -120,7 +152,43 @@ export function SignaturePadRenderer({
         };
     }, [autosaveTimer]);
 
-    // ---- UI ----
+    /* ====== Bulk export ====== */
+    const bulkExport = async () => {
+        if (!multiSignatures) {
+            const sig = signatures.default;
+            if (!sig) return;
+            await runEventHandler(element.onExport, {
+                id: element.id,
+                signatures,
+                format: "json",
+            });
+            downloadJSON(signatures, "signatures.json");
+            return;
+        }
+
+        // JSON export
+        downloadJSON(signatures, "signatures.json");
+
+        // PDF export
+        const pdf = new jsPDF();
+        Object.entries(signatures).forEach(([pid, sig], idx) => {
+            if (idx > 0) pdf.addPage();
+            pdf.setFontSize(12);
+            pdf.text(`Signature: ${pid}`, 10, 10);
+            if (sig) {
+                pdf.addImage(sig, "PNG", 10, 20, 180, 60);
+            }
+        });
+        pdf.save("signatures.pdf");
+
+        await runEventHandler(element.onExport, {
+            id: element.id,
+            signatures,
+            format: "pdf",
+        });
+    };
+
+    /* ====== UI ====== */
     return (
         <div
             className={cn(
@@ -142,6 +210,15 @@ export function SignaturePadRenderer({
                                     id: element.id,
                                     participantId: p.id,
                                 });
+                                if (
+                                    element.resumeFromSaved &&
+                                    sigRef.current &&
+                                    signatures[p.id]
+                                ) {
+                                    sigRef.current.fromDataURL(signatures[p.id]);
+                                } else {
+                                    sigRef.current?.clear();
+                                }
                             }}
                         >
                             {p.label || p.id}
@@ -168,7 +245,7 @@ export function SignaturePadRenderer({
             />
 
             {/* Controls */}
-            <div className="flex gap-2 mt-2">
+            <div className="flex gap-2 mt-2 flex-wrap">
                 {element.clearButton && (
                     <Button
                         size="sm"
@@ -199,6 +276,16 @@ export function SignaturePadRenderer({
                         {t("save") || "Save"}
                     </Button>
                 )}
+                {element.exportButton && (
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={bulkExport}
+                        disabled={!Object.keys(signatures).length}
+                    >
+                        {t("export") || "Export All"}
+                    </Button>
+                )}
             </div>
 
             {/* Preview */}
@@ -224,4 +311,15 @@ export function SignaturePadRenderer({
                 )}
         </div>
     );
+}
+
+/* ========== Utils ========== */
+function downloadJSON(data: any, filename: string) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+    });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
 }

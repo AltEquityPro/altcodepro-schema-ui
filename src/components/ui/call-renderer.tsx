@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { WSClient, SignalMessage } from "@/src/lib/webrtc/signaling";
+import { WSClient } from "@/src/lib/webrtc/signaling";
 import { resolveBinding, classesFromStyleProps, cn } from "@/src/lib/utils";
 import { Button } from "@/src/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/src/components/ui/tooltip";

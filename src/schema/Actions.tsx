@@ -1,28 +1,8 @@
 import { useRef, useEffect } from "react";
-import { ActionType, AnyObj, Binding, EventHandler, UIProject, DataSource, TransitionSpec, ExportConfig, UIScreenDef } from "../types";
+import { ActionType, AnyObj, Binding, EventHandler, UIProject, DataSource, TransitionSpec, ActionRuntime, UIScreenDef, ActionParams } from "../types";
 import { deepResolveBindings, resolveBinding } from "../lib/utils";
 import { JSONPath } from "jsonpath-plus";
 import { useAppState } from "./StateContext";
-
-export interface ActionRuntime {
-    navigate?: (href: string, replace?: boolean) => void;
-    openModal?: (id: string) => void;
-    closeModal?: (id: string) => void;
-    runScript?: (name: string, args: any[]) => Promise<any> | any;
-    toast?: (msg: string, variant?: "success" | "error" | "info") => void;
-    exportFile?: (type: "pdf" | "ppt" | "word" | "json", payload: AnyObj) => Promise<void>;
-    connectWallet?: (provider: string, chainId: number, projectId?: string) => Promise<any>;
-    signTransaction?: (provider: string, chainId: number, transaction: any) => Promise<any>;
-    initiateCall?: (callType: "video" | "audio", peerId: string, signalingServer?: string) => Promise<void>;
-    processVoiceCommand?: (command: string, language: string, voiceModel?: string) => Promise<any>;
-}
-
-interface ActionParams {
-    timeout?: number;
-    retry?: { attempts: number; delay: number; strategy?: 'exponential' | 'linear' | 'jitter' };
-    optimisticState?: { path: string; value: any };
-    resultMapping?: { jsonPath?: string; transform?: string };
-}
 
 async function withRetry<T>(
     fn: () => Promise<T>,
