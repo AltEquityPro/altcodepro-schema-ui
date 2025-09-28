@@ -1,7 +1,7 @@
 {
   "name": "altcodepro-schema-ui",
-  "version": "1.0.1",
-  "description": "",
+  "version": "1.0.2",
+  "description": "AltcodePro Schema driven UI",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
