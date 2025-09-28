@@ -1,3 +1,4 @@
+'use client';
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DataSource, AnyObj, UIProject, DataMapping, UIScreenDef } from "../types";
 import { useAppState } from "./StateContext";
