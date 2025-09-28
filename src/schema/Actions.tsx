@@ -280,7 +280,7 @@ export function useActionHandler({
 
             const controllerWithTimeout = new AbortController();
             const timeoutId = h.params?.timeout ? setTimeout(() => controllerWithTimeout.abort(), h.params.timeout) : null;
-            const signal = AbortSignal.any([controller.signal, controllerWithTimeout.signal]);
+            const signal = (AbortSignal as any).any([controller.signal, controllerWithTimeout.signal]);
 
             const fetchWithRetry = async () => {
                 const res = await fetch(url, {

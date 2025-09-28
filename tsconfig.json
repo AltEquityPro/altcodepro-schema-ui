@@ -35,7 +35,7 @@
         ]
     },
     "files": [
-        "src/aframe-jsx.d.ts"
+        "src/aframe-jsx.ts"
     ],
     "include": [
         "src",

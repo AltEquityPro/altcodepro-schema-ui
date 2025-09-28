@@ -405,8 +405,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
         }
     };
 
-    const renderInputField = (field: UIElement) => {
-        const input = field as InputElement;
+    const renderInputField = (input: InputElement) => {
         const name = input.name as keyof FormValues;
 
         return (

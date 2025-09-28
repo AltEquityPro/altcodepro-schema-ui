@@ -24,7 +24,6 @@ export enum ActionType {
     wallet_sign = 'wallet_sign',
     websocket_call = 'websocket_call',
 }
-import type { AnyObj } from "../types";
 
 export interface ActionRuntime {
     /** Navigation & layout */
@@ -1024,7 +1023,6 @@ export interface ImageElement extends BaseElement {
 }
 
 export interface InputElement extends BaseElement {
-    type: ElementType.input;
     accept?: string;
     currency?: string | Binding;
     inputType: InputType;
@@ -1255,7 +1253,6 @@ export interface ProgressElement extends BaseElement {
     label?: Binding;
     labelPosition?: 'inside' | 'outside' | 'none';
     srOnlyLabel?: boolean | Binding;
-    value: number | Binding;
 }
 
 export interface QRReaderElement extends BaseElement {
@@ -1277,7 +1274,6 @@ export interface RadioGroupElement extends BaseElement {
 export interface RatingElement extends BaseElement {
     type: ElementType.rating;
     max?: number;
-    value: number | Binding;
     readonly?: boolean;
     allowHalf?: boolean;
     precision?: number; // e.g., 0.5
@@ -1579,7 +1575,7 @@ export interface TreeElement extends BaseElement {
 }
 
 export interface TreeNodeElement extends BaseElement {
-    type: ElementType.tree_node;     // (not required to render, but helps the schema)
+    type: ElementType.tree;     // (not required to render, but helps the schema)
     id: string;
     label: Binding;
     description?: Binding;
@@ -1620,7 +1616,6 @@ export interface ToggleGroupElement extends BaseElement {
     multiple?: boolean;
     onChange?: EventHandler;
     options: ToggleElement[];
-    value: Binding | string[];
 }
 
 export interface TooltipElement extends BaseElement {

@@ -6,7 +6,6 @@ export * from "./schema/ProjectRouter";
 export * from "./schema/ScreenRenderer";
 export * from "./schema/StateContext";
 
-// export UI types
 export * from "./types";
 export * from "./lib/i18n";
 export * from "./lib/utils";
