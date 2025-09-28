@@ -24,6 +24,134 @@ export enum ActionType {
     wallet_sign = 'wallet_sign',
     websocket_call = 'websocket_call',
 }
+import type { AnyObj } from "../types";
+
+export interface ActionRuntime {
+    /** Navigation & layout */
+    navigate?: (href: string, replace?: boolean) => void;
+    openModal?: (id: string) => void;
+    closeModal?: (id: string) => void;
+    openDrawer?: (id: string) => void;
+    closeDrawer?: (id: string) => void;
+    openSidebar?: (id: string) => void;
+    closeSidebar?: (id: string) => void;
+
+    /** Scripts, forms, exports */
+    runScript?: (name: string, args: any[]) => Promise<any> | any;
+    toast?: (msg: string, variant?: "success" | "error" | "info" | "warning") => void;
+    exportFile?: (
+        type: "pdf" | "ppt" | "word" | "json" | "csv" | "xlsx",
+        payload: AnyObj
+    ) => Promise<void>;
+
+    /** Web3 / wallet / crypto */
+    connectWallet?: (provider: string, chainId: number, projectId?: string) => Promise<any>;
+    signTransaction?: (provider: string, chainId: number, transaction: any) => Promise<any>;
+    signMessage?: (provider: string, chainId: number, message: string) => Promise<any>;
+    disconnectWallet?: () => Promise<void>;
+
+    /** Real-time / comms */
+    initiateCall?: (
+        callType: "video" | "audio",
+        peerId: string,
+        signalingServer?: string
+    ) => Promise<void>;
+    endCall?: () => void;
+    sendMessage?: (threadId: string, message: AnyObj) => Promise<void>;
+    joinChatThread?: (threadId: string) => Promise<void>;
+    leaveChatThread?: (threadId: string) => Promise<void>;
+    voteComment?: (threadId: string, commentId: string, up: boolean) => Promise<void>;
+
+    /** Voice / AI / media */
+    processVoiceCommand?: (command: string, language: string, voiceModel?: string) => Promise<any>;
+    transcribeAudio?: (file: File, language?: string) => Promise<string>;
+    generateAIContent?: (prompt: string, type: "text" | "image" | "video" | "ui") => Promise<any>;
+
+    /** Signature pad & drawing */
+    saveSignature?: (dataUrl: string, exportType: "png" | "jpeg" | "svg") => Promise<void>;
+    clearSignature?: () => void;
+
+    /** Timeline / tree interactions */
+    selectTimelineItem?: (id: string) => void;
+    selectTreeNode?: (id: string, selected: boolean) => void;
+
+    /** Generic state patcher (for form/datagrid etc.) */
+    patchState?: (path: string, value: any) => void;
+}
+export interface ActionParams {
+    /** General controls */
+    timeout?: number;
+    retry?: {
+        attempts: number;
+        delay: number;
+        strategy?: "exponential" | "linear" | "jitter";
+    };
+    optimisticState?: { path: string; value: any };
+    resultMapping?: { jsonPath?: string; transform?: string };
+
+    /** API / network */
+    queryParams?: Record<string, string | number | boolean>;
+    body?: AnyObj | FormData;
+    headers?: Record<string, string>;
+    statePath?: string; // where to save result in state
+    responseType?: "data" | "blob" | "text";
+
+    /** Navigation / transitions */
+    href?: string;
+    replace?: boolean;
+    modalId?: string;
+    drawerId?: string;
+    sidebarId?: string;
+
+    /** Form / validation */
+    validate?: boolean;
+    resetForm?: boolean;
+    submitFormId?: string;
+
+    /** File / uploads */
+    file?: File | File[];
+    accept?: string;
+    maxSizeBytes?: number;
+    multiple?: boolean;
+
+    /** Chat / comments */
+    threadId?: string;
+    message?: AnyObj;
+    commentId?: string;
+    voteDirection?: "up" | "down";
+
+    /** Timeline / tree */
+    itemId?: string;
+    nodeId?: string;
+    selected?: boolean;
+
+    /** Wallet / crypto */
+    provider?: string;
+    chainId?: number;
+    projectId?: string;
+    transaction?: AnyObj;
+    messageToSign?: string;
+
+    /** Voice / AI */
+    command?: string;
+    language?: string;
+    voiceModel?: string;
+    prompt?: string;
+    type?: "text" | "image" | "video" | "ui";
+
+    /** Export */
+    exportType?: "pdf" | "ppt" | "word" | "json" | "csv" | "xlsx";
+    exportConfig?: AnyObj;
+
+    /** Signature pad */
+    dataUrl?: string;
+    format?: "png" | "jpeg" | "svg";
+
+    /** Misc */
+    args?: any[];
+    event?: string; // audit log / custom
+    metadata?: AnyObj;
+}
 
 export enum Alignment {
     center = 'center',
@@ -189,7 +317,9 @@ export enum LayoutType {
 // === Base Types ===
 export type AnyObj = Record<string, any>;
 
-export type Binding = string | { binding: string } | null;
+// Replace your current Binding with this:
+export type Binding<T = any> = string | { binding: string } | null;
+
 
 export type ButtonVariant =
     | 'default'
@@ -662,7 +792,7 @@ export interface CustomElement extends BaseElement {
     props?: Record<string, any>;
 }
 
-export type DatagGridCol = {
+export type DataGridCol = {
     align?: Alignment;
     cellClass?: string | Binding | { condition: Binding; class: string }[] | ((row: any) => string);
     chartConfig?: {
@@ -694,7 +824,7 @@ export interface DataGridElement extends BaseElement {
     type: ElementType.datagrid;
     autoHeight?: boolean;
     columnVisibility?: Record<string, boolean> | Binding;
-    columns: DatagGridCol[];
+    columns: DataGridCol[];
     currentPage?: number | Binding;
     editForm?: FormElement;
     editingMode?: 'none' | 'cell' | 'row' | 'modal';
@@ -961,16 +1091,16 @@ export interface ListItemElement extends BaseElement {
 }
 export interface LottieElement extends BaseElement {
     type: ElementType.lottie;
-    src: Binding; // Lottie JSON file or URL
+    src: Binding;                           // URL or inline JSON via binding
 
     // Playback controls
     autoplay?: boolean;
-    loop?: boolean;                          // legacy boolean loop
-    loopCount?: Binding<number>;             // finite loop count
+    loop?: boolean;                         // legacy boolean loop
+    loopCount?: Binding<number>;            // finite count
     speed?: number;
     direction?: 1 | -1;
-    isPlaying?: Binding<boolean>;            // external play/pause binding
-    progress?: Binding<number>;              // bindable 0..1 progress
+    isPlaying?: Binding<boolean>;
+    progress?: Binding<number>;             // 0..1
     controlBinding?: Binding<{ cmd: string; args?: any; nonce?: any }>;
 
     // Segments & markers
@@ -994,7 +1124,7 @@ export interface LottieElement extends BaseElement {
     // Events
     onComplete?: EventHandler;
     onLoop?: EventHandler;
-    onEnterFrame?: EventHandler;
+    onEnterFrame?: EventHandler;    // payload: { id, frame, totalFrames }
     onSegmentStart?: EventHandler;
     onClick?: EventHandler;
     onHoverStart?: EventHandler;
@@ -1006,7 +1136,15 @@ export interface LottieElement extends BaseElement {
     onConfigReady?: EventHandler;
     onError?: EventHandler;
 }
-
+export interface SkeletonElement extends BaseElement {
+    type: ElementType.skeleton;
+    lines?: number;                   // how many lines (for text)
+    circular?: boolean;               // avatar-style
+    width?: number | string;
+    height?: number | string;
+    animation?: "pulse" | "wave" | "none";
+    radius?: number | string;         // border radius
+}
 
 export interface MenuElement extends BaseElement {
     type: ElementType.menu;
@@ -1257,13 +1395,15 @@ export interface SignaturePadElement extends BaseElement {
     initialParticipantId?: string;
 
     // Persistence
-    signatureDataSourceId?: string
+    signatureDataSourceId?: string;
+    resumeFromSaved?: boolean;
 
     // UI toggles
     clearButton?: boolean;
     undoButton?: boolean;
     saveButton?: boolean;
     preview?: boolean;
+    exportButton?: boolean;          // 🆕 Show export bulk button
 
     // Autosave
     autosave?: boolean;
@@ -1274,6 +1414,7 @@ export interface SignaturePadElement extends BaseElement {
     onClear?: EventHandler;
     onUndo?: EventHandler;
     onSave?: EventHandler;
+    onExport?: EventHandler;          // 🆕 Event when bulk export triggered
     onParticipantChange?: EventHandler;
 }
 
@@ -1375,29 +1516,93 @@ export interface ThreeDModelElement extends BaseElement {
 }
 export interface TimelineElement extends BaseElement {
     type: ElementType.timeline;
-    items: {
+    // Prefer dataSourceId on BaseElement for remote items. If provided,
+    // state[dataSourceId] should resolve to an array of raw items.
+    items?: {
         id: string;
         title: Binding;
         description?: Binding;
-        timestamp?: Binding;
-        icon?: string;
-        color?: string;
+        timestamp?: Binding;        // ISO date/time or any parseable date
+        icon?: string;              // lucide name or custom class
+        color?: string;             // dot/line color
+        badge?: Binding;            // small label
+        meta?: Binding;             // right-side small text
+        disabled?: Binding | boolean;
+        onClick?: EventHandler;
     }[];
-    orientation?: 'horizontal' | 'vertical';
+    orientation?: "horizontal" | "vertical";
+    align?: "left" | "right" | "alternate" | "center";
+    compact?: boolean;            // dense spacing
+    showTimeAxis?: boolean;       // show axis for vertical
+    showNowMarker?: boolean;      // "Now" pin on the axis
+    groupBy?: "day" | "month" | "year" | "none";
+    sort?: "asc" | "desc";        // by timestamp
+    // Loading & empty states
+    loading?: boolean | Binding;
+    emptyText?: Binding;
+    // Pagination / more
+    hasMore?: Binding | boolean;
+    onLoadMore?: EventHandler;    // load next page from DS
+    // Item events (fallback if per-item onClick omitted)
+    onItemClick?: EventHandler;
 }
+// === Extended Tree schema (suggested) ===
 export interface TreeElement extends BaseElement {
     type: ElementType.tree;
-    nodes: {
-        id: string;
-        label: Binding;
-        children?: TreeElement['nodes'];
-        icon?: string;
-        expanded?: boolean;
-        onSelect?: EventHandler;
-    }[];
-    selectable?: boolean;
-    multiple?: boolean;
+    /** Root nodes (ignored if dataSourceId provided; those come from state[dataSourceId]) */
+    nodes?: TreeNodeElement[];
+    /** If provided, root nodes are read from state[dataSourceId] (schema or data layer populates). */
+    dataSourceId?: string;
+
+    /* Behavior */
+    selectable?: boolean;            // default false
+    multiple?: boolean;              // default false (single select)
+    checkStrictly?: boolean;         // default false (if false, parent reflects child selection tri-state)
+    disableToggleOnLabel?: boolean;  // default false (clicking label selects; caret toggles expand)
+
+    /* UX / Features */
+    searchable?: boolean;            // default false (renders search input)
+    searchPlaceholder?: Binding;
+    showBadges?: boolean;            // display badge if node.badge provided
+    showDescriptions?: boolean;      // display description if provided
+    draggable?: boolean;             // enable HTML5 DnD reordering (siblings only)
+    emptyLabel?: Binding;            // shown when no items / empty filter
+    loadingLabel?: Binding;          // shown while lazy children loading
+
+    /* Event hooks (schema-driven) */
+    onNodeSelect?: EventHandler;     // after selection toggled (payload: { id, selected })
+    onNodeExpand?: EventHandler;     // after expand/collapse (payload: { id, expanded })
+    onLoadChildren?: EventHandler;   // for lazy nodes; schema should callback(children)
+    onContextMenu?: EventHandler;    // right click (payload: { id })
+    onReorder?: EventHandler;        // after DnD sibling reordering (payload: { parentId, fromIndex, toIndex })
 }
+
+export interface TreeNodeElement extends BaseElement {
+    type: ElementType.tree_node;     // (not required to render, but helps the schema)
+    id: string;
+    label: Binding;
+    description?: Binding;
+    icon?: string;                   // "folder" | "file" | custom key (see resolveIcon)
+    color?: string;                  // tailwind color token or hex
+    badge?: Binding | number;        // small count/label
+    /** If true, do not load children until first expand. */
+    lazy?: boolean;
+    /** Mark initial expansion state. */
+    expanded?: boolean;
+    /** Disable selection for this node only. */
+    disabled?: boolean;
+
+    /** children: resolved in-place OR loaded via onLoadChildren or external dataSource */
+    children?: TreeNodeElement[];
+
+    /* Node-level event hooks */
+    onSelect?: EventHandler;
+    onExpand?: EventHandler;
+    onContextMenu?: EventHandler;
+    onAction?: EventHandler;         // for action buttons e.g. kebab menu (payload: { id, actionId })
+    actions?: { id: string; label: Binding; icon?: string }[];
+}
+
 
 export interface ToggleElement extends BaseElement {
     type: ElementType.toggle;
