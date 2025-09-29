@@ -6,13 +6,6 @@ import { ThreeDModelElement } from "../../types";
 import { CallRenderer } from "./call-renderer";
 import { VoiceRenderer } from "./voice-renderer";
 
-declare global {
-    namespace JSX {
-        interface IntrinsicElements {
-            [elemName: string]: any;
-        }
-    }
-}
 
 export function ThreeDRenderer({
     threeElement,

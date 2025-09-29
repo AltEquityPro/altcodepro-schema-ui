@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://altcode.pro/docs
+    about: Please check our docs before creating an issue.
+  - name: 💬 Community Discussions
+    url: https://github.com/altcodepro/schema-ui/discussions
+    about: Use discussions for questions and ideas that don’t fit issues.

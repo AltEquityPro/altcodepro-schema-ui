@@ -29,10 +29,17 @@
             "node",
             "react",
             "react-dom"
+        ],
+        "typeRoots": [
+            "./node_modules/@types"
         ]
     },
+    "files": [
+        "src/aframe.d.ts"
+    ],
     "include": [
-        "src"
+        "src",
+        "src/**/*.d.ts"
     ],
     "exclude": [
         "node_modules",
