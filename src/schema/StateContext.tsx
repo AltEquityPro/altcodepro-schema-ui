@@ -1,4 +1,3 @@
-"use client";
 'use client';
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { AnyObj, UIProject, Binding } from "../types";
