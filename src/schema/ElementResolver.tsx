@@ -8,7 +8,7 @@ import {
     deepResolveBindings,
     cn
 } from "../lib/utils";
-
+import { motion } from "framer-motion";
 // Lazy load shadcn components
 const AccordionRenderer = lazy(() => import("../components/ui/accordion").then(module => ({ default: module.AccordionRenderer })));
 const AlertDialogRenderer = lazy(() => import("../components/ui/alert-dialog").then(module => ({ default: module.AlertDialogRenderer })));
@@ -55,7 +55,7 @@ const Toggle = lazy(() => import("../components/ui/toggle").then(module => ({ de
 const Tooltip = lazy(() => import("../components/ui/tooltip").then(module => ({ default: module.Tooltip })));
 const TooltipTrigger = lazy(() => import("../components/ui/tooltip").then(module => ({ default: module.TooltipTrigger })));
 const TooltipContent = lazy(() => import("../components/ui/tooltip").then(module => ({ default: module.TooltipContent })));
-const Motion = lazy(() => import("framer-motion").then(module => ({ default: module.motion })));
+
 const ContainerRenderer = lazy(() => import("../components/ui/container").then(module => ({ default: module.ContainerRenderer })));
 const DynamicIcon = lazy(() => import("../components/ui/dynamic-icon").then(module => ({ default: module.DynamicIcon })));
 const CustomComponentRender = lazy(() => import("../components/ui/custom-component"));
@@ -662,16 +662,15 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
         case ElementType.text:
             const text = resolvedElement as TextElement;
             const TextTag = text.tag || 'p';
-            const MotionText = ((Motion as any)[TextTag]);
+            const MotionText = ((motion as any)[TextTag]) || motion.div;
             return (
-                <LazyComponent>
-                    <MotionText
-                        className={cn(className, `text-${text.alignment || 'left'}`, text.fontWeight ? `font-${text.fontWeight}` : '')}
-                        dangerouslySetInnerHTML={text.contentFormat === 'html' ? { __html: resolveBinding(text.content, state, t) } : undefined}
-                    >
-                        {text.contentFormat !== 'html' ? resolveBinding(text.content, state, t) : null}
-                    </MotionText>
-                </LazyComponent>
+
+                <MotionText
+                    className={cn(className, `text-${text.alignment || 'left'}`, text.fontWeight ? `font-${text.fontWeight}` : '')}
+                    dangerouslySetInnerHTML={text.contentFormat === 'html' ? { __html: resolveBinding(text.content, state, t) } : undefined}
+                >
+                    {text.contentFormat !== 'html' ? resolveBinding(text.content, state, t) : null}
+                </MotionText>
             );
 
         case ElementType.three_d_model:

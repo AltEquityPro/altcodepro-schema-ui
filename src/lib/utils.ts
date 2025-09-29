@@ -267,21 +267,55 @@ function readEnv(key: string): string | undefined {
     return undefined;
 }
 
-function expandEnvTemplates(str: string): string {
+export function expandEnvTemplates(str: string): string {
     return str.replace(/\$\{([A-Z0-9_]+)\}/g, (_, k) => readEnv(k) || "");
 }
-export function resolveBinding(val: any, state: AnyObj, t: (k: string) => string): any {
+export function resolveBinding(
+    val: any,
+    state: AnyObj,
+    t: (k: string) => string
+): any {
     if (val == null) return val;
 
+    // --- 1) Handle direct string bindings ---
+    if (typeof val === "string") {
+        // i18n.key
+        if (val.startsWith("i18n.")) {
+            const key = val.slice(5);
+            const out = t(key);
+            return out === key ? "" : out;
+        }
+
+        // translations.<locale>.<path>
+        if (val.startsWith("translations.")) {
+            const parts = val.split(".");
+            if (parts.length >= 3) {
+                const path = parts.slice(2).join(".");
+                const out = t(path);
+                return out === path ? "" : out;
+            }
+        }
+
+        // Direct ENV (ALL_CAPS or contains API_ENDPOINT)
+        if (/^[A-Z0-9_]+$/.test(val)) return readEnv(val);
+        if (val.includes("API_ENDPOINT")) return readEnv("API_ENDPOINT");
+
+        // Fallback: return as-is
+        return val;
+    }
+
+    // --- 2) Handle { binding: "..." } objects ---
     if (typeof val === "object" && "binding" in val) {
         const key = String(val.binding);
 
-        // i18n translations
+        // i18n.key
         if (key.startsWith("i18n.")) {
             const k = key.slice(5);
             const out = t(k);
             return out === k ? "" : out;
         }
+
+        // translations.<locale>.<path>
         if (key.startsWith("translations.")) {
             const parts = key.split(".");
             if (parts.length >= 3) {
@@ -291,24 +325,18 @@ export function resolveBinding(val: any, state: AnyObj, t: (k: string) => string
             }
         }
 
-        // State lookup
+        // state.path
         if (key.startsWith("state.")) {
             const valFromState = getPath(state, key.slice(6));
-            // return [] instead of undefined for options
-            if (Array.isArray(valFromState)) return valFromState;
-            return valFromState ?? null;
+            return Array.isArray(valFromState) ? valFromState : (valFromState ?? null);
         }
 
-        // env.* lookup
+        // env.X or DIRECT_ENV
         if (key.startsWith("env.")) return readEnv(key.slice(4));
-
-        // Direct ENV key
         if (/^[A-Z0-9_]+$/.test(key)) return readEnv(key);
-
-        // Any reference mentioning API_ENDPOINT
         if (key.includes("API_ENDPOINT")) return readEnv("API_ENDPOINT");
 
-        // fallback to state full path
+        // fallback: attempt state lookup with full key, expand env templates if string
         const maybe = getPath(state, key);
         return typeof maybe === "string" ? expandEnvTemplates(maybe) : maybe;
     }
@@ -316,21 +344,38 @@ export function resolveBinding(val: any, state: AnyObj, t: (k: string) => string
     return val;
 }
 
+export function deepResolveBindings(
+    input: any,
+    state: any,
+    t: (k: string) => string
+): any {
+    if (input == null) return input;
+
+    if (Array.isArray(input)) {
+        return input.map(v => deepResolveBindings(v, state, t));
+    }
+
+    // only treat *plain* objects specially
+    if (isPlainObj(input)) {
+        // direct binding object
+        if ('binding' in input) return resolveBinding(input, state, t);
+
+        const out: any = {};
+        for (const [k, v] of Object.entries(input)) {
+            out[k] = deepResolveBindings(v, state, t);
+        }
+        return out;
+    }
+
+    // strings can be binding-like (translations.*, i18n.*, ENV)
+    if (typeof input === 'string') return resolveBinding(input, state, t);
+
+    return input;
+}
+
 const isPlainObj = (v: any) =>
     v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date) && !(v instanceof File) && !(v instanceof FormData);
 
-export function deepResolveBindings(input: any, state: any, t: (k: string) => string): any {
-    if (input == null) return input;
-    if (Array.isArray(input)) return input.map(v => deepResolveBindings(v, state, t));
-    if (isPlainObj(input)) {
-        if ('binding' in input) return resolveBinding(input, state, t);
-        const out: any = {};
-        for (const [k, v] of Object.entries(input)) out[k] = deepResolveBindings(v, state, t);
-        return out;
-    }
-    if (typeof input === 'string') return resolveBinding(input, state, t);
-    return input;
-}
 
 export function setPath<T extends AnyObj>(obj: T, path: string, value: any): T {
     if (!path) return obj;
