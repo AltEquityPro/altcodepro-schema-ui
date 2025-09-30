@@ -1,3 +1,4 @@
+// src/lib/utils.ts
 import stripJsonComments from 'strip-json-comments';
 import { BrowserProvider } from 'ethers';
 import { AnyObj, VisibilityControl, AccessibilityProps, StyleProps, AnimationSpec, IRoute, UIDefinition, ImageElement, UIProject, Brand } from '../types';
@@ -172,29 +173,6 @@ export const getProvider = (): BrowserProvider => {
         throw new Error("No Ethereum provider found");
     }
     return new BrowserProvider((window as any).ethereum);
-};
-
-export const scriptRegistry = {
-    walletConnect: async () => {
-        const provider = getProvider();
-        const accounts = (await provider.send("eth_requestAccounts", [])) as string[];
-        const [account] = accounts;
-        if (!account) throw new Error("No accounts returned");
-        return account;
-    },
-    walletSign: async (message: string, account?: string) => {
-        const provider = getProvider();
-        const signer = await provider.getSigner();
-        const addr = await signer.getAddress();
-        if (account && addr.toLowerCase() !== account.toLowerCase()) {
-            throw new Error("Signer/account mismatch");
-        }
-        return signer.signMessage(message);
-    },
-
-    validateInput: (value: string, regex: string) => {
-        return new RegExp(regex).test(value);
-    },
 };
 
 export function throttle<T extends (...args: any[]) => void>(fn: T, ms = 2000): T {

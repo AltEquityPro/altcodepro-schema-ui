@@ -309,11 +309,26 @@ export function useActionHandler({
             if (h.params?.optimisticState) {
                 setState(h.params.optimisticState.path, resolveBinding(h.params.optimisticState.value, state, t));
             }
-
             switch (h.action) {
                 case ActionType.navigation: {
                     const href = String(h.params?.href || h.successTransition?.href || "/");
-                    runtime.navigate?.(href, !!h.successTransition?.replace);
+                    if (href) {
+                        const isExternal = /^https?:\/\//i.test(href);
+
+                        if (isExternal) {
+                            // Always open external links in a new tab
+                            window.open(href, "_blank", "noopener,noreferrer");
+                        } else if (runtime.navigate) {
+                            // Internal routes use Next.js router
+                            runtime.navigate(href, !!h.successTransition?.replace);
+                        } else {
+                            // Fallback if runtime.navigate not available
+                            const base =
+                                window.location.origin ||
+                                `${window.location.protocol}//${window.location.host}`;
+                            window.location.href = new URL(href, base).toString();
+                        }
+                    }
                     break;
                 }
 

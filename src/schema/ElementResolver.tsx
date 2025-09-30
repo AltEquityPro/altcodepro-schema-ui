@@ -316,12 +316,7 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
 
         case ElementType.container:
             const container = resolvedElement as ContainerElement;
-            return wrapWithMotion(container,
-                <LazyComponent>
-                    <ContainerRenderer element={container} />
-                </LazyComponent>
-            )
-
+            return <ContainerRenderer element={container} />
         case ElementType.context_menu:
             const contextMenu = resolvedElement as ContextMenuElement;
             return (
@@ -425,16 +420,13 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
 
         case ElementType.image:
             const image = resolvedElement as ImageElement;
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <img
-                        src={resolveBinding(image.src, state, t)}
-                        alt={resolveBinding(image.alt, state, t)}
-                        width={image.width}
-                        height={image.height}
-                    />
-                </LazyComponent>
-            );
+            return <img
+                src={resolveBinding(image.src, state, t)}
+                alt={resolveBinding(image.alt, state, t)}
+                width={image.width}
+                className={image.styles?.className}
+                height={image.height}
+            />
         case ElementType.list:
             return (
                 <LazyComponent>

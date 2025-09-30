@@ -984,9 +984,8 @@ export interface FormElement extends BaseElement {
     description?: Binding;
     formFields: FormField[];
     formGroupType: FormGroupType;
-    onCancel?: EventHandler;
-    onSubmit: EventHandler;
-    submitLabel?: Binding;
+    submit: ButtonElement;
+    cancel?: ButtonElement;
     tabsConfig?: {
         tabPosition?: 'top' | 'left' | 'right';
         variant?: 'default' | 'outline' | 'pills';
@@ -2296,5 +2295,15 @@ export interface UIProject {
         sampleRate?: number;
     };
     translations?: Record<string, Record<string, string>>;
+    cookie_banner?: {
+        id: string;
+        name: string;
+        styles?: StyleProps;
+        accessibility?: AccessibilityProps;
+        children?: UIElement[];
+        position?: "bottom" | "top";
+        persistKey?: string;
+    },
+    screens?: UIScreenDef[];
     version: string;
 }

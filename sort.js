@@ -26,4 +26,3 @@ const sortedFile = file.replace(regex, () => blocks.shift());
 
 // write output
 fs.writeFileSync(OUTPUT_FILE, sortedFile);
-console.log(`✅ Sorted cases written to ${OUTPUT_FILE}`);

@@ -20,7 +20,7 @@ import { useAppState } from "../../schema/StateContext";
 import { useActionHandler } from "../../schema/Actions";
 import { resolveBinding, classesFromStyleProps, luhnCheck } from "../../lib/utils";
 
-import { Button } from "../../components/ui/button";
+import { Button, ButtonRenderer } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -378,7 +378,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
         if (onFormSubmit) {
             onFormSubmit(data);
         } else {
-            runEventHandler(element.onSubmit, data as AnyObj);
+            runEventHandler(element.submit?.onClick, data as AnyObj);
         }
     };
 
@@ -875,7 +875,6 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                 return <div key={group.id}>{group.formFields.map(renderField)}</div>;
         }
     };
-
     return (
         <Form {...form}>
             <form
@@ -883,7 +882,14 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                 className={classesFromStyleProps(element.styles)}
             >
                 {renderGroup(element)}
-                <Button type="submit">{t("submit")}</Button>
+                <div className=" flex justify-between">
+                    <div className="mr-1">
+                        {element.cancel && <ButtonRenderer element={element.cancel} />}
+                    </div>
+                    <div className="ml-1">
+                        {element.submit && <ButtonRenderer element={element.submit} />}
+                    </div>
+                </div>
             </form>
         </Form>
     );

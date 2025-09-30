@@ -160,7 +160,6 @@ function setupWebSocket(
         ws = new WebSocket(url, protocol);
 
         ws.onopen = () => {
-            console.log('WebSocket connected');
             backoff = 1000;
             const initPayload = authHeaders && authHeaders['Authorization'] ? { Authorization: authHeaders['Authorization'] } : {};
             if (protocol === 'graphql-ws' || protocol === 'graphql-transport-ws') {
@@ -192,7 +191,6 @@ function setupWebSocket(
         };
 
         ws.onclose = (event) => {
-            console.log('WebSocket closed', event.code, event.reason);
             if (heartbeatInterval) clearInterval(heartbeatInterval);
             if (!event.wasClean) {
                 reconnectTimeout = setTimeout(connect, backoff);

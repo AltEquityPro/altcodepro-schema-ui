@@ -1,14 +1,18 @@
-"use client";
+// components/ProjectRouter.tsx
+'use client';
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { UIProject, UIScreenDef, IRoute, ElementType, MenuElement, SidebarElement, ContainerElement, ButtonElement, ActionType, DrawerElement, IconElement, UIElement } from "../types";
-import { ScreenRenderer, ScreenRuntime } from "./ScreenRenderer";
+import {
+    UIProject, UIScreenDef, IRoute, ElementType, MenuElement, SidebarElement,
+    ContainerElement, ButtonElement, ActionType, DrawerElement, IconElement, UIElement
+} from "../types";
+import { ScreenRenderer } from "./ScreenRenderer";
 import { ElementResolver } from "./ElementResolver";
 import { Loader2 } from "lucide-react";
+import { useRuntime } from "../hooks/useRuntime";
 
 interface ProjectRouterProps {
     project: UIProject;
-    runtime: ScreenRuntime;
     showDebug?: boolean;
     preloadedScreens?: Record<string, UIScreenDef>;
 }
@@ -25,13 +29,20 @@ function useIsMobile() {
     }, []);
     return isMobile;
 }
-
-function flattenRoutes(routes: IRoute[], parentHref = ''): IRoute[] {
+function norm(path: string): string {
+    if (!path) return "/";
+    // ensure leading slash, remove duplicate slashes, strip trailing slash (except root)
+    let p = path.replace(/\/{2,}/g, "/");
+    if (!p.startsWith("/")) p = `/${p}`;
+    if (p.length > 1 && p.endsWith("/")) p = p.slice(0, -1);
+    return p;
+}
+function flattenRoutes(routes: IRoute[], parentHref = ""): IRoute[] {
     return routes.reduce((acc: IRoute[], route) => {
-        const fullHref = `${parentHref}${route.href}`.replace('//', '/');
+        const fullHref = norm(`${parentHref}${route.href || ""}`);
         const updatedRoute = { ...route, href: fullHref };
         acc.push(updatedRoute);
-        if (route.nested) {
+        if (route.nested?.length) {
             acc.push(...flattenRoutes(route.nested, fullHref));
         }
         return acc;
@@ -39,15 +50,28 @@ function flattenRoutes(routes: IRoute[], parentHref = ''): IRoute[] {
 }
 
 function generateMenuItems(routes: IRoute[]): MenuElement['items'] {
-    return routes.filter(r => r.showInNavigation).map(route => ({
-        id: route.href,
-        type: 'item' as const,
-        label: route.label,
-        icon: route.icon,
-        href: route.href,
-        onSelect: { action: ActionType.navigation, params: { href: route.href } },
-        ...(route.nested ? { type: 'sub' as const, items: generateMenuItems(route.nested) } : {}),
-    })) as any;
+    return routes
+        .filter(r => r.showInNavigation)
+        .map(route => {
+            const base = {
+                id: route.href,
+                label: route.label,
+                icon: route.icon,
+            };
+            if (route.nested && route.nested.length) {
+                return {
+                    ...base,
+                    type: 'sub' as const,
+                    items: generateMenuItems(route.nested),
+                };
+            }
+            return {
+                ...base,
+                type: 'item' as const,
+                href: route.href,
+                onSelect: { action: ActionType.navigation, params: { href: route.href } },
+            };
+        }) as any;
 }
 
 function generateSidebarFromRoutes(routes: IRoute[]): SidebarElement {
@@ -63,7 +87,7 @@ function generateSidebarFromRoutes(routes: IRoute[]): SidebarElement {
                     id: item.id,
                     text: item.label,
                     iconLeft: item.icon ? { type: ElementType.icon, name: item.icon, size: 20 } as IconElement : undefined,
-                    onClick: item.onSelect,
+                    onClick: item.onSelect ?? { action: ActionType.navigation, params: { href: item.id } },
                 }))
                 : [{
                     type: ElementType.button,
@@ -82,6 +106,10 @@ function generateBottomNav(routes: IRoute[]): ContainerElement {
         id: 'bottom-nav',
         layout: 'flex',
         justify: 'around',
+        // if your renderer expects styles.className instead of className, change accordingly
+        // styles: { className: 'fixed bottom-0 left-0 right-0 bg-background border-t p-2' },
+        // keeping your original:
+        // @ts-ignore – your resolver supports className on element
         className: 'fixed bottom-0 left-0 right-0 bg-background border-t p-2',
         children: routes.filter(r => r.showInBottomBar).map(route => ({
             type: ElementType.button,
@@ -113,74 +141,109 @@ function generateBurgerMenu(routes: IRoute[]): DrawerElement {
             type: ElementType.button,
             id: item.id,
             text: item.label,
-            onClick: item.onSelect,
+            onClick: item.onSelect ?? { action: ActionType.navigation, params: { href: item.id } },
         } as any)),
     } as any;
 }
 
-export function ProjectRouter({ project, runtime, showDebug, preloadedScreens = {} }: ProjectRouterProps) {
+export function ProjectRouter({ project, showDebug, preloadedScreens = {} }: ProjectRouterProps) {
+    const runtime = useRuntime();
+    const isMobile = useIsMobile();
     const [currentScreen, setCurrentScreen] = useState<UIScreenDef | null>(null);
     const [loading, setLoading] = useState(true);
-    const isMobile = useIsMobile();
-    const flatRoutes = useMemo(() => flattenRoutes(project.routeList.routes), [project.routeList.routes]);
+    const base = useMemo(() => {
+        // normalize routeBase (no trailing slash except root)
+        return project.routeBase ? norm(project.routeBase) : "";
+    }, [project.routeBase]);
 
-    const findRouteByHref = useCallback((href: string) => flatRoutes.find(r => r.href === href) || project.routeList.routes[0], [flatRoutes, project.routeList.routes]);
+    // Build flattened routes and attach __fullHref for reliable matching
+    const flatRoutes = useMemo(() => {
+        const flat = flattenRoutes(project.routeList.routes, "");
+        return flat.map(r => {
+            // r.href currently is a full path without routeBase (e.g., "/settings/profile")
+            const path = norm(r.href);
+            const full = norm(`${base}${path}`);
+            // store short path in href (for UI), and full path in __fullHref (for matching)
+            return { ...r, href: path, __fullHref: full } as IRoute & { __fullHref: string };
+        });
+    }, [project.routeList.routes, base]);
+
+    const findRouteByHref = useCallback((href: string) => {
+        const n = norm(href);
+        // match by full href (with base) OR by short href (without base)
+        return (
+            (flatRoutes as Array<IRoute & { __fullHref?: string }>).find(
+                r => r.__fullHref === n || r.href === n
+            ) || (flatRoutes[0] as IRoute)
+        );
+    }, [flatRoutes]);
 
     const loadScreen = useCallback(async (route: IRoute) => {
         setLoading(true);
-        let screen: UIScreenDef | undefined;
-        if (route.screenId && preloadedScreens[route.screenId]) {
-            screen = preloadedScreens[route.screenId];
-        } else if (route.screenConfigUrl) {
-            try {
-                const res = await fetch(route.screenConfigUrl);
+        try {
+            let screen: UIScreenDef | undefined;
+            if (route.screenId && preloadedScreens[route.screenId]) {
+                screen = preloadedScreens[route.screenId];
+            } else if ((route as any).screenConfigUrl) {
+                const res = await fetch((route as any).screenConfigUrl as string);
                 if (!res.ok) throw new Error(`Failed to fetch screen: ${res.status}`);
                 screen = await res.json();
-            } catch (error) {
-                console.error('Error loading screen:', error);
-                // Optionally handle error, e.g., redirect or show fallback
+            } else {
+                screen = project?.screens?.find(f => f.id === route.screenId);
             }
+            if (screen) setCurrentScreen(screen);
+        } catch (err) {
+            console.error("Error loading screen:", err);
+        } finally {
+            setLoading(false);
         }
-        if (screen) setCurrentScreen(screen);
-        setLoading(false);
-    }, [preloadedScreens]);
+    }, [preloadedScreens, project?.screens]);
 
+    // Initial load + back/forward
     useEffect(() => {
-        if (typeof window === 'undefined') return;
-
-        // Initial load
-        const initialHref = window.location.pathname || '/';
+        if (typeof window === "undefined") return;
+        const initialHref = window.location.pathname || "/";
         const initialRoute = findRouteByHref(initialHref);
         loadScreen(initialRoute);
 
-        // Navigation listener
         const handlePopstate = () => {
             const href = window.location.pathname;
             const route = findRouteByHref(href);
             loadScreen(route);
         };
-        window.addEventListener('popstate', handlePopstate);
-
-        return () => window.removeEventListener('popstate', handlePopstate);
+        window.addEventListener("popstate", handlePopstate);
+        return () => window.removeEventListener("popstate", handlePopstate);
     }, [findRouteByHref, loadScreen]);
 
-    // Override runtime.navigate for history management
-    const originalNavigate = runtime.navigate;
-    runtime.navigate = (href: string, replace?: boolean) => {
-        if (typeof window === 'undefined') return;
-        const fullHref = `${project.routeBase || ''}${href}`.replace('//', '/');
-        if (replace) {
-            window.history.replaceState({}, '', fullHref);
-        } else {
-            window.history.pushState({}, '', fullHref);
-        }
-        const route = findRouteByHref(fullHref);
-        loadScreen(route);
-        originalNavigate?.(href, replace);
-    };
+    // Wrap runtime.navigate so action handlers cause router + screen changes
+    const navigateWithRouter = useCallback(
+        (href: string, replace?: boolean) => {
+            if (typeof window === "undefined") return;
+            const short = norm(href);
+            const fullHref = norm(`${base}${short}`);
+            if (replace) {
+                window.history.replaceState({}, "", fullHref);
+            } else {
+                window.history.pushState({}, "", fullHref);
+            }
+            const route = findRouteByHref(fullHref);
+            loadScreen(route);
 
+            // Important: don't call runtime.navigate() again here — it already pushes/popstates.
+            // This avoids double popstate events and weird refresh-like behavior.
+        },
+        [base, findRouteByHref, loadScreen]
+    );
+
+    // Pass a derived runtime with the wrapped navigate
+    const routedRuntime = useMemo(
+        () => ({ ...runtime, navigate: navigateWithRouter }),
+        [runtime, navigateWithRouter]
+    );
+
+
+    // Pick nav flavor
     const navType = isMobile ? project.routeList.responsiveNavType : project.routeList.desktopNavType;
-
     let navElement: UIElement | null = null;
     const navRoutes = project.routeList.routes.filter(r => r.showInNavigation);
 
@@ -199,21 +262,25 @@ export function ProjectRouter({ project, runtime, showDebug, preloadedScreens = 
     }
 
     if (loading || !currentScreen) {
-        return <Loader2 className="h-4 w-4 animate-spin" />
+        return <Loader2 className="h-4 w-4 animate-spin" />;
     }
 
-    const layoutClass = navType === 'side' ? 'flex' : 'flex flex-col';
+    const layoutClass = navType === "side" ? "flex" : "flex flex-col";
 
     return (
-        <div className={layoutClass} style={{ minHeight: '100vh' }}>
-            {project.header && <ElementResolver element={project.header} runtime={runtime} />}
-            {navElement && navType === 'top' && <ElementResolver element={navElement} runtime={runtime} />}
-            {navType === 'side' && navElement && <ElementResolver element={navElement} runtime={runtime} />}
+        <div className={layoutClass} style={{ minHeight: "100vh" }}>
+            {project.header && <ElementResolver element={project.header} runtime={routedRuntime} />}
+            {navElement && navType === "top" && <ElementResolver element={navElement} runtime={routedRuntime} />}
+            {navType === "side" && navElement && <ElementResolver element={navElement} runtime={routedRuntime} />}
+
             <main className="flex-1">
-                <ScreenRenderer project={project} screen={currentScreen} runtime={runtime} showDebug={showDebug} />
+                <ScreenRenderer project={project} screen={currentScreen} runtime={routedRuntime} showDebug={showDebug} />
             </main>
-            {project.footer && <ElementResolver element={project.footer} runtime={runtime} />}
-            {navElement && (navType === 'bottom' || navType === 'burger') && isMobile && <ElementResolver element={navElement} runtime={runtime} />}
+
+            {project.footer && <ElementResolver element={project.footer} runtime={routedRuntime} />}
+            {navElement && (navType === "bottom" || navType === "burger") && isMobile && (
+                <ElementResolver element={navElement} runtime={routedRuntime} />
+            )}
         </div>
     );
 }
