@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { useAppState } from "../../schema/StateContext"
 import { useActionHandler } from "../../schema/Actions"
 import { ElementResolver } from "../../schema/ElementResolver"
-import { resolveBinding, cn } from "../../lib/utils"
+import { resolveBinding, cn, getAccessibilityProps, classesFromStyleProps } from "../../lib/utils"
 import { ButtonElement, UIElement } from "../../types"
 
 const buttonVariants = cva(
@@ -79,7 +79,8 @@ function ButtonRenderer({ element, runtime = {} }: ButtonRendererProps) {
 
   const text = resolveBinding(element.text, state, t)
   const disabled = resolveBinding(element.disabled, state, t)
-
+  const accessibilityProps = getAccessibilityProps(element.accessibility);
+  const className = classesFromStyleProps(element.styles);
   return (
     <Button
       variant={(element.variant || "default") as any}
@@ -88,6 +89,8 @@ function ButtonRenderer({ element, runtime = {} }: ButtonRendererProps) {
       aria-disabled={disabled ? true : undefined}
       asChild={element.asChild}
       onClick={() => runEventHandler(element.onClick)}
+      {...accessibilityProps}
+      className={className}
     >
       <>
         {element.iconLeft && (

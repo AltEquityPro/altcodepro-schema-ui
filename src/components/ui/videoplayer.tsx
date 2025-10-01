@@ -4,11 +4,9 @@ import * as React from "react";
 import Hls, { Level } from "hls.js";
 import { cn, resolveBinding } from "../../lib/utils";
 import { Button } from "./button";
-import wrapWithMotion from "./wrapWithMotion";
 import {
     MaximizeIcon,
     PictureInPicture2Icon,
-    CaptionsIcon,
     SkipForwardIcon,
     PlayIcon,
     PauseIcon,
@@ -455,149 +453,146 @@ export function VideoRenderer({
     };
 
     // ============ Render ==========
-    return wrapWithMotion(
-        element,
-        <div className="relative w-full bg-black rounded-2xl overflow-hidden shadow">
-            {/* MAIN VIDEO */}
-            <video
-                ref={mainRef}
-                className={cn("w-full", showAd && "opacity-0 pointer-events-none")}
-                autoPlay={element.autoPlay}
-                loop={element.loop}
-                controls={element.controls}
-                playsInline
-                preload={element.caching ? "auto" : "metadata"}
-                width={element.width}
-                height={element.height}
-                onLoadedMetadata={(e) => setDuration((e.currentTarget as HTMLVideoElement).duration || 0)}
-            />
+    return <div className="relative w-full bg-black rounded-2xl overflow-hidden shadow">
+        {/* MAIN VIDEO */}
+        <video
+            ref={mainRef}
+            className={cn("w-full", showAd && "opacity-0 pointer-events-none")}
+            autoPlay={element.autoPlay}
+            loop={element.loop}
+            controls={element.controls}
+            playsInline
+            preload={element.caching ? "auto" : "metadata"}
+            width={element.width}
+            height={element.height}
+            onLoadedMetadata={(e) => setDuration((e.currentTarget as HTMLVideoElement).duration || 0)}
+        />
 
-            {/* AD OVERLAY */}
-            {showAd && (
-                <div className="absolute inset-0 bg-black flex flex-col items-center justify-center">
-                    <video ref={adRef} className="w-full" controls={false} playsInline />
-                    {element.ads?.skippableAfter != null && (
-                        <div className="absolute bottom-4 right-4">
-                            {skipCountdown != null && skipCountdown > 0 ? (
-                                <span className="text-white text-sm bg-black/70 px-2 py-1 rounded">{`Skip in ${skipCountdown}s`}</span>
-                            ) : (
-                                <Button size="sm" variant="default" onClick={skipAd} className="flex items-center gap-1">
-                                    <SkipForwardIcon className="size-4" /> Skip Ad
-                                </Button>
-                            )}
-                        </div>
+        {/* AD OVERLAY */}
+        {showAd && (
+            <div className="absolute inset-0 bg-black flex flex-col items-center justify-center">
+                <video ref={adRef} className="w-full" controls={false} playsInline />
+                {element.ads?.skippableAfter != null && (
+                    <div className="absolute bottom-4 right-4">
+                        {skipCountdown != null && skipCountdown > 0 ? (
+                            <span className="text-white text-sm bg-black/70 px-2 py-1 rounded">{`Skip in ${skipCountdown}s`}</span>
+                        ) : (
+                            <Button size="sm" variant="default" onClick={skipAd} className="flex items-center gap-1">
+                                <SkipForwardIcon className="size-4" /> Skip Ad
+                            </Button>
+                        )}
+                    </div>
+                )}
+            </div>
+        )}
+
+        {/* CUSTOM CONTROL BAR */}
+        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Timeline */}
+            <div className="relative w-full mb-2" onMouseMove={onTimelineHover} onMouseLeave={onHoverLeave}>
+                {element.showThumbnails && element.thumbnails && hoverTime != null && (
+                    <div className="absolute -top-24 left-1/2 -translate-x-1/2 border border-white/10 rounded shadow" style={thumbStyle} />
+                )}
+                <input
+                    type="range"
+                    min={0}
+                    max={Math.max(0, duration)}
+                    step={0.1}
+                    value={Math.min(currentTime, duration)}
+                    onChange={onSeek}
+                    className="w-full accent-white"
+                />
+                {element.chapters && element.chapters.length > 0 && (
+                    <div className="absolute inset-x-0 -bottom-1 h-1 pointer-events-none">
+                        {element.chapters.map((c, i) => (
+                            <div
+                                key={i}
+                                title={c.title}
+                                className="absolute top-0 h-1 w-0.5 bg-white/60 pointer-events-auto"
+                                style={{ left: `${(c.start / Math.max(1, duration)) * 100}%` }}
+                                onClick={() => seekTo(c.start)}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Controls Row */}
+            <div className="flex items-center justify-between gap-3 text-white">
+                <div className="flex items-center gap-2">
+                    <Button size="icon" variant="ghost" onClick={togglePlay}>
+                        {isPlaying ? <PauseIcon className="size-5" /> : <PlayIcon className="size-5" />}
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={toggleMute}>
+                        {isMuted ? <VolumeXIcon className="size-5" /> : <Volume2Icon className="size-5" />}
+                    </Button>
+                    <input type="range" min={0} max={1} step={0.05} onChange={onVolume} className="w-24 accent-white" />
+                    <span className="text-xs tabular-nums">{formatTime(currentTime)} / {formatTime(duration)}</span>
+                    {element.showSkipIntro && (
+                        <Button size="sm" variant="outline" className="ml-2" onClick={() => (mainRef.current ? (mainRef.current.currentTime += 85) : null)}>
+                            Skip Intro
+                        </Button>
+                    )}
+                    {element.showNextEpisode && (
+                        <Button size="sm" variant="default" onClick={() => runEventHandler?.(element.onNextEpisode)}>Next Episode</Button>
                     )}
                 </div>
-            )}
 
-            {/* CUSTOM CONTROL BAR */}
-            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                {/* Timeline */}
-                <div className="relative w-full mb-2" onMouseMove={onTimelineHover} onMouseLeave={onHoverLeave}>
-                    {element.showThumbnails && element.thumbnails && hoverTime != null && (
-                        <div className="absolute -top-24 left-1/2 -translate-x-1/2 border border-white/10 rounded shadow" style={thumbStyle} />
-                    )}
-                    <input
-                        type="range"
-                        min={0}
-                        max={Math.max(0, duration)}
-                        step={0.1}
-                        value={Math.min(currentTime, duration)}
-                        onChange={onSeek}
-                        className="w-full accent-white"
-                    />
-                    {element.chapters && element.chapters.length > 0 && (
-                        <div className="absolute inset-x-0 -bottom-1 h-1 pointer-events-none">
-                            {element.chapters.map((c, i) => (
-                                <div
-                                    key={i}
-                                    title={c.title}
-                                    className="absolute top-0 h-1 w-0.5 bg-white/60 pointer-events-auto"
-                                    style={{ left: `${(c.start / Math.max(1, duration)) * 100}%` }}
-                                    onClick={() => seekTo(c.start)}
-                                />
+                <div className="flex items-center gap-2">
+                    {element.qualitySelector && levels.length > 0 && (
+                        <select
+                            className="bg-black/60 border border-white/10 rounded px-2 py-1 text-xs"
+                            value={levelIndex}
+                            onChange={(e) => switchLevel(parseInt(e.target.value, 10))}
+                            title="Quality"
+                        >
+                            <option value={-1}>Auto</option>
+                            {levels.map((lv, i) => (
+                                <option key={i} value={i}>{`${lv.height || lv.width || ""}${lv.bitrate ? ` (${Math.round(lv.bitrate / 1000)}kbps)` : ""}`}</option>
                             ))}
-                        </div>
+                        </select>
                     )}
-                </div>
 
-                {/* Controls Row */}
-                <div className="flex items-center justify-between gap-3 text-white">
-                    <div className="flex items-center gap-2">
-                        <Button size="icon" variant="ghost" onClick={togglePlay}>
-                            {isPlaying ? <PauseIcon className="size-5" /> : <PlayIcon className="size-5" />}
+                    {element.showPlaybackRate && (
+                        <select
+                            className="bg-black/60 border border-white/10 rounded px-2 py-1 text-xs"
+                            value={playbackRate}
+                            onChange={(e) => changeRate(parseFloat(e.target.value))}
+                            title="Playback speed"
+                        >
+                            {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((r) => (
+                                <option key={r} value={r}>{r}x</option>
+                            ))}
+                        </select>
+                    )}
+
+                    {element.showCaptions && textTracks && (
+                        <select
+                            className="bg-black/60 border border-white/10 rounded px-2 py-1 text-xs"
+                            value={activeCaption ?? -1}
+                            onChange={(e) => setCaptionIndex(parseInt(e.target.value, 10) === -1 ? null : parseInt(e.target.value, 10))}
+                            title="Subtitles"
+                        >
+                            <option value={-1}>Captions off</option>
+                            {Array.from({ length: textTracks.length }).map((_, i) => (
+                                <option key={i} value={i}>{textTracks[i].label || textTracks[i].language || `Track ${i + 1}`}</option>
+                            ))}
+                        </select>
+                    )}
+
+                    {(element.showMiniPlayer || element.pictureInPicture) && (
+                        <Button size="icon" variant="ghost" onClick={requestPiP} disabled={!pipSupported} title="Mini Player">
+                            <PictureInPicture2Icon className="size-5" />
                         </Button>
-                        <Button size="icon" variant="ghost" onClick={toggleMute}>
-                            {isMuted ? <VolumeXIcon className="size-5" /> : <Volume2Icon className="size-5" />}
+                    )}
+
+                    {element.showFullscreen && (
+                        <Button size="icon" variant="ghost" onClick={requestFs} title="Fullscreen">
+                            <MaximizeIcon className="size-5" />
                         </Button>
-                        <input type="range" min={0} max={1} step={0.05} onChange={onVolume} className="w-24 accent-white" />
-                        <span className="text-xs tabular-nums">{formatTime(currentTime)} / {formatTime(duration)}</span>
-                        {element.showSkipIntro && (
-                            <Button size="sm" variant="outline" className="ml-2" onClick={() => (mainRef.current ? (mainRef.current.currentTime += 85) : null)}>
-                                Skip Intro
-                            </Button>
-                        )}
-                        {element.showNextEpisode && (
-                            <Button size="sm" variant="default" onClick={() => runEventHandler?.(element.onNextEpisode)}>Next Episode</Button>
-                        )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        {element.qualitySelector && levels.length > 0 && (
-                            <select
-                                className="bg-black/60 border border-white/10 rounded px-2 py-1 text-xs"
-                                value={levelIndex}
-                                onChange={(e) => switchLevel(parseInt(e.target.value, 10))}
-                                title="Quality"
-                            >
-                                <option value={-1}>Auto</option>
-                                {levels.map((lv, i) => (
-                                    <option key={i} value={i}>{`${lv.height || lv.width || ""}${lv.bitrate ? ` (${Math.round(lv.bitrate / 1000)}kbps)` : ""}`}</option>
-                                ))}
-                            </select>
-                        )}
-
-                        {element.showPlaybackRate && (
-                            <select
-                                className="bg-black/60 border border-white/10 rounded px-2 py-1 text-xs"
-                                value={playbackRate}
-                                onChange={(e) => changeRate(parseFloat(e.target.value))}
-                                title="Playback speed"
-                            >
-                                {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((r) => (
-                                    <option key={r} value={r}>{r}x</option>
-                                ))}
-                            </select>
-                        )}
-
-                        {element.showCaptions && textTracks && (
-                            <select
-                                className="bg-black/60 border border-white/10 rounded px-2 py-1 text-xs"
-                                value={activeCaption ?? -1}
-                                onChange={(e) => setCaptionIndex(parseInt(e.target.value, 10) === -1 ? null : parseInt(e.target.value, 10))}
-                                title="Subtitles"
-                            >
-                                <option value={-1}>Captions off</option>
-                                {Array.from({ length: textTracks.length }).map((_, i) => (
-                                    <option key={i} value={i}>{textTracks[i].label || textTracks[i].language || `Track ${i + 1}`}</option>
-                                ))}
-                            </select>
-                        )}
-
-                        {(element.showMiniPlayer || element.pictureInPicture) && (
-                            <Button size="icon" variant="ghost" onClick={requestPiP} disabled={!pipSupported} title="Mini Player">
-                                <PictureInPicture2Icon className="size-5" />
-                            </Button>
-                        )}
-
-                        {element.showFullscreen && (
-                            <Button size="icon" variant="ghost" onClick={requestFs} title="Fullscreen">
-                                <MaximizeIcon className="size-5" />
-                            </Button>
-                        )}
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
-    );
+    </div>
 }

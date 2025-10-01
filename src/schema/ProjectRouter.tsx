@@ -184,7 +184,7 @@ export function ProjectRouter({ project, showDebug, preloadedScreens = {} }: Pro
             let screen: UIScreenDef | undefined;
             if (route.screenId && preloadedScreens[route.screenId]) {
                 screen = preloadedScreens[route.screenId];
-            } else if ((route as any).screenConfigUrl) {
+            } else if (route.screenConfigUrl) {
                 const res = await fetch((route as any).screenConfigUrl as string);
                 if (!res.ok) throw new Error(`Failed to fetch screen: ${res.status}`);
                 screen = await res.json();

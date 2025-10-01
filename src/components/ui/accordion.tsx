@@ -3,7 +3,7 @@ import * as React from "react"
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
 import { ChevronDownIcon } from "lucide-react"
 
-import { cn, resolveBinding } from "../../lib/utils"
+import { classesFromStyleProps, cn, getAccessibilityProps, resolveBinding } from "../../lib/utils"
 import { useActionHandler } from "../../schema/Actions"
 import { ElementResolver } from "../../schema/ElementResolver"
 import { useAppState } from "../../schema/StateContext"
@@ -87,7 +87,8 @@ function AccordionRenderer({
   const expanded = resolveBinding(element.expandedItem, state, t)
 
   const type = multiple ? "multiple" : "single"
-
+  const accessibilityProps = getAccessibilityProps(element.accessibility);
+  const className = classesFromStyleProps(element.styles);
   return (
     <AccordionPrimitive.Root
       type={type as any}

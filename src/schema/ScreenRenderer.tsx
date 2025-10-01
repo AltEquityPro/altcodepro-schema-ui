@@ -250,7 +250,7 @@ export function ScreenRenderer({
 
                 // If element has dataSourceId, ensure it can read from state[dsId]
                 // (the mirroring effect above already synced dataMap into state).
-                const resolved = deepResolveBindings(el, state, t);
+                const resolved = el.dataSourceId ? deepResolveBindings(el, state, t) : el;
 
                 // Give a stable key; prefer element.id
                 const key = resolved.id;

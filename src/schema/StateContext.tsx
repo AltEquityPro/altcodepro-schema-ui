@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
-import { AnyObj, UIProject, Binding } from "../types";
+import { AnyObj, UIProject, Binding, UIScreenDef, UIDefinition } from "../types";
 import { resolveBinding } from "../lib/utils";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,11 +20,14 @@ export function StateProvider({
     children,
     initialState = {},
     defaultLocale = "en",
+    screenDef
 }: {
     project: UIProject;
     children: ReactNode;
     initialState?: AnyObj;
     defaultLocale?: string;
+    screenDef?: UIDefinition;
+
 }) {
     const [state, setStateRaw] = useState<AnyObj>(() => {
         const initial = { ...initialState };
@@ -70,8 +73,15 @@ export function StateProvider({
     };
 
     const t = (key: string) => {
-        const translations = project.translations?.[state.locale || defaultLocale] || {};
-        return translations[key] || key;
+        const locale = state.locale || defaultLocale;
+
+        const screenTranslations =
+            screenDef?.translations?.[locale] || {};
+
+        const projectTranslations =
+            project.translations?.[locale] || {};
+
+        return screenTranslations[key] || projectTranslations[key] || key;
     };
 
     const formSchema: any = z.object(

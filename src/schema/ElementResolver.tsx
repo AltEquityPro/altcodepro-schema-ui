@@ -6,7 +6,8 @@ import {
     isVisible,
     classesFromStyleProps,
     deepResolveBindings,
-    cn
+    cn,
+    getAccessibilityProps
 } from "../lib/utils";
 import { motion } from "framer-motion";
 // Lazy load shadcn components
@@ -49,7 +50,6 @@ const Tabs = lazy(() => import("../components/ui/tabs").then(module => ({ defaul
 const TabsList = lazy(() => import("../components/ui/tabs").then(module => ({ default: module.TabsList })));
 const TabsTrigger = lazy(() => import("../components/ui/tabs").then(module => ({ default: module.TabsTrigger })));
 const TabsContent = lazy(() => import("../components/ui/tabs").then(module => ({ default: module.TabsContent })));
-const Textarea = lazy(() => import("../components/ui/textarea").then(module => ({ default: module.Textarea })));
 const ToggleGroup = lazy(() => import("../components/ui/toggle-group").then(module => ({ default: module.ToggleGroup })));
 const Toggle = lazy(() => import("../components/ui/toggle").then(module => ({ default: module.Toggle })));
 const Tooltip = lazy(() => import("../components/ui/tooltip").then(module => ({ default: module.Tooltip })));
@@ -90,7 +90,6 @@ const CodeInput = lazy(() => import("../components/ui/code-input").then(module =
 import { useActionHandler } from "./Actions";
 import { useAppState } from "./StateContext";
 import { RenderChildren } from "./RenderChildren";
-import wrapWithMotion from "../components/ui/wrapWithMotion";
 import {
     AnyObj,
     UIElement,
@@ -166,7 +165,6 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
 
     if (!isVisible(element.visibility, state, t)) return null;
 
-    const className = classesFromStyleProps(element.styles);
     const resolvedElement = useMemo(() => deepResolveBindings(element, state, t), [element, state, t]);
 
     const LazyComponent = ({ children }: { children: React.ReactNode }) => (
@@ -174,32 +172,27 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             {children}
         </Suspense>
     );
-
+    const accessibilityProps = getAccessibilityProps(element.accessibility);
+    const className = classesFromStyleProps(element.styles);
     switch (resolvedElement.type) {
         case ElementType.accordion:
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <AccordionRenderer
-                        element={resolvedElement as AccordionElement}
-                        runtime={runtime}
-                    />
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <AccordionRenderer
+                    element={resolvedElement as AccordionElement}
+                    runtime={runtime}
+                />
+            </LazyComponent>
         case ElementType.alert:
             const alert = resolvedElement as AlertElement;
-            return wrapWithMotion(alert,
-                <LazyComponent>
-                    <Alert dismissible={alert.dismissible} variant={alert.variant || 'default'}>
-                        <AlertDescription>{resolveBinding(alert.message, state, t)}</AlertDescription>
-                    </Alert>
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <Alert dismissible={alert.dismissible} variant={alert.variant || 'default'} className={className}{...accessibilityProps} >
+                    <AlertDescription>{resolveBinding(alert.message, state, t)}</AlertDescription>
+                </Alert>
+            </LazyComponent>
         case ElementType.alert_dialog:
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <AlertDialogRenderer element={resolvedElement as AlertDialogElement} runtime={runtime} />
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <AlertDialogRenderer element={resolvedElement as AlertDialogElement} className={className}{...accessibilityProps} runtime={runtime} />
+            </LazyComponent>
         case ElementType.audio:
             return (
                 <LazyComponent>
@@ -208,37 +201,24 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             );
 
         case ElementType.avatar:
-            const avatar = resolvedElement as AvatarElement;
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <AvatarRenderer element={resolvedElement as AvatarElement} />
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <AvatarRenderer element={resolvedElement as AvatarElement} />
+            </LazyComponent>
         case ElementType.badge:
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <BadgeRenderer element={resolvedElement as BadgeElement} runtime={runtime} />
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <BadgeRenderer element={resolvedElement as BadgeElement} runtime={runtime} />
+            </LazyComponent>
         case ElementType.breadcrumb:
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <BreadcrumbRenderer element={resolvedElement as BreadcrumbElement} runtime={runtime} />
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <BreadcrumbRenderer element={resolvedElement as BreadcrumbElement} runtime={runtime} />
+            </LazyComponent>
         case ElementType.button:
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <ButtonRenderer element={resolvedElement as ButtonElement} runtime={runtime} />
-                </LazyComponent>
-            )
+            return <ButtonRenderer element={resolvedElement as ButtonElement} runtime={runtime} />
 
         case ElementType.calendar:
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <CalendarRenderer element={resolvedElement as CalendarElement} state={state} t={t} runEventHandler={runEventHandler} />
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <CalendarRenderer element={resolvedElement as CalendarElement} state={state} t={t} runEventHandler={runEventHandler} />
+            </LazyComponent>
         case ElementType.calendar_event:
             return (
                 <LazyComponent>
@@ -248,25 +228,19 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
 
         case ElementType.call: {
             const call = resolvedElement as CallElement;
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <CallRenderer element={call} state={state} t={t} runEventHandler={runEventHandler} />
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <CallRenderer element={call} state={state} t={t} runEventHandler={runEventHandler} />
+            </LazyComponent>
         }
         case ElementType.card:
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <CardRenderer element={resolvedElement as CardElement} runtime={runtime} />
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <CardRenderer element={resolvedElement as CardElement} runtime={runtime} />
+            </LazyComponent>
         case ElementType.carousel:
             const carousel = resolvedElement as CarouselElement;
-            return wrapWithMotion(carousel,
-                <LazyComponent>
-                    <CarouselRenderer element={carousel} runtime={runtime} state={state} t={t} />
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <CarouselRenderer element={carousel} runtime={runtime} state={state} t={t} />
+            </LazyComponent>
         case ElementType.chat:
             return (
                 <LazyComponent>
@@ -276,37 +250,29 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
 
         case ElementType.chart: {
             const chart = resolvedElement as ChartElement
-            return wrapWithMotion(chart,
-                <LazyComponent>
-                    <Chart element={chart} state={state} t={t} />
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <Chart element={chart} state={state} t={t} />
+            </LazyComponent>
         }
         case ElementType.code: {
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <CodeInput value={resolveBinding((resolvedElement as BaseElement).value, state, t)} />
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <CodeInput value={resolveBinding((resolvedElement as BaseElement).value, state, t)} />
+            </LazyComponent>
         }
         case ElementType.collapsible:
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <CollapsibleRenderer
-                        element={resolvedElement as CollapsibleElement}
-                        runtime={runtime}
-                        state={state}
-                        t={t}
-                        runEventHandler={runEventHandler}
-                    />
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <CollapsibleRenderer
+                    element={resolvedElement as CollapsibleElement}
+                    runtime={runtime}
+                    state={state}
+                    t={t}
+                    runEventHandler={runEventHandler}
+                />
+            </LazyComponent>
         case ElementType.command:
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <CommandRenderer element={resolvedElement as CommandElement} runEventHandler={runEventHandler} />
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <CommandRenderer element={resolvedElement as CommandElement} runEventHandler={runEventHandler} />
+            </LazyComponent>
         case ElementType.comments:
             return (
                 <LazyComponent>
@@ -341,36 +307,30 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             );
 
         case ElementType.drawer:
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <DrawerRenderer element={resolvedElement as DrawerElement} runEventHandler={runEventHandler} />
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <DrawerRenderer element={resolvedElement as DrawerElement} runEventHandler={runEventHandler} />
+            </LazyComponent>
 
         case ElementType.dropdown:
             const dropdown = resolvedElement as DropdownElement;
-            return wrapWithMotion(dropdown,
-                <LazyComponent>
-                    <DropdownRenderer dropdown={dropdown} runEventHandler={runEventHandler} state={state} t={t} />
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <DropdownRenderer dropdown={dropdown} runEventHandler={runEventHandler} state={state} t={t} />
+            </LazyComponent>
 
         case ElementType.editor: {
             const editor = resolvedElement as EditorElement
             const content = resolveBinding(editor.content, state, t) || ""
             const placeholder = resolveBinding(editor.placeholder, state, t)
 
-            return wrapWithMotion(editor,
-                <LazyComponent>
-                    <RichTextEditor
-                        value={content}
-                        placeholder={placeholder}
-                        toolbar={editor.toolbar}
-                        onChange={(val) => runEventHandler(editor.onChange, { value: val })}
-                        className={editor.styles?.className}
-                    />
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <RichTextEditor
+                    value={content}
+                    placeholder={placeholder}
+                    toolbar={editor.toolbar}
+                    onChange={(val) => runEventHandler(editor.onChange, { value: val })}
+                    className={editor.styles?.className}
+                />
+            </LazyComponent>
         }
         case ElementType.file_upload: {
             const el = resolvedElement as FileUploadElement
@@ -385,38 +345,30 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
         }
         case ElementType.footer:
             const footer = resolvedElement as FooterElement;
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <footer className={cn(`text-${footer.alignment || 'left'}`)}>
-                        {footer.children && <RenderChildren children={footer.children} />}
-                    </footer>
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <footer className={cn(`text-${footer.alignment || 'left'}`)}>
+                    {footer.children && <RenderChildren children={footer.children} />}
+                </footer>
+            </LazyComponent>
 
         case ElementType.form:
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <FormResolver element={resolvedElement as FormElement} />
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <FormResolver element={resolvedElement as FormElement} />
+            </LazyComponent>
 
         case ElementType.header:
             const header = resolvedElement as HeaderElement;
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <header className={cn(`text-${header.alignment || 'left'}`)}>
-                        {header.children && <RenderChildren children={header.children} />}
-                    </header>
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <header className={cn(className, `text-${(resolvedElement as HeaderElement).alignment || "left"}`)} {...accessibilityProps}>
+                    {resolvedElement.children && <RenderChildren children={resolvedElement.children} />}
+                </header>
+            </LazyComponent>
 
         case ElementType.icon:
             const icon = resolvedElement as IconElement;
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <DynamicIcon name={icon.name} size={icon.size} aria-label={resolveBinding(icon.label, state, t)} />
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <DynamicIcon name={icon.name} size={icon.size} aria-label={resolveBinding(icon.label, state, t)} />
+            </LazyComponent>
 
         case ElementType.image:
             const image = resolvedElement as ImageElement;
@@ -424,8 +376,9 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
                 src={resolveBinding(image.src, state, t)}
                 alt={resolveBinding(image.alt, state, t)}
                 width={image.width}
-                className={image.styles?.className}
+                className={className}
                 height={image.height}
+                {...accessibilityProps}
             />
         case ElementType.list:
             return (
@@ -448,11 +401,9 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             );
 
         case ElementType.map:
-            return wrapWithMotion(resolvedElement,
-                <LazyComponent>
-                    <MapRenderer element={resolvedElement} state={state} t={t} />
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <MapRenderer element={resolvedElement} state={state} t={t} />
+            </LazyComponent>
         case ElementType.menu:
             const menubar = resolvedElement as MenuElement;
             return (
@@ -477,14 +428,11 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             )
 
         case ElementType.payment:
-            const payment = resolvedElement as PaymentElement;
-            return wrapWithMotion(element,
-                <LazyComponent>
-                    <PaymentFormRenderer
-                        element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t}
-                    />
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <PaymentFormRenderer
+                    element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t}
+                />
+            </LazyComponent>
 
         case ElementType.popover:
             return (
@@ -502,11 +450,9 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
 
         case ElementType.qr_reader:
             const qr = resolvedElement as QRReaderElement;
-            return wrapWithMotion(qr,
-                <LazyComponent>
-                    <QRCodeRenderer element={qr} state={state} t={t} runEventHandler={runEventHandler} />
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <QRCodeRenderer element={qr} state={state} t={t} runEventHandler={runEventHandler} />
+            </LazyComponent>
 
         case ElementType.radio_group:
             return (
@@ -548,11 +494,9 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             );
 
         case ElementType.separator:
-            return wrapWithMotion(element,
-                <LazyComponent>
-                    <Separator />
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <Separator />
+            </LazyComponent>
 
         case ElementType.sheet:
             return (
@@ -562,7 +506,6 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             )
 
         case ElementType.sidebar:
-            const sidebar = resolvedElement as SidebarElement;
             return (
                 <LazyComponent>
                     <SidebarRenderer element={resolvedElement} runtime={runtime} runEventHandler={runEventHandler} state={state} t={t} />
@@ -576,11 +519,9 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             );
 
         case ElementType.skeleton:
-            return wrapWithMotion(element,
-                <LazyComponent>
-                    <Skeleton />
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <Skeleton />
+            </LazyComponent>
 
         case ElementType.step_wizard:
             return (
@@ -591,79 +532,75 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
 
         case ElementType.switch:
             const switchEl = resolvedElement as InputElement;
-            return wrapWithMotion(element,
-                <LazyComponent>
-                    <Switch
-                        checked={resolveBinding(switchEl.value, state, t)}
-                        onCheckedChange={(checked) => runEventHandler(switchEl.onChange, { value: checked })}
-                    />
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <Switch
+                    checked={resolveBinding(switchEl.value, state, t)}
+                    onCheckedChange={(checked) => runEventHandler(switchEl.onChange, { value: checked })}
+                />
+            </LazyComponent>
 
         case ElementType.table:
             const table = resolvedElement as TableElement;
             const headers = resolveBinding(table.headers, state, t) || [];
             const rows = resolveBinding(table.rows, state, t) || [];
-            return wrapWithMotion(element,
-                <LazyComponent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                {headers.map((header: string, i: number) => (
-                                    <TableHead key={i}>{header}</TableHead>
+            return <LazyComponent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            {headers.map((header: string, i: number) => (
+                                <TableHead key={i}>{header}</TableHead>
+                            ))}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {rows.map((row: any, i: number) => (
+                            <TableRow key={i}>
+                                {(row.cells || []).map((cell: any, j: number) => (
+                                    <TableCell key={j}>{resolveBinding(cell, state, t)}</TableCell>
                                 ))}
                             </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {rows.map((row: any, i: number) => (
-                                <TableRow key={i}>
-                                    {(row.cells || []).map((cell: any, j: number) => (
-                                        <TableCell key={j}>{resolveBinding(cell, state, t)}</TableCell>
-                                    ))}
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </LazyComponent>
-            );
+                        ))}
+                    </TableBody>
+                </Table>
+            </LazyComponent>
 
         case ElementType.tabs:
             const tabs = resolvedElement as TabsElement;
-            return wrapWithMotion(element,
-                <LazyComponent>
-                    <Tabs
-                        value={tabs.activeTab}
-                        onValueChange={(v) => runEventHandler(tabs.onChange, { value: v })}
-                    >
-                        <TabsList>
-                            {tabs.tabs.map((tab) => (
-                                <TabsTrigger key={tab.id} value={tab.id}>
-                                    {tab.label}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                        {tabs.tabs.map((tab) => (
-                            <TabsContent key={tab.id} value={tab.id}>
-                                <RenderChildren children={tab.content} />
-                            </TabsContent>
-                        ))}
-                    </Tabs>
-                </LazyComponent>
-            );
-
-        case ElementType.text:
-            const text = resolvedElement as TextElement;
-            const TextTag = text.tag || 'p';
-            const MotionText = ((motion as any)[TextTag]) || motion.div;
-            return (
-
-                <MotionText
-                    className={cn(className, `text-${text.alignment || 'left'}`, text.fontWeight ? `font-${text.fontWeight}` : '')}
-                    dangerouslySetInnerHTML={text.contentFormat === 'html' ? { __html: resolveBinding(text.content, state, t) } : undefined}
+            return <LazyComponent>
+                <Tabs
+                    value={tabs.activeTab}
+                    onValueChange={(v) => runEventHandler(tabs.onChange, { value: v })}
                 >
-                    {text.contentFormat !== 'html' ? resolveBinding(text.content, state, t) : null}
-                </MotionText>
+                    <TabsList>
+                        {tabs.tabs.map((tab) => (
+                            <TabsTrigger key={tab.id} value={tab.id}>
+                                {tab.label}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                    {tabs.tabs.map((tab) => (
+                        <TabsContent key={tab.id} value={tab.id}>
+                            <RenderChildren children={tab.content} />
+                        </TabsContent>
+                    ))}
+                </Tabs>
+            </LazyComponent>
+
+        case ElementType.text: {
+            const text = resolvedElement as TextElement;
+            const Tag = (text.tag as React.ElementType) || "div";
+            const resolvedContent = resolveBinding(text.content, state, t);
+            return (
+                <Tag
+                    id={text.id}
+                    className={cn(className, text.alignment && `text-${text.alignment}`)}
+                    {...accessibilityProps}
+                >
+                    {text.contentFormat === "html" ? <div dangerouslySetInnerHTML={{ __html: resolvedContent }} /> : resolvedContent}
+                </Tag>
             );
+        }
+
 
         case ElementType.three_d_model:
             return (
@@ -686,70 +623,62 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
 
         case ElementType.toggle: {
             const toggle = resolvedElement as ToggleElement
-            return wrapWithMotion(
-                element,
-                <LazyComponent>
-                    <Toggle
-                        variant={toggle.variant}
-                        size={toggle.size}
-                        pressed={resolveBinding(toggle.pressed, state, t)}
-                        onPressedChange={(pressed) =>
-                            runEventHandler(toggle.onToggle, { pressed })
-                        }
-                    >
-                        {toggle.icon && <DynamicIcon name={toggle.icon} className="size-4" />}
-                        {toggle.label && resolveBinding(toggle.label, state, t)}
-                    </Toggle>
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <Toggle
+                    variant={toggle.variant}
+                    size={toggle.size}
+                    pressed={resolveBinding(toggle.pressed, state, t)}
+                    onPressedChange={(pressed) =>
+                        runEventHandler(toggle.onToggle, { pressed })
+                    }
+                >
+                    {toggle.icon && <DynamicIcon name={toggle.icon} className="size-4" />}
+                    {toggle.label && resolveBinding(toggle.label, state, t)}
+                </Toggle>
+            </LazyComponent>
         }
 
         case ElementType.toggle_group: {
             const toggleGroup = resolvedElement as ToggleGroupElement
-            return wrapWithMotion(
-                element,
-                <LazyComponent>
-                    <ToggleGroup
-                        type={toggleGroup.multiple ? "multiple" : "single"}
-                        value={resolveBinding(toggleGroup.value, state, t) || []}
-                        onValueChange={(value: any) =>
-                            runEventHandler(toggleGroup.onChange, { value })
-                        }
-                    >
-                        {toggleGroup.options.map((opt) => (
-                            <Toggle
-                                key={opt.id}
-                                variant={opt.variant}
-                                size={opt.size}
-                                value={opt.pressed ? "on" : opt.id}
-                                pressed={resolveBinding(opt.pressed, state, t)}
-                            >
-                                {opt.icon && <DynamicIcon name={opt.icon} className="size-4" />}
-                                {opt.label && resolveBinding(opt.label, state, t)}
-                            </Toggle>
-                        ))}
-                    </ToggleGroup>
-                </LazyComponent>
-            )
+            return <LazyComponent>
+                <ToggleGroup
+                    type={toggleGroup.multiple ? "multiple" : "single"}
+                    value={resolveBinding(toggleGroup.value, state, t) || []}
+                    onValueChange={(value: any) =>
+                        runEventHandler(toggleGroup.onChange, { value })
+                    }
+                >
+                    {toggleGroup.options.map((opt) => (
+                        <Toggle
+                            key={opt.id}
+                            variant={opt.variant}
+                            size={opt.size}
+                            value={opt.pressed ? "on" : opt.id}
+                            pressed={resolveBinding(opt.pressed, state, t)}
+                        >
+                            {opt.icon && <DynamicIcon name={opt.icon} className="size-4" />}
+                            {opt.label && resolveBinding(opt.label, state, t)}
+                        </Toggle>
+                    ))}
+                </ToggleGroup>
+            </LazyComponent>
         }
 
         case ElementType.tooltip:
             const tooltip = resolvedElement as TooltipElement;
-            return wrapWithMotion(tooltip,
-                <LazyComponent>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            {tooltip.trigger && <RenderChildren children={[tooltip.trigger]} />}
-                        </TooltipTrigger>
-                        <TooltipContent
-                            side={tooltip.side || "top"}
-                            sideOffset={tooltip.sideOffset ?? 4}
-                        >
-                            {resolveBinding(tooltip.content, state, t)}
-                        </TooltipContent>
-                    </Tooltip>
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        {tooltip.trigger && <RenderChildren children={[tooltip.trigger]} />}
+                    </TooltipTrigger>
+                    <TooltipContent
+                        side={tooltip.side || "top"}
+                        sideOffset={tooltip.sideOffset ?? 4}
+                    >
+                        {resolveBinding(tooltip.content, state, t)}
+                    </TooltipContent>
+                </Tooltip>
+            </LazyComponent>
 
         case ElementType.video:
             const video = resolvedElement as VideoElement;
@@ -769,17 +698,13 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
 
         case ElementType.wallet:
             const wallet = resolvedElement as WalletElement;
-            return wrapWithMotion(wallet,
-                <LazyComponent>
-                    <WalletRenderer element={wallet} state={state} t={t} runEventHandler={runEventHandler} />
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <WalletRenderer element={wallet} state={state} t={t} runEventHandler={runEventHandler} />
+            </LazyComponent>
 
         default:
-            return wrapWithMotion(element,
-                <LazyComponent>
-                    <div>Unsupported element type: {resolvedElement.type}</div>
-                </LazyComponent>
-            );
+            return <LazyComponent>
+                <div>Unsupported element type: {resolvedElement.type}</div>
+            </LazyComponent>
     }
 }

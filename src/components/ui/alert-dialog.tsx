@@ -147,10 +147,13 @@ function AlertDialogCancel({
 
 function AlertDialogRenderer({
   element,
+  className,
   runtime,
+  ...rest
 }: {
   element: AlertDialogElement
-  runtime: any
+  runtime: any,
+  className: string
 }) {
   const { state, t } = useAppState()
   const { runEventHandler } = useActionHandler({ runtime })
@@ -160,6 +163,7 @@ function AlertDialogRenderer({
   return (
     <AlertDialogPrimitive.Root
       open={!!isOpen}
+      {...rest}
       onOpenChange={(open) =>
         runEventHandler(element.onOpenChange, { open })
       }

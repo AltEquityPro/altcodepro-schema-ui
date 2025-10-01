@@ -255,7 +255,7 @@ export function resolveBinding(
 ): any {
     if (val == null) return val;
 
-    // --- 1) Handle direct string bindings ---
+    // // --- 1) Handle direct string bindings ---
     if (typeof val === "string") {
         // i18n.key
         if (val.startsWith("i18n.")) {
@@ -322,6 +322,9 @@ export function resolveBinding(
     return val;
 }
 
+const isPlainObj = (v: any) =>
+    v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date) && !(v instanceof File) && !(v instanceof FormData);
+
 export function deepResolveBindings(
     input: any,
     state: any,
@@ -350,10 +353,6 @@ export function deepResolveBindings(
 
     return input;
 }
-
-const isPlainObj = (v: any) =>
-    v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date) && !(v instanceof File) && !(v instanceof FormData);
-
 
 export function setPath<T extends AnyObj>(obj: T, path: string, value: any): T {
     if (!path) return obj;
@@ -435,7 +434,7 @@ export const filterRows = (rows: any[], filters: Record<string, string>) => {
 };
 
 export function isVisible(visibility: VisibilityControl | undefined, state: AnyObj, t: (key: string) => string): boolean {
-    if (!visibility) return true;
+    if (!visibility || !visibility.condition) return true;
     const { key, operator, value } = visibility.condition;
     const resolvedKey = resolveBinding(key, state, t);
     const resolvedValue = resolveBinding(value, state, t);

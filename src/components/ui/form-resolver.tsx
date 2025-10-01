@@ -10,7 +10,6 @@ import {
     AnyObj,
     FormElement,
     InputElement,
-    UIElement,
     InputType,
     FieldType,
     FormField as FormFieldType,
@@ -18,7 +17,7 @@ import {
 } from "../../types";
 import { useAppState } from "../../schema/StateContext";
 import { useActionHandler } from "../../schema/Actions";
-import { resolveBinding, classesFromStyleProps, luhnCheck } from "../../lib/utils";
+import { resolveBinding, classesFromStyleProps, luhnCheck, getAccessibilityProps } from "../../lib/utils";
 
 import { Button, ButtonRenderer } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -76,7 +75,7 @@ function Description({ text }: { text: string }) {
     return <p className="text-sm text-muted-foreground">{text}</p>;
 }
 function Divider() {
-    return <div className="my-4 border-t border-border" />;
+    return <div className="my-4 border-t" />;
 }
 function HelpMessage({ text }: { text: string }) {
     return <p className="text-xs text-muted-foreground italic">{text}</p>;
@@ -85,7 +84,7 @@ function ContainerWrapper({ children }: { children: React.ReactNode }) {
     return <div className="grid gap-4">{children}</div>;
 }
 function CardWrapper({ children }: { children: React.ReactNode }) {
-    return <div className="rounded-lg border bg-card p-4 shadow-sm">{children}</div>;
+    return <div className="rounded-lg  bg-card p-4 shadow-sm">{children}</div>;
 }
 interface FormResolverProps {
     element: FormElement;
@@ -875,20 +874,19 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                 return <div key={group.id}>{group.formFields.map(renderField)}</div>;
         }
     };
+    const accessibilityProps = getAccessibilityProps(element.accessibility);
+    const className = classesFromStyleProps(element.styles);
     return (
         <Form {...form}>
             <form
                 onSubmit={form.handleSubmit(onSubmit)}
-                className={classesFromStyleProps(element.styles)}
+                className={className}
+                {...accessibilityProps}
             >
                 {renderGroup(element)}
                 <div className=" flex justify-between">
-                    <div className="mr-1">
-                        {element.cancel && <ButtonRenderer element={element.cancel} />}
-                    </div>
-                    <div className="ml-1">
-                        {element.submit && <ButtonRenderer element={element.submit} />}
-                    </div>
+                    {element.cancel && <ButtonRenderer element={element.cancel} />}
+                    {element.submit && <ButtonRenderer element={element.submit} />}
                 </div>
             </form>
         </Form>
