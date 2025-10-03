@@ -169,7 +169,7 @@ function ModalRenderer({ element, runEventHandler, runtime }: ModalRendererProps
         )}
 
         {/* Body */}
-        <RenderChildren children={modal.content} />
+        <RenderChildren children={modal.content} runtime={runtime} />
 
         {/* Footer */}
         {modal.closeButton && (

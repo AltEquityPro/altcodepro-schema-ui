@@ -6,8 +6,8 @@ import {
   MoreHorizontalIcon,
 } from "lucide-react"
 
-import { cn, resolveBinding } from "../../lib/utils"
-import { Button, buttonVariants } from "./button"
+import { cn, resolveBinding, variants } from "../../lib/utils"
+import { Button } from "./button"
 import wrapWithMotion from "./wrapWithMotion"
 import { AnyObj, EventHandler, PaginationElement } from "../../types"
 
@@ -42,13 +42,12 @@ function PaginationItem({ ...props }: React.ComponentProps<"li">) {
 
 type PaginationLinkProps = {
   isActive?: boolean
-} & Pick<React.ComponentProps<typeof Button>, "size"> &
+} &
   React.ComponentProps<"a">
 
 function PaginationLink({
   className,
   isActive,
-  size = "icon",
   ...props
 }: PaginationLinkProps) {
   return (
@@ -57,9 +56,9 @@ function PaginationLink({
       data-slot="pagination-link"
       data-active={isActive}
       className={cn(
-        buttonVariants({
+        variants({
           variant: isActive ? "outline" : "ghost",
-          size,
+
         }),
         className
       )}
@@ -75,7 +74,7 @@ function PaginationPrevious({
   return (
     <PaginationLink
       aria-label="Go to previous page"
-      size="default"
+
       className={cn("gap-1 px-2.5 sm:pl-2.5", className)}
       {...props}
     >
@@ -92,7 +91,7 @@ function PaginationNext({
   return (
     <PaginationLink
       aria-label="Go to next page"
-      size="default"
+
       className={cn("gap-1 px-2.5 sm:pr-2.5", className)}
       {...props}
     >

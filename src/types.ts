@@ -1031,6 +1031,7 @@ export interface InputElement extends BaseElement {
     maxSize?: number;
     disabled?: boolean;
     min?: number;
+    rows?: number; // for textarea
     minFractionDigits?: number;
     multiple?: boolean;
     name: string;
@@ -1153,6 +1154,8 @@ export interface MenuElement extends BaseElement {
         items: MenuItem[];
         label: Binding;
     }>;
+    activeStyle?: StyleProps;
+    inactiveStyle?: StyleProps;
     trigger?: UIElement;
     variant: 'dropdown' | 'context' | 'menubar' | 'navigation';
 }
@@ -1893,10 +1896,8 @@ export interface SeriesSpec {
 }
 
 export interface StyleProps {
-    animation?: AnimationSpec;
     background?: BackgroundSpec | null;
     className: string;
-    customCss?: string;
     responsiveClasses?: Record<string, string>;
 }
 
@@ -2029,9 +2030,8 @@ export interface IRouteList {
 }
 
 export interface NavStyle {
-    activeStyle?: StyleProps;
+
     containerStyle?: StyleProps;
-    inactiveStyle?: StyleProps;
     overlayStyle?: StyleProps;
     sheetStyle?: StyleProps;
 }
@@ -2104,11 +2104,7 @@ export interface UIDefinition {
 }
 
 export interface VisibilityControl {
-    condition: {
-        key: Binding;
-        operator: ConditionOp;
-        value: any;
-    };
+    condition: ConditionExpr;
     show: boolean;
 }
 
@@ -2185,6 +2181,7 @@ export interface SocialMediaLinks {
 export interface UIProject {
     brand: Brand;
     footer?: FooterElement;
+    search?: { enabled?: boolean; path?: string };
     globalConfig?: {
         accessibilityConfig?: AccessibilityConfig;
         auth?: AuthGlobalConfig;
@@ -2216,7 +2213,6 @@ export interface UIProject {
             license?: string;
             pinterest?: { richPin: string | boolean };
             schemaType?: string;
-            search?: { enabled?: boolean; path?: string };
             twitter?: { site?: string };
             verification?: {
                 google?: string | number | (string | number)[];
@@ -2246,11 +2242,7 @@ export interface UIProject {
     };
     globalStyles?: {
         animationFramework?: string;
-        tailwindConfig?: {
-            customClasses?: Record<string, string>;
-            important?: boolean;
-            prefix?: string;
-        };
+        projectStyle?: string;
         theme?: {
             colorScheme?: 'normal' | 'light' | 'dark' | 'light dark' | 'dark light' | 'only light';
             fontFamily?: string;
@@ -2260,8 +2252,8 @@ export interface UIProject {
             secondaryColorDark?: string;
             secondaryColorLight?: string;
         };
+        headerStyle?: StyleProps;
     };
-    header?: HeaderElement;
     initialData?: Record<string, any>;
     projectId?: string;
     routeBase?: string;
@@ -2299,11 +2291,26 @@ export interface UIProject {
         id: string;
         name: string;
         styles?: StyleProps;
-        accessibility?: AccessibilityProps;
-        children?: UIElement[];
         position?: "bottom" | "top";
         persistKey?: string;
-    },
-    screens?: UIScreenDef[];
+        description?: Binding;
+
+        /** Buttons */
+        acceptButton?: ButtonElement;   // Accept all
+        manageButton?: ButtonElement;   // Opens modal
+        saveButton?: ButtonElement;     // Save preferences
+
+        /** Preferences modal */
+        preferencesModal?: ModalElement;
+
+        /** Options list */
+        options?: Array<{
+            id: string;
+            label: Binding;
+            required?: boolean;
+            defaultValue?: boolean;
+        }>;
+    }
+    screens?: UIDefinition[];
     version: string;
 }

@@ -1,107 +1,138 @@
 "use client";
-import * as React from "react"
-import { Slot } from "@radix-ui/react-slot"
-import { cva, type VariantProps } from "class-variance-authority"
-import { useAppState } from "../../schema/StateContext"
-import { useActionHandler } from "../../schema/Actions"
-import { ElementResolver } from "../../schema/ElementResolver"
-import { resolveBinding, cn, getAccessibilityProps, classesFromStyleProps } from "../../lib/utils"
-import { ButtonElement, UIElement } from "../../types"
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        pirmary: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
-        outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
-        success:
-          "bg-green-600 text-white hover:bg-green-700 focus-visible:ring-green-500/40 dark:bg-green-700 dark:hover:bg-green-800",
-        danger:
-          "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500/40 dark:bg-red-700 dark:hover:bg-red-800",
-        warning:
-          "bg-yellow-500 text-black hover:bg-yellow-600 focus-visible:ring-yellow-500/40 dark:bg-yellow-600 dark:hover:bg-yellow-700",
-        info:
-          "bg-blue-500 text-white hover:bg-blue-600 focus-visible:ring-blue-500/40 dark:bg-blue-600 dark:hover:bg-blue-700",
+import {
+  classesFromStyleProps,
+  getAccessibilityProps,
+  resolveAnimation,
+  resolveBinding,
+} from "@/lib/utils";
+import { Binding, ButtonElement } from "@/types";
+import clsx from "clsx";
+import { motion } from "framer-motion";
+import React, { useMemo } from "react";
+import { DynamicIcon } from "./dynamic-icon";
+import { useActionHandler } from "@/schema/Actions";
+import { useAppState } from "@/schema/StateContext";
 
-      },
-      size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
-        icon: "size-9",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-)
+/* ----------------------------
+ * Variant + Size Maps
+ * ---------------------------- */
+const buttonVariants: Record<string, string> = {
+  primary:
+    "bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500",
+  secondary:
+    "bg-gray-300 hover:bg-gray-400 focus:ring-2 focus:ring-gray-400",
+  success:
+    "bg-green-600 text-white hover:bg-green-700 focus:ring-2 focus:ring-green-500",
+  danger:
+    "bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-500",
+  warning:
+    "bg-yellow-500 text-black hover:bg-yellow-600 focus:ring-2 focus:ring-yellow-400",
+  outline:
+    "border border-gray-300 bg-transparent text-gray-900 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400",
+};
 
-function Button({
+const sizeClasses: Record<string, string> = {
+  default: "h-9 px-4 py-2 has-[>svg]:px-3",
+  sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5 text-sm",
+  lg: "h-10 rounded-md px-6 has-[>svg]:px-4 text-base",
+  icon: "size-9",
+};
+
+/* ----------------------------
+ * Design-system Button
+ * ---------------------------- */
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: keyof typeof buttonVariants;
+  size?: "default" | "sm" | "lg" | "icon";
+}
+
+export function Button({
+  children,
+  variant = "primary",
   className,
-  variant,
-  size,
-  asChild = false,
+  size = "default",
   ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
-  const Comp = asChild ? Slot : "button"
+}: ButtonProps) {
+  const variantClass = buttonVariants[variant] ?? "";
+  const sizeClass = sizeClasses[size] ?? "";
+
+  return (
+    <button
+      className={clsx(
+        "inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none",
+        variantClass,
+        sizeClass,
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+/* ----------------------------
+ * Schema-driven ButtonRenderer
+ * ---------------------------- */
+export function ButtonRenderer({
+  element,
+  runtime,
+}: {
+  element: ButtonElement;
+  runtime: Record<string, any>;
+}) {
+  const { state, t } = useAppState();
+  const { runEventHandler } = useActionHandler({ runtime });
+
+  const variantClass = buttonVariants[element.variant ?? "primary"] ?? "";
+  const sizeClass = sizeClasses[element.size ?? "default"] ?? "";
+  const styles = classesFromStyleProps(element.styles);
+  const accessibilityProps = getAccessibilityProps(element.accessibility);
+  const animationProps: any = resolveAnimation(element.animations);
+
+  const resolvedBinding = useMemo(
+    () => (binding: Binding) => resolveBinding(binding, state, t),
+    [state, t]
+  );
+
+  const disabled =
+    typeof element.disabled === "boolean"
+      ? element.disabled
+      : String(resolvedBinding(element.disabled as any)) === "true";
+
+  // Choose motion.button only if animations are defined
+  const Comp: any =
+    element.animations?.framework === "framer-motion"
+      ? motion.button
+      : "button";
 
   return (
     <Comp
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
-  )
-}
-interface ButtonRendererProps {
-  element: ButtonElement
-  runtime?: Record<string, any>
-}
-
-function ButtonRenderer({ element, runtime = {} }: ButtonRendererProps) {
-  const { state, t } = useAppState()
-  const { runEventHandler } = useActionHandler({ runtime })
-
-  const text = resolveBinding(element.text, state, t)
-  const disabled = resolveBinding(element.disabled, state, t)
-  const accessibilityProps = getAccessibilityProps(element.accessibility);
-  const className = classesFromStyleProps(element.styles);
-  return (
-    <Button
-      variant={(element.variant || "default") as any}
-      size={element.size || "default"}
+      {...(element.animations?.framework === "framer-motion"
+        ? animationProps
+        : {})}
+      className={clsx(
+        "inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none",
+        variantClass,
+        sizeClass,
+        styles,
+        element.styles?.className
+      )}
       disabled={disabled}
-      aria-disabled={disabled ? true : undefined}
-      asChild={element.asChild}
-      onClick={() => runEventHandler(element.onClick)}
+      onClick={() => element.onClick && runEventHandler(element.onClick)}
+      style={{ zIndex: element.zIndex, ...(animationProps?.style || {}) }}
       {...accessibilityProps}
-      className={className}
     >
-      <>
-        {element.iconLeft && (
-          <ElementResolver element={element.iconLeft as UIElement} runtime={runtime} />
-        )}
-        {text}
-        {element.iconRight && (
-          <ElementResolver element={element.iconRight as UIElement} runtime={runtime} />
-        )}
-      </>
-    </Button>
-  )
+      {element.iconLeft?.name && (
+        <DynamicIcon name={element.iconLeft.name} className="mr-1" />
+      )}
+      {resolvedBinding(element.text)}
+      {element.iconRight?.name && (
+        <DynamicIcon name={element.iconRight.name} className="ml-1" />
+      )}
+    </Comp>
+  );
 }
-export { ButtonRenderer, Button, buttonVariants }
+

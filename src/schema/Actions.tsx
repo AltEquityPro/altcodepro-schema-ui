@@ -42,12 +42,12 @@ async function withRetry<T>(
 
 export function useActionHandler({
     globalConfig,
-    screen,
     runtime,
+    dataSources,
 }: {
     globalConfig?: UIProject['globalConfig'];
-    screen?: UIScreenDef;
     runtime: ActionRuntime;
+    dataSources?: DataSource[];
 }) {
     const { state, setState, t, form } = useAppState();
     const abortControllers = useRef<Record<string, AbortController>>({});
@@ -375,7 +375,7 @@ export function useActionHandler({
                 case ActionType.ai_generate: {
                     const dsId = h.dataSourceId;
                     if (!dsId) throw new Error(`dataSourceId required for ${h.action}`);
-                    const inlineDs = screen?.dataSources?.find(ds => ds.id === dsId);
+                    const inlineDs = dataSources?.find(ds => ds.id === dsId);
                     const globalDs = (globalConfig?.endpoints?.registry || []).find(ref => ref.id === dsId);
                     const ds = inlineDs || globalDs;
                     if (!ds) throw new Error(`DataSource ${dsId} not found`);
@@ -405,7 +405,7 @@ export function useActionHandler({
                 case ActionType.graphql_subscription: {
                     const dsId = h.dataSourceId;
                     if (!dsId) throw new Error(`dataSourceId required for ${h.action}`);
-                    const inlineDs = screen?.dataSources?.find(ds => ds.id === dsId);
+                    const inlineDs = dataSources?.find(ds => ds.id === dsId);
                     const globalDs = (globalConfig?.endpoints?.registry || []).find(ref => ref.id === dsId);
                     const ds = inlineDs || globalDs;
                     if (!ds) throw new Error(`DataSource ${dsId} not found`);
@@ -419,7 +419,7 @@ export function useActionHandler({
                 case ActionType.websocket_call: {
                     const dsId = h.dataSourceId;
                     if (!dsId) throw new Error(`dataSourceId required for ${h.action}`);
-                    const inlineDs = screen?.dataSources?.find(ds => ds.id === dsId);
+                    const inlineDs = dataSources?.find(ds => ds.id === dsId);
                     const globalDs = (globalConfig?.endpoints?.registry || []).find(ref => ref.id === dsId);
                     const ds = inlineDs || globalDs;
                     if (!ds) throw new Error(`DataSource ${dsId} not found`);

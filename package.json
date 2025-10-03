@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "rm -rf dist && tsup"
+    "build": "rm -rf dist && tsup && cp dist/index.js /Users/sireeshpangaluri/Desktop/Projects/AltEquityPro/altcodepro-config-next-ui/node_modules/altcodepro-schema-ui/dist && cp dist/index.d.ts /Users/sireeshpangaluri/Desktop/Projects/AltEquityPro/altcodepro-config-next-ui/node_modules/altcodepro-schema-ui/dist"
   },
   "keywords": [],
   "author": "",
@@ -69,8 +69,10 @@
     "embla-carousel-react": "^8.6.0",
     "ethers": "^6.15.0",
     "framer-motion": "^12.23.22",
+    "gsap": "^3.13.0",
     "hls.js": "^1.6.13",
     "input-otp": "^1.4.2",
+    "js-cookie": "^3.0.5",
     "jsonpath-plus": "^10.3.0",
     "jspdf": "^3.0.3",
     "leaflet": "^1.9.4",
@@ -104,6 +106,7 @@
   "devDependencies": {
     "@types/aframe": "^1.2.8",
     "@types/google.maps": "^3.58.1",
+    "@types/js-cookie": "^3.0.6",
     "@types/leaflet": "^1.9.20",
     "@types/react": "^19.1.15",
     "@types/react-dom": "^19.1.9",

@@ -9,6 +9,8 @@ import {
     AnyObj,
     RedirectSpec,
     ConditionExpr,
+    ActionRuntime,
+    UIElement,
 } from "../types";
 
 import { useAppState } from "./StateContext";
@@ -20,38 +22,28 @@ import {
     classesFromStyleProps,
     isVisible,
     cn,
-    motionFromAnimation,
+    resolveAnimation,
 } from "../lib/utils";
 
 import { ElementResolver } from "./ElementResolver";
 import { useDataSources } from "./Datasource";
 
-/** Runtime you already pass around in Actions.ts (navigate, modal, toast, etc.) */
-export type ScreenRuntime = {
-    navigate?: (href: string, replace?: boolean) => void;
-    openModal?: (id: string) => void;
-    closeModal?: (id: string) => void;
-    toast?: (msg: string, variant?: "success" | "error" | "info") => void;
-    exportFile?: (type: "pdf" | "ppt" | "word" | "json", payload: AnyObj) => Promise<void>;
-    runScript?: (name: string, args: any[]) => Promise<any> | any;
-    connectWallet?: (provider: string, chainId: number, projectId?: string) => Promise<any>;
-    signTransaction?: (provider: string, chainId: number, tx: any) => Promise<any>;
-    initiateCall?: (callType: "video" | "audio", peerId: string, signalingServer?: string) => Promise<void>;
-    processVoiceCommand?: (command: string, language: string, voiceModel?: string) => Promise<any>;
-    /** Injected so ElementResolver has access to screen+global config */
-    globalConfig?: UIProject["globalConfig"];
-    screen?: UIScreenDef;
-};
-
 export interface ScreenRendererProps {
     project: UIProject;
-    screen: UIScreenDef;
-    runtime: ScreenRuntime;
-    /** Optional: show a tiny debug strip for data/guard status */
+    currentScreenDef: UIScreenDef;
+    runtime: ActionRuntime;
     showDebug?: boolean;
-    /** Optional fallbacks */
     loadingFallback?: React.ReactNode;
     errorFallback?: (errs: Array<{ id: string; error: any }>) => React.ReactNode;
+    CustomElementResolver?: (
+        element: UIElement,
+        ctx: {
+            runtime: ActionRuntime;
+            state: AnyObj;
+            t: (k: string) => string;
+            runEventHandler: (ev: any, payload?: AnyObj) => void;
+        }
+    ) => React.ReactNode;
 }
 
 /** ---------- Guard helpers ---------- */
@@ -84,7 +76,7 @@ function evalGuard(guard: UIScreenDef["guard"] | undefined, state: AnyObj, t: (k
     return { ok, onFail: guard.onFail };
 }
 
-function gotoRedirect(runtime: ScreenRuntime, redirect?: RedirectSpec) {
+function gotoRedirect(runtime: ActionRuntime, redirect?: RedirectSpec) {
     if (!redirect) return;
     if (redirect.href && runtime.navigate) runtime.navigate(redirect.href, false);
     // If you support screenId-based navigation, add your mapping here
@@ -138,33 +130,33 @@ function layoutClasses(layout: UIScreenDef["layoutType"]) {
     }
 }
 
-/** ---------- ScreenRenderer ---------- */
 export function ScreenRenderer({
     project,
-    screen,
+    currentScreenDef,
     runtime,
     showDebug = false,
     loadingFallback,
     errorFallback,
+    CustomElementResolver
 }: ScreenRendererProps) {
     const { state, setState, t } = useAppState();
 
     // Resolve DS (fetch, poll, ws/subs) + data mappings
     const dataMap = useDataSources({
-        dataSources: screen.dataSources || [],
+        dataSources: currentScreenDef.dataSources || [],
         globalConfig: project.globalConfig,
-        screen,
+        screen: currentScreenDef,
     });
-
-    // Build actions with full runtime
-    const { runEventHandler } = useActionHandler({
+    const action = {
         globalConfig: project.globalConfig,
-        screen,
+        dataSources: currentScreenDef?.dataSources,
         runtime: {
-            ...runtime,
+            ...(runtime || {}),
             patchState: (path: string, val: any) => setState(path, val)
-        } as any,
-    });
+        }
+    }
+    // Build actions with full runtime
+    const { runEventHandler } = useActionHandler({ ...action });
 
 
     /** Keep each dataSource result mirrored into state under its id.
@@ -181,17 +173,17 @@ export function ScreenRenderer({
 
     /** Lifecycle: onEnter / onLeave */
     useEffect(() => {
-        const enter = screen.lifecycle?.onEnter;
-        if (enter) runEventHandler(enter);
+        const enter = currentScreenDef.lifecycle?.onEnter;
+        if (enter && enter.action !== 'navigation') runEventHandler(enter);
         return () => {
-            const leave = screen.lifecycle?.onLeave;
+            const leave = currentScreenDef.lifecycle?.onLeave;
             if (leave) runEventHandler(leave);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [screen.id]);
+    }, [currentScreenDef.id]);
 
     /** Evaluate guard after DS + state are ready */
-    const guardResult = useMemo(() => evalGuard(screen.guard, state, t), [screen.guard, state, t]);
+    const guardResult = useMemo(() => evalGuard(currentScreenDef.guard, state, t), [currentScreenDef.guard, state, t]);
 
     useEffect(() => {
         if (!guardResult.ok) gotoRedirect(runtime, guardResult.onFail);
@@ -199,7 +191,7 @@ export function ScreenRenderer({
     }, [guardResult.ok]);
 
     /** Loading / Errors */
-    const dsList = screen.dataSources || [];
+    const dsList = currentScreenDef.dataSources || [];
     const isLoading =
         dsList.length > 0 &&
         dsList.some((ds) => typeof dataMap[ds.id] === "undefined");
@@ -209,8 +201,7 @@ export function ScreenRenderer({
         .map((x) => ({ id: x.id, error: x.data }));
 
     /** Screen container classes + animation */
-    const screenClasses = cn(layoutClasses(screen.layoutType), classesFromStyleProps(screen.styles));
-    const motionProps = motionFromAnimation(screen.styles?.animation);
+    const screenClasses = cn(layoutClasses(currentScreenDef.layoutType), classesFromStyleProps(currentScreenDef.styles));
 
     if (!guardResult.ok) {
         // While redirecting, optionally render nothing or a tiny placeholder.
@@ -226,12 +217,12 @@ export function ScreenRenderer({
     }
 
     return (
-        <motion.section {...motionProps} className={screenClasses} data-screen-id={screen.id}>
+        <div className={screenClasses} data-screen-id={currentScreenDef.id}>
             {/* Optional debug strip */}
             {showDebug && (
                 <div className="mb-4 text-xs text-muted-foreground">
                     <span className="inline-block rounded bg-muted px-2 py-1 mr-2">
-                        screen: <strong>{resolveBinding(screen.name, state, t)}</strong>
+                        screen: <strong>{resolveBinding(currentScreenDef.name, state, t)}</strong>
                     </span>
                     {dsList.length > 0 && (
                         <span className="inline-block rounded bg-muted px-2 py-1 mr-2">
@@ -242,7 +233,7 @@ export function ScreenRenderer({
             )}
 
             {/* Render all elements with ElementResolver so each gets proper runtime + actions */}
-            {screen.elements?.map((el) => {
+            {currentScreenDef.elements?.map((el) => {
                 // Global per-element visibility is already checked inside ElementResolver,
                 // but we can short-circuit here if you need faster skip:
                 const visible = isVisible(el.visibility, state, t);
@@ -255,8 +246,13 @@ export function ScreenRenderer({
                 // Give a stable key; prefer element.id
                 const key = resolved.id;
 
-                return <ElementResolver key={key} element={resolved} runtime={{ ...runtime, globalConfig: project.globalConfig, screen }} />;
+                return <ElementResolver key={key}
+                    element={resolved}
+                    runtime={runtime}
+                    globalConfig={project?.globalConfig}
+                    dataSources={currentScreenDef?.dataSources}
+                    CustomElementResolver={CustomElementResolver} />;
             })}
-        </motion.section>
+        </div>
     );
 }

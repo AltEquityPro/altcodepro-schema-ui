@@ -3,7 +3,8 @@ import stripJsonComments from 'strip-json-comments';
 import { BrowserProvider } from 'ethers';
 import { AnyObj, VisibilityControl, AccessibilityProps, StyleProps, AnimationSpec, IRoute, UIDefinition, ImageElement, UIProject, Brand } from '../types';
 import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+// import { twMerge } from "tailwind-merge"
+import { cva } from 'class-variance-authority';
 
 const injectedCache = new Set<string>();
 export const languageMap: Record<string, string> = {
@@ -23,7 +24,7 @@ export const languageMap: Record<string, string> = {
 };
 
 export function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs))
+    return (clsx(inputs))
 }
 
 export function useTranslation(translations: Record<string, Record<string, string>>, locale: string) {
@@ -373,24 +374,96 @@ export function setPath<T extends AnyObj>(obj: T, path: string, value: any): T {
 }
 
 /**
- * Generates Framer Motion animation props.
- * @param a - Animation specification.
- * @returns Animation props.
+ * Resolve animation props/styles/classes from AnimationSpec.
+ * Supports animate.css, CSS (inline), framer-motion, and GSAP.
  */
-export function motionFromAnimation(a?: AnimationSpec) {
-    if (!a) return {} as Record<string, any>;
-    return {
-        initial: { opacity: 0 },
-        animate: { opacity: 1 },
-        exit: { opacity: 0 },
-        transition: {
-            duration: a.duration ? a.duration / 1000 : 0.3,
-            delay: a.delay || 0,
-            repeat: a.repeat === 'infinite' ? Infinity : a.repeat,
-            ease: a.easing || 'easeInOut',
-        },
-    } as Record<string, any>;
+export function resolveAnimation(animation?: AnimationSpec) {
+    if (!animation) return {};
+
+    const {
+        framework = "css",
+        animate,
+        initial,
+        transition,
+        delay,
+        duration,
+        easing,
+        entrance,
+        exit,
+        whileHover,
+        whileTap,
+        repeat,
+        lottieUrl,
+        layout,
+    } = animation;
+
+    switch (framework) {
+        case "animate.css": {
+            // expect entrance/exit names (like "fadeIn", "bounceOut")
+            let className = "";
+            if (entrance) className += ` animate__animated animate__${entrance}`;
+            if (exit) className += ` animate__animated animate__${exit}`;
+            return {
+                className: className.trim(),
+                style: {
+                    animationDelay: delay ? `${delay}ms` : undefined,
+                    animationDuration: duration ? `${duration}ms` : undefined,
+                } as React.CSSProperties,
+            };
+        }
+
+        case "css": {
+            // Map directly to inline styles
+            return {
+                style: {
+                    transition: transition ? Object.entries(transition).map(([k, v]) => `${k} ${v}`).join(", ") : undefined,
+                    animationDelay: delay ? `${delay}ms` : undefined,
+                    animationDuration: duration ? `${duration}ms` : undefined,
+                    animationIterationCount: repeat,
+                    ...animate,
+                } as React.CSSProperties,
+            };
+        }
+
+        case "framer-motion": {
+            // Return props you can spread into a <motion.div>
+            return {
+                initial,
+                animate,
+                exit,
+                whileHover,
+                whileTap,
+                layout,
+                transition: {
+                    delay,
+                    duration,
+                    ease: easing,
+                    repeat,
+                    ...transition,
+                },
+            };
+        }
+
+        case "gsap": {
+            // Return a GSAP config you can feed into gsap.to()
+            return {
+                gsap: {
+                    from: initial,
+                    to: animate,
+                    duration: duration ? duration / 1000 : undefined, // gsap uses seconds
+                    delay: delay ? delay / 1000 : undefined,
+                    ease: easing,
+                    repeat,
+                    ...transition,
+                },
+            };
+        }
+
+        default:
+            return {};
+    }
 }
+
 
 /**
  * Validates input data against a regex or schema.
@@ -435,11 +508,11 @@ export const filterRows = (rows: any[], filters: Record<string, string>) => {
 
 export function isVisible(visibility: VisibilityControl | undefined, state: AnyObj, t: (key: string) => string): boolean {
     if (!visibility || !visibility.condition) return true;
-    const { key, operator, value } = visibility.condition;
+    const { key, op, value } = visibility.condition;
     const resolvedKey = resolveBinding(key, state, t);
     const resolvedValue = resolveBinding(value, state, t);
 
-    switch (operator) {
+    switch (op) {
         case "==": return resolvedKey === resolvedValue;
         case "!=": return resolvedKey !== resolvedValue;
         case ">": return resolvedKey > resolvedValue;
@@ -454,51 +527,74 @@ export function isVisible(visibility: VisibilityControl | undefined, state: AnyO
         default: return true;
     }
 }
-
+/**
+ * Convert schema style props into Tailwind class names.
+ * Fallback to inline-safe values for unsupported cases.
+ */
 export function classesFromStyleProps(styles?: StyleProps): string {
     if (!styles) return "";
     let classes = styles.className || "";
+
     if (styles.responsiveClasses) {
         classes += " " + Object.values(styles.responsiveClasses).join(" ");
     }
-    if (styles.customCss) {
-        // Assume customCss is a string of Tailwind classes or raw CSS (handled by a CSS-in-JS solution)
-        classes += " " + styles.customCss;
-    }
+
     if (styles.background) {
         switch (styles.background.type) {
             case "color":
+                // prefer Tailwind color tokens; fallback inline handled elsewhere
                 classes += ` bg-[${styles.background.value}]`;
                 break;
             case "gradient":
+                // expect "from-xxx to-yyy" format
                 classes += ` bg-gradient-to-r ${styles.background.value}`;
                 break;
             case "image":
-                classes += ` bg-[url(${styles.background.value})] bg-cover`;
-                break;
             case "video":
-                classes += ` bg-[url(${styles.background.value})] bg-cover`;
+                classes += ` bg-[url('${styles.background.value}')] bg-cover`;
                 break;
         }
         if (styles.background.overlayClass) {
             classes += ` ${styles.background.overlayClass}`;
         }
     }
+
     return classes.trim();
 }
 
-export function getAccessibilityProps(accessibility?: AccessibilityProps): Record<string, any> {
+/**
+ * Convert schema accessibility props to React-friendly attributes.
+ */
+export function getAccessibilityProps(
+    accessibility?: AccessibilityProps,
+    state: Record<string, any> = {},
+    t: (s: string) => string = (s) => s
+): Record<string, any> {
     if (!accessibility) return {};
-    return {
-        "aria-label": resolveBinding(accessibility.ariaLabel, {}, () => ""),
-        role: accessibility.ariaRole,
-        "aria-hidden": accessibility.ariaHidden,
-        tabIndex: accessibility.tabIndex,
-        "aria-description": resolveBinding(accessibility.screenReaderText, {}, () => ""),
-        focusable: accessibility.focusable,
-    };
-}
 
+    const props: Record<string, any> = {};
+
+    if (accessibility.ariaLabel) {
+        props["aria-label"] = resolveBinding(accessibility.ariaLabel, state, t);
+    }
+    if (accessibility.ariaRole) {
+        props.role = accessibility.ariaRole;
+    }
+    if (accessibility.ariaHidden !== undefined) {
+        props["aria-hidden"] = accessibility.ariaHidden;
+    }
+    if (accessibility.tabIndex !== undefined) {
+        props.tabIndex = accessibility.tabIndex;
+    }
+    if (accessibility.focusable) {
+        props.tabIndex = 0;
+    }
+    if (accessibility.screenReaderText) {
+        props["aria-description"] = resolveBinding(accessibility.screenReaderText, state, t);
+    }
+
+    return props;
+}
 export function getAllScreenImages(logo: string, screenJson: UIDefinition | null) {
     const images: Array<string> = [logo];
     if (screenJson) {
@@ -680,18 +776,10 @@ export async function getJSONLD(
                 ? metadata.keywords.join(', ')
                 : metadata.keywords;
         }
-        // Optional: Add structured search support
-        if (project.globalConfig?.metadata?.search?.enabled && globalMeta?.search?.path) {
+        if (project?.search?.enabled && project?.search?.path) {
             jsonLd.potentialAction = {
                 "@type": "SearchAction",
-                "target": `${metadataBase}${globalMeta.search.path}?q={search_term_string}`,
-                "query-input": "required name=search_term_string"
-            };
-        }
-        if (globalMeta.search?.enabled && globalMeta.search.path) {
-            jsonLd.potentialAction = {
-                "@type": "SearchAction",
-                target: `${url}${globalMeta.search.path}?q={search_term_string}`,
+                "target": `${metadataBase}${project.search.path}?q={search_term_string}`,
                 "query-input": "required name=search_term_string"
             };
         }
@@ -750,3 +838,43 @@ export function anySignal(signals: AbortSignal[]): AbortSignal {
 
     return controller.signal;
 }
+
+export const variants = cva(
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+    {
+        variants: {
+            variant: {
+                default: "bg-primary text-primary-foreground hover:bg-primary/90",
+                pirmary: "bg-primary text-primary-foreground hover:bg-primary/90",
+                destructive:
+                    "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+                outline:
+                    "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+                secondary:
+                    "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+                ghost:
+                    "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+                link: "text-primary underline-offset-4 hover:underline",
+                success:
+                    "bg-green-600 text-white hover:bg-green-700 focus-visible:ring-green-500/40 dark:bg-green-700 dark:hover:bg-green-800",
+                danger:
+                    "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500/40 dark:bg-red-700 dark:hover:bg-red-800",
+                warning:
+                    "bg-yellow-500 text-black hover:bg-yellow-600 focus-visible:ring-yellow-500/40 dark:bg-yellow-600 dark:hover:bg-yellow-700",
+                info:
+                    "bg-blue-500 text-white hover:bg-blue-600 focus-visible:ring-blue-500/40 dark:bg-blue-600 dark:hover:bg-blue-700",
+
+            },
+            size: {
+                default: "h-9 px-4 py-2 has-[>svg]:px-3",
+                sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
+                lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
+                icon: "size-9",
+            },
+        },
+        defaultVariants: {
+            variant: "default",
+            size: "default",
+        },
+    }
+)

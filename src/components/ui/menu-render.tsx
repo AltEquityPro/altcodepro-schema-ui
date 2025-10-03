@@ -6,7 +6,7 @@ import * as Navigation from "@radix-ui/react-navigation-menu"
 import { MenuIcon, ChevronRightIcon, ChevronDownIcon, XIcon } from "lucide-react"
 import { cn, resolveBinding } from "../../lib/utils"
 import { RenderChildren } from "../../schema/RenderChildren"
-import { AnyObj, MenuElement, EventHandler, MenuItem } from "../../types"
+import { AnyObj, MenuElement, EventHandler, MenuItem, ActionRuntime } from "../../types"
 import wrapWithMotion from "./wrapWithMotion"
 import { DynamicIcon } from "./dynamic-icon"
 
@@ -440,11 +440,13 @@ export function MenuRenderer({
   runEventHandler,
   state,
   t,
+  runtime
 }: {
   element: MenuElement
   runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
   state: AnyObj
   t: (key: string) => string
+  runtime: ActionRuntime
 }) {
   const [pathname, setPathname] = React.useState("")
   const [isOpen, setIsOpen] = React.useState(false)
@@ -475,7 +477,7 @@ export function MenuRenderer({
         element,
         <Dropdown.Root>
           <Dropdown.Trigger asChild>
-            {element.trigger && <RenderChildren children={[element.trigger]} />}
+            {element.trigger && <RenderChildren children={[element.trigger]} runtime={runtime} />}
           </Dropdown.Trigger>
           <Dropdown.Content className="z-50 rounded-md border bg-popover p-1 shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out">
             {renderItems(element.items, runEventHandler, state, t, Dropdown, "dropdown")}
@@ -488,7 +490,7 @@ export function MenuRenderer({
         element,
         <Context.Root>
           <Context.Trigger asChild>
-            {element.trigger && <RenderChildren children={[element.trigger]} />}
+            {element.trigger && <RenderChildren children={[element.trigger]} runtime={runtime} />}
           </Context.Trigger>
           <Context.Content className="z-50 rounded-md border bg-popover p-1 shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out">
             {renderItems(element.items, runEventHandler, state, t, Context, "context")}

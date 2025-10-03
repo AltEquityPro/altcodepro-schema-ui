@@ -8,8 +8,8 @@ import {
 } from "lucide-react"
 import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker"
 
-import { cn, resolveBinding } from "../../lib/utils"
-import { Button, buttonVariants } from "./button"
+import { cn, resolveBinding, variants } from "../../lib/utils"
+import { Button } from "./button"
 import {
   AnyObj,
   CalendarElement,
@@ -58,12 +58,12 @@ function Calendar({
           defaultClassNames.nav
         ),
         button_previous: cn(
-          buttonVariants({ variant: buttonVariant }),
+          variants({ variant: buttonVariant as any }),
           "size-(--cell-size) aria-disabled:opacity-50 p-0 select-none",
           defaultClassNames.button_previous
         ),
         button_next: cn(
-          buttonVariants({ variant: buttonVariant }),
+          variants({ variant: buttonVariant as any }),
           "size-(--cell-size) aria-disabled:opacity-50 p-0 select-none",
           defaultClassNames.button_next
         ),
@@ -168,9 +168,7 @@ function CalendarDayButton({
 
   return (
     <Button
-      ref={ref}
       variant="ghost"
-      size="icon"
       data-day={day.date.toLocaleDateString()}
       data-selected-single={
         modifiers.selected && !modifiers.range_start && !modifiers.range_end && !modifiers.range_middle
@@ -343,7 +341,6 @@ function CalendarRenderer({
               {e.onClick && e.btnLabel && (
                 <Button
                   variant="ghost"
-                  size="sm"
                   className="mt-2"
                   onClick={(ev) => {
                     ev.stopPropagation()

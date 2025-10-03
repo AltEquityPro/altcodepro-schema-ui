@@ -1,10 +1,15 @@
 "use client";
-import * as React from "react"
-import * as AvatarPrimitive from "@radix-ui/react-avatar"
-
-import { cn, resolveBinding } from "../../lib/utils"
-import { useAppState } from "../../schema/StateContext"
-import { AvatarElement } from "../../types"
+import * as React from "react";
+import * as AvatarPrimitive from "@radix-ui/react-avatar";
+import {
+  cn,
+  resolveBinding,
+  classesFromStyleProps,
+  getAccessibilityProps,
+  resolveAnimation,
+} from "../../lib/utils";
+import { useAppState } from "../../schema/StateContext";
+import { AvatarElement } from "../../types";
 
 function Avatar({
   className,
@@ -19,7 +24,7 @@ function Avatar({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function AvatarImage({
@@ -32,7 +37,7 @@ function AvatarImage({
       className={cn("aspect-square size-full", className)}
       {...props}
     />
-  )
+  );
 }
 
 function AvatarFallback({
@@ -48,59 +53,53 @@ function AvatarFallback({
       )}
       {...props}
     />
-  )
+  );
 }
+
 function getInitials(text: string): string {
-  if (!text) return "?"
-  const parts = text.trim().split(" ")
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  if (!text) return "?";
+  const parts = text.trim().split(" ");
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 function stringToGradient(input: string): string {
-  let hash = 0
+  let hash = 0;
   for (let i = 0; i < input.length; i++) {
-    hash = input.charCodeAt(i) + ((hash << 5) - hash)
+    hash = input.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const h1 = hash % 360
-  const h2 = (hash * 37) % 360
-  return `linear-gradient(135deg, hsl(${h1}, 70%, 50%), hsl(${h2}, 70%, 50%))`
+  const h1 = hash % 360;
+  const h2 = (hash * 37) % 360;
+  return `linear-gradient(135deg, hsl(${h1}, 70%, 50%), hsl(${h2}, 70%, 50%))`;
 }
 
 // Animated gradient CSS class
 const animatedGradientClass =
-  "bg-[linear-gradient(270deg,#ff6ec4,#7873f5,#4ade80,#facc15)] bg-[length:600%_600%] animate-[gradientShift_8s_ease_infinite]"
-
-// Add global keyframes (can go in globals.css)
-// @keyframes gradientShift {
-//   0% { background-position: 0% 50%; }
-//   50% { background-position: 100% 50%; }
-//   100% { background-position: 0% 50%; }
-// }
+  "bg-[linear-gradient(270deg,#ff6ec4,#7873f5,#4ade80,#facc15)] bg-[length:600%_600%] animate-[gradientShift_8s_ease_infinite]";
 
 function AvatarRenderer({ element }: { element: AvatarElement }) {
-  const { state, t } = useAppState()
+  const { state, t } = useAppState();
 
-  const src = resolveBinding(element.src, state, t)
-  const alt = resolveBinding(element.alt, state, t)
-  const fallback = resolveBinding(element.fallback, state, t)
-  const status = resolveBinding(element.onlineStatus, state, t)
+  const src = resolveBinding(element.src, state, t);
+  const alt = resolveBinding(element.alt, state, t);
+  const fallback = resolveBinding(element.fallback, state, t);
+  const status = resolveBinding(element.onlineStatus, state, t);
 
   const sizeClass =
     typeof element.size === "number"
       ? `w-[${element.size}px] h-[${element.size}px]`
-      : element.size || "size-8"
+      : element.size || "size-8";
 
   const shapeClass =
     element.shape === "square"
       ? "rounded-none"
       : element.shape === "rounded"
         ? "rounded-md"
-        : "rounded-full"
+        : "rounded-full";
 
   const ringClass = element.showRing
     ? "ring-2 ring-primary ring-offset-1"
-    : ""
+    : "";
 
   const statusColor =
     status === true || status === "online"
@@ -109,18 +108,33 @@ function AvatarRenderer({ element }: { element: AvatarElement }) {
         ? "bg-yellow-500"
         : status === false || status === "offline"
           ? "bg-gray-400"
-          : ""
+          : "";
 
-  const fallbackText = fallback || getInitials(alt || "") || "?"
+  const fallbackText = fallback || getInitials(alt || "") || "?";
 
   // If generation is set, enable animated gradient
-  const isAnimated = Boolean(element.generation)
+  const isAnimated = Boolean(element.generation);
   const gradientBg = isAnimated
     ? undefined
-    : stringToGradient(alt || fallbackText || "avatar")
+    : stringToGradient(alt || fallbackText || "avatar");
+
+  // Schema styles / accessibility / animations
+  const schemaClass = classesFromStyleProps(element.styles);
+  const acc = getAccessibilityProps(element.accessibility);
+  const anim = resolveAnimation(element.animations);
+
+  const Wrapper: React.ElementType =
+    element.animations?.framework === "framer-motion"
+      ? (require("framer-motion").motion.div as any)
+      : "div";
 
   return (
-    <div className="relative inline-flex">
+    <Wrapper
+      className={cn("relative inline-flex", schemaClass, (anim as any)?.className)}
+      style={(anim as any)?.style}
+      {...acc}
+      {...(element.animations?.framework === "framer-motion" ? (anim as any) : {})}
+    >
       <Avatar
         className={cn(sizeClass, shapeClass, ringClass, "overflow-hidden")}
       >
@@ -148,7 +162,8 @@ function AvatarRenderer({ element }: { element: AvatarElement }) {
           )}
         />
       )}
-    </div>
-  )
+    </Wrapper>
+  );
 }
-export { AvatarRenderer, Avatar, AvatarImage, AvatarFallback }
+
+export { AvatarRenderer, Avatar, AvatarImage, AvatarFallback };

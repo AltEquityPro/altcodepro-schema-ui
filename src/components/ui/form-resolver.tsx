@@ -17,7 +17,7 @@ import {
 } from "../../types";
 import { useAppState } from "../../schema/StateContext";
 import { useActionHandler } from "../../schema/Actions";
-import { resolveBinding, classesFromStyleProps, luhnCheck, getAccessibilityProps } from "../../lib/utils";
+import { resolveBinding, classesFromStyleProps, luhnCheck, getAccessibilityProps, cn } from "../../lib/utils";
 
 import { Button, ButtonRenderer } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -65,33 +65,43 @@ const numberCoerce = (val: unknown) => {
 };
 
 /** ---------- UI-Only Elements ---------- */
-function Heading({ text }: { text: string }) {
-    return <h2 className="text-2xl font-semibold">{text}</h2>;
+
+function Heading({ text, className }: { text: string; className?: string }) {
+    return <h2 className={cn(className)}>{text}</h2>;
 }
-function Subheading({ text }: { text: string }) {
-    return <h3 className="text-lg font-medium text-muted-foreground">{text}</h3>;
+
+function Subheading({ text, className }: { text: string; className?: string }) {
+    return <h3 className={cn(className)}>{text}</h3>;
 }
-function Description({ text }: { text: string }) {
-    return <p className="text-sm text-muted-foreground">{text}</p>;
+
+function Description({ text, className }: { text: string; className?: string }) {
+    return <p className={cn(className)}>{text}</p>;
 }
-function Divider() {
-    return <div className="my-4 border-t" />;
+
+function HelpMessage({ text, className }: { text: string; className?: string }) {
+    return <p className={cn(className)}>{text}</p>;
 }
-function HelpMessage({ text }: { text: string }) {
-    return <p className="text-xs text-muted-foreground italic">{text}</p>;
+
+function Divider({ className }: { className?: string }) {
+    return <div className={cn(className)} />;
 }
-function ContainerWrapper({ children }: { children: React.ReactNode }) {
-    return <div className="grid gap-4">{children}</div>;
+
+function ContainerWrapper({ children, className }: { children: React.ReactNode; className?: string }) {
+    return <div className={cn(className)}>{children}</div>;
 }
-function CardWrapper({ children }: { children: React.ReactNode }) {
-    return <div className="rounded-lg  bg-card p-4 shadow-sm">{children}</div>;
+
+function CardWrapper({ children, className }: { children: React.ReactNode; className?: string }) {
+    return <div className={cn(className)}>{children}</div>;
 }
+
 interface FormResolverProps {
     element: FormElement;
     defaultData?: Record<string, any>;
     onFormSubmit?: (data: Record<string, any>) => void;
+    runtime: Record<string, any>
+
 }
-export function FormResolver({ element, defaultData, onFormSubmit }: FormResolverProps) {
+export function FormResolver({ element, defaultData, runtime, onFormSubmit }: FormResolverProps) {
     const { state, t } = useAppState();
     const { runEventHandler } = useActionHandler({ runtime: {} as any });
 
@@ -406,7 +416,11 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
 
     const renderInputField = (input: InputElement) => {
         const name = input.name as keyof FormValues;
-
+        const commonProps = {
+            className: classesFromStyleProps(input.styles),
+            disabled: input.disabled,
+            ...getAccessibilityProps(input.accessibility),
+        };
         return (
             <FormField
                 key={input.id}
@@ -438,14 +452,22 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                         formField.onChange(numberCoerce(e.target.value))
                                                     }
                                                     inputMode="decimal"
+                                                    min={input.min}
+                                                    max={input.max}
+                                                    step={input.step}
+                                                    {...commonProps}
                                                 />
                                             );
                                         }
 
                                         case InputType.textarea: {
-                                            return <Textarea placeholder={placeholder}
+                                            return <Textarea
+                                                placeholder={placeholder}
                                                 value={(formField.value as string) ?? ""}
-                                                onChange={formField.onChange} />;
+                                                onChange={formField.onChange}
+                                                rows={input.rows ?? 3} // optional support if schema has it
+                                                {...commonProps}
+                                            />;
                                         }
 
                                         case InputType.checkbox: {
@@ -455,6 +477,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                     onCheckedChange={(checked) =>
                                                         formField.onChange(Boolean(checked))
                                                     }
+                                                    {...commonProps}
                                                 />
                                             );
                                         }
@@ -468,6 +491,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                 <Select
                                                     value={(formField.value as string) ?? ""}
                                                     onValueChange={(v) => formField.onChange(v)}
+                                                    {...commonProps}
                                                 >
                                                     <SelectTrigger>
                                                         <SelectValue placeholder={placeholder} />
@@ -494,6 +518,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                     value={(formField.value as string[]) || []}
                                                     onChange={(vals) => formField.onChange(vals)}
                                                     placeholder={placeholder}
+                                                    {...commonProps}
                                                 />
                                             );
                                         }
@@ -513,6 +538,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                         max={max}
                                                         step={step}
                                                         onValueChange={(vals) => formField.onChange(vals[0])}
+                                                        {...commonProps}
                                                     />
                                                     <div className="text-xs text-muted-foreground">
                                                         {current}
@@ -529,6 +555,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                     maxSize={input.maxSize}
                                                     files={(formField.value as File[]) || []}
                                                     onFiles={(files) => formField.onChange(files)}
+                                                    {...commonProps}
                                                 />
                                             );
                                         }
@@ -601,6 +628,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                 <Calendar
                                                     mode="single"
                                                     selected={value}
+                                                    {...commonProps}
                                                     onSelect={(date) =>
                                                         formField.onChange(date ? date.toISOString().split("T")[0] : "")
                                                     }
@@ -612,6 +640,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                             return (
                                                 <Input
                                                     type="datetime-local"
+                                                    {...commonProps}
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
                                                 />
@@ -622,6 +651,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                             return (
                                                 <Input
                                                     type="time"
+                                                    {...commonProps}
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
                                                 />
@@ -631,6 +661,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                         case InputType.month: {
                                             return (
                                                 <Input
+                                                    {...commonProps}
                                                     type="month"
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
@@ -641,6 +672,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                         case InputType.week: {
                                             return (
                                                 <Input
+                                                    {...commonProps}
                                                     type="week"
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
@@ -659,6 +691,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                                 type="radio"
                                                                 name={name as string}
                                                                 value={opt.value}
+                                                                {...commonProps}
                                                                 checked={formField.value === opt.value}
                                                                 onChange={() => formField.onChange(opt.value)}
                                                             />
@@ -673,6 +706,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                             return (
                                                 <Input
                                                     type="color"
+                                                    {...commonProps}
                                                     value={(formField.value as string) ?? "#000000"}
                                                     onChange={formField.onChange}
                                                 />
@@ -683,6 +717,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                         case InputType.switch: {
                                             return (
                                                 <Checkbox
+                                                    {...commonProps}
                                                     checked={Boolean(formField.value)}
                                                     onCheckedChange={(checked) => formField.onChange(Boolean(checked))}
                                                 />
@@ -724,12 +759,12 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                             return (
                                                 <input
                                                     type="range"
+                                                    {...commonProps}
                                                     min={min}
                                                     max={max}
                                                     step={step}
                                                     value={current}
                                                     onChange={(e) => formField.onChange(Number(e.target.value))}
-                                                    className="w-full"
                                                 />
                                             );
                                         }
@@ -741,6 +776,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                     placeholder={placeholder}
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
+                                                    {...commonProps}
                                                 />
                                             );
                                         }
@@ -751,6 +787,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
                                                     placeholder={placeholder}
+                                                    {...commonProps}
                                                 />
                                             );
 
@@ -760,6 +797,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
                                                     placeholder={placeholder}
+                                                    {...commonProps}
                                                 />
                                             );
                                         case InputType.markdown:
@@ -768,6 +806,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
                                                     placeholder={placeholder}
+                                                    {...commonProps}
                                                 />
                                             );
                                         case InputType.currency: {
@@ -776,6 +815,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                     value={(formField.value as number | undefined)}
                                                     onChange={(num) => formField.onChange(num)}
                                                     placeholder={placeholder ?? "0.00"}
+                                                    {...commonProps}
                                                     // Optional: pass locale/currency from schema if you have them
                                                     // locale={resolveBinding(input.locale, state, t) as string | undefined}
                                                     currency={resolveBinding(input.currency, state, t) as string | undefined}
@@ -790,6 +830,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                     maxLength={6}
                                                     value={formField.value as string}
                                                     onChange={formField.onChange}
+                                                    {...commonProps}
                                                 >
                                                     <InputOTPGroup>
                                                         {Array.from({ length: 6 }).map((_, i) => (
@@ -810,6 +851,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                                     placeholder={placeholder}
                                                     onChange={(val) => formField.onChange(val)}
                                                     onCreateAction={input.onCreate}
+                                                    {...commonProps}
                                                 />
                                             );
                                         }
@@ -818,6 +860,7 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
                                             return (
                                                 <Input
                                                     type={input.inputType}
+                                                    {...commonProps}
                                                     placeholder={placeholder}
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
@@ -885,8 +928,8 @@ export function FormResolver({ element, defaultData, onFormSubmit }: FormResolve
             >
                 {renderGroup(element)}
                 <div className=" flex justify-between">
-                    {element.cancel && <ButtonRenderer element={element.cancel} />}
-                    {element.submit && <ButtonRenderer element={element.submit} />}
+                    {element.cancel && <ButtonRenderer element={element.cancel} runtime={runtime} />}
+                    {element.submit && <ButtonRenderer element={element.submit} runtime={runtime} />}
                 </div>
             </form>
         </Form>

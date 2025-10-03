@@ -9,7 +9,6 @@ import {
     cn,
     getAccessibilityProps
 } from "../lib/utils";
-import { motion } from "framer-motion";
 // Lazy load shadcn components
 const AccordionRenderer = lazy(() => import("../components/ui/accordion").then(module => ({ default: module.AccordionRenderer })));
 const AlertDialogRenderer = lazy(() => import("../components/ui/alert-dialog").then(module => ({ default: module.AlertDialogRenderer })));
@@ -113,11 +112,8 @@ import {
     FormElement,
     EditorElement,
     FileUploadElement,
-    FooterElement,
-    HeaderElement,
     IconElement,
     ImageElement,
-    PaymentElement,
     QRReaderElement,
     TableElement,
     TabsElement,
@@ -147,19 +143,35 @@ import {
     SearchElement,
     SignaturePadElement,
     TimelineElement,
-    TreeElement
+    TreeElement,
+    ActionRuntime,
+    UIProject,
+    DataSource,
+    FooterElement,
+    HeaderElement
 } from "../types";
 
 interface ElementResolverProps {
     element: UIElement;
-    runtime?: AnyObj;
+    globalConfig?: UIProject['globalConfig'];
+    dataSources?: DataSource[];
+    runtime: ActionRuntime;
+    CustomElementResolver?: (
+        element: UIElement,
+        ctx: {
+            runtime: ActionRuntime;
+            state: AnyObj;
+            t: (k: string) => string;
+            runEventHandler: (ev: any, payload?: AnyObj) => void;
+        }
+    ) => React.ReactNode;
 }
 
-export function ElementResolver({ element, runtime = {} }: ElementResolverProps) {
+export function ElementResolver({ element, globalConfig, dataSources, runtime = {}, CustomElementResolver }: ElementResolverProps) {
     const { state, t } = useAppState();
     const { runEventHandler } = useActionHandler({
-        globalConfig: runtime.globalConfig,
-        screen: runtime.screen,
+        globalConfig: globalConfig,
+        dataSources: dataSources,
         runtime,
     });
 
@@ -282,7 +294,7 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
 
         case ElementType.container:
             const container = resolvedElement as ContainerElement;
-            return <ContainerRenderer element={container} />
+            return <ContainerRenderer element={container} runtime={runtime} />
         case ElementType.context_menu:
             const contextMenu = resolvedElement as ContextMenuElement;
             return (
@@ -345,22 +357,19 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
         }
         case ElementType.footer:
             const footer = resolvedElement as FooterElement;
-            return <LazyComponent>
-                <footer className={cn(`text-${footer.alignment || 'left'}`)}>
-                    {footer.children && <RenderChildren children={footer.children} />}
-                </footer>
-            </LazyComponent>
+            return <footer className={cn(`text-${footer.alignment || 'left'}`, className)}>
+                {footer.children && <RenderChildren children={footer.children} runtime={runtime} />}
+            </footer>
 
         case ElementType.form:
             return <LazyComponent>
-                <FormResolver element={resolvedElement as FormElement} />
+                <FormResolver element={resolvedElement as FormElement} runtime={runtime} />
             </LazyComponent>
-
         case ElementType.header:
             const header = resolvedElement as HeaderElement;
             return <LazyComponent>
                 <header className={cn(className, `text-${(resolvedElement as HeaderElement).alignment || "left"}`)} {...accessibilityProps}>
-                    {resolvedElement.children && <RenderChildren children={resolvedElement.children} />}
+                    {resolvedElement.children && <RenderChildren children={resolvedElement.children} runtime={runtime} />}
                 </header>
             </LazyComponent>
 
@@ -371,15 +380,21 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             </LazyComponent>
 
         case ElementType.image:
+        case ElementType.image: {
             const image = resolvedElement as ImageElement;
-            return <img
-                src={resolveBinding(image.src, state, t)}
-                alt={resolveBinding(image.alt, state, t)}
-                width={image.width}
-                className={className}
-                height={image.height}
-                {...accessibilityProps}
-            />
+            const accessibilityProps = getAccessibilityProps(image.accessibility, state, t);
+
+            return (
+                image.src ? <img
+                    src={resolveBinding(image.src, state, t)}
+                    alt={resolveBinding(image.alt, state, t)}
+                    width={image.width}
+                    height={image.height}
+                    className={className}
+                    {...accessibilityProps}
+                /> : null
+            );
+        }
         case ElementType.list:
             return (
                 <LazyComponent>
@@ -408,7 +423,7 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             const menubar = resolvedElement as MenuElement;
             return (
                 <LazyComponent>
-                    <MenuRenderer element={menubar} runEventHandler={runEventHandler} state={state} t={t} />
+                    <MenuRenderer element={menubar} runEventHandler={runEventHandler} state={state} t={t} runtime={runtime} />
                 </LazyComponent>
             )
 
@@ -580,7 +595,7 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
                     </TabsList>
                     {tabs.tabs.map((tab) => (
                         <TabsContent key={tab.id} value={tab.id}>
-                            <RenderChildren children={tab.content} />
+                            <RenderChildren children={tab.content} runtime={runtime} />
                         </TabsContent>
                     ))}
                 </Tabs>
@@ -600,8 +615,6 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
                 </Tag>
             );
         }
-
-
         case ElementType.three_d_model:
             return (
                 <LazyComponent>
@@ -669,7 +682,7 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             return <LazyComponent>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        {tooltip.trigger && <RenderChildren children={[tooltip.trigger]} />}
+                        {tooltip.trigger && <RenderChildren children={[tooltip.trigger]} runtime={runtime} />}
                     </TooltipTrigger>
                     <TooltipContent
                         side={tooltip.side || "top"}
@@ -682,11 +695,11 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
 
         case ElementType.video:
             const video = resolvedElement as VideoElement;
-            return (
+            return video.src ? (
                 <LazyComponent>
                     <VideoRenderer element={video} state={state} t={t} runEventHandler={runEventHandler} />
                 </LazyComponent>
-            )
+            ) : null
 
         case ElementType.voice:
             const voice = resolvedElement as VoiceElement;
@@ -703,8 +716,19 @@ export function ElementResolver({ element, runtime = {} }: ElementResolverProps)
             </LazyComponent>
 
         default:
-            return <LazyComponent>
-                <div>Unsupported element type: {resolvedElement.type}</div>
-            </LazyComponent>
+            if (CustomElementResolver) {
+                const maybeNode = CustomElementResolver(resolvedElement, {
+                    runtime,
+                    state,
+                    t,
+                    runEventHandler,
+                });
+                if (maybeNode) return <>{maybeNode}</>;
+            }
+            return (
+                <div>
+                    Unsupported element type: {resolvedElement.type}
+                </div>
+            );
     }
 }
