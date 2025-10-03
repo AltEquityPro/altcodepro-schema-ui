@@ -541,7 +541,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
         case ElementType.step_wizard:
             return (
                 <LazyComponent>
-                    <StepWizardRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
+                    <StepWizardRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} runtime={runtime} />
                 </LazyComponent>
             )
 

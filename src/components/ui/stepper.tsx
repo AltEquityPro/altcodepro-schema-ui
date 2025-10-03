@@ -1,5 +1,5 @@
 "use client";
-import { AnyObj, EventHandler, StepWizardElement } from "../../types"
+import { ActionRuntime, AnyObj, EventHandler, StepWizardElement } from "../../types"
 import wrapWithMotion from "./wrapWithMotion"
 import React from "react"
 import { cn, resolveBinding } from "../../lib/utils"
@@ -12,11 +12,13 @@ function StepWizardRenderer({
     runEventHandler,
     state,
     t,
+    runtime
 }: {
     element: StepWizardElement
     runEventHandler: (h?: EventHandler, d?: AnyObj) => Promise<void>
     state: AnyObj
-    t: (key: string) => string
+    t: (key: string) => string,
+    runtime: ActionRuntime
 }) {
     const [currentStep, setCurrentStep] = React.useState(element.current || 0)
 
@@ -92,7 +94,7 @@ function StepWizardRenderer({
                 <h3 className="text-lg font-semibold mb-2">
                     Step {currentStep + 1}: {resolveBinding(step.title, state, t)}
                 </h3>
-                {step.content && <RenderChildren children={step.content} />}
+                {step.content && <RenderChildren children={step.content} runtime={runtime} />}
             </div>
 
             {/* Navigation */}

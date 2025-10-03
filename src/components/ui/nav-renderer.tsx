@@ -204,7 +204,7 @@ export function NavRenderer({ project, state, t }: { project: UIProject, state: 
                     {/* Brand */}
                     <a href={project.brand.href || "/"} className="flex items-center gap-2">
                         {project.brand.logoUrl ? (
-                            <img src={project.brand.logoUrl} alt="Logo" className="h-6 w-auto" />
+                            <img src={project.brand.logoUrl} alt="Logo" className="h-12 w-auto" />
                         ) : (
                             <span className="font-bold text-lg">{project.brand.name}</span>
                         )}

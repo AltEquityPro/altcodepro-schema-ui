@@ -6,6 +6,7 @@ import { UIProject, AnyObj, EventHandler, ElementType } from "../../types";
 import { resolveBinding } from "../../lib/utils";
 import { ElementResolver } from "../../schema/ElementResolver";
 import { ModalRenderer } from "./dialog";
+import { Button } from "./button";
 
 export function CookieBannerRenderer({
     project,
@@ -105,16 +106,10 @@ export function CookieBannerRenderer({
                             />
                         )}
                         {c.acceptButton && (
-                            <ElementResolver
-                                element={{
-                                    ...c.acceptButton,
-                                    onClick: {
-                                        action: "cookie_accept" as any,
-                                        params: { fn: onAcceptAll },
-                                    },
-                                }}
-                                runtime={{}}
-                            />
+                            <Button onClick={onAcceptAll}>
+                                {resolveBinding(c.acceptButton.text, state, t)}
+                            </Button>
+
                         )}
                     </div>
                 </div>
