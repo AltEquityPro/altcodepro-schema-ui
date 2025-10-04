@@ -22,13 +22,13 @@ export function TagsInput({ value, onChange }: TagsInputProps) {
     };
 
     const removeTag = (tag: string) => {
-        onChange(value.filter((t) => t !== tag));
+        onChange(value?.filter((t) => t !== tag));
     };
 
     return (
         <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
-                {value.map((tag) => (
+                {value && Array.isArray(value) && value.map((tag) => (
                     <span
                         key={tag}
                         className="bg-accent text-sm px-2 py-1 rounded-full flex items-center gap-1"

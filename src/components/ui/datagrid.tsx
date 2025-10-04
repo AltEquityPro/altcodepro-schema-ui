@@ -1,13 +1,16 @@
 "use client";
 import * as React from "react"
 import { useMemo, useState, useEffect } from "react"
-import { ColumnDef, SortingState, ColumnFiltersState, VisibilityState, RowSelectionState, PaginationState, Row, flexRender, getCoreRowModel, getExpandedRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table"
+import {
+    ColumnDef, SortingState, ColumnFiltersState, VisibilityState, RowSelectionState,
+    PaginationState, Row, flexRender, getCoreRowModel, getExpandedRowModel, getFilteredRowModel,
+    getPaginationRowModel, getSortedRowModel, useReactTable
+} from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
-import { ArrowUpDown, MoreHorizontal, ChevronDown, Edit, Trash, Eye, Table } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, ChevronDown } from "lucide-react"
 import { Calendar } from "../../components/ui/calendar"
-import { DataGridElement, DataGridCol, ElementType, InputType } from "../../types"
+import { DataGridElement, DataGridCol, ElementType, InputType, ActionRuntime, DataSource, EventHandler, AnyObj } from "../../types"
 import { resolveBinding, deepResolveBindings, cn } from "../../lib/utils"
-import { useActionHandler } from "../../schema/Actions"
 import { useDataSources } from "../../schema/Datasource"
 import { useAppState } from "../../schema/StateContext"
 import { Checkbox } from "../../components/ui/checkbox"
@@ -23,20 +26,36 @@ import { DialogHeader } from "./dialog"
 import { FormResolver } from "./form-resolver"
 import { Input } from "./input"
 import { Skeleton } from "./skeleton"
-import { TableHeader, TableRow, TableHead, TableBody, TableCell } from "./table"
+import { TableHeader, TableRow, TableHead, TableBody, TableCell, Table } from "./table"
 import { Button } from "./button"
 import { Badge } from "./badge"
 
 
 interface DataGridProps {
     element: DataGridElement
-    runtime: any // From parent, for actions like navigate, etc.
+    dataSources?: DataSource[];
+    runtime: ActionRuntime
+    runEventHandler: (handler?: EventHandler | undefined, dataOverride?: AnyObj) => Promise<void>
 }
 
-export function DataGrid({ element, runtime }: DataGridProps) {
-    const { state, setState, t } = useAppState()
-    const { runEventHandler } = useActionHandler({ globalConfig: runtime.globalConfig, screen: runtime.screen, runtime })
-    const dataSources = useDataSources({ dataSources: runtime.screen?.dataSources || [], globalConfig: runtime.globalConfig, screen: runtime.screen })
+const getFilterFn = (type?: string) => {
+    switch (type) {
+        case 'number':
+        case 'range':
+            return 'inNumberRange'
+        case 'date':
+        case 'datetime':
+        case 'time':
+            return 'equals'
+        case 'bool':
+            return 'equals'
+        default:
+            return 'includesString'
+    }
+}
+
+export function DataGrid({ element, dataSources, runtime, runEventHandler }: DataGridProps) {
+    const { state, t } = useAppState()
 
     const [sorting, setSorting] = useState<SortingState>(resolveBinding(element.sorting, state, t) || [])
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(resolveBinding(element.filters, state, t) || [])
@@ -53,12 +72,31 @@ export function DataGrid({ element, runtime }: DataGridProps) {
     const [modalOpen, setModalOpen] = useState(false)
     const [currentEditData, setCurrentEditData] = useState<any>(null)
 
+    const resolvedDataSources = useDataSources({ dataSources })
+
     const data = useMemo(() => {
+        let raw = [];
+
         if (element.serverSide && element.dataSourceId) {
-            return dataSources[element.dataSourceId] || []
+            raw = resolvedDataSources[element.dataSourceId] ?? [];
+        } else {
+            raw = resolveBinding(element.rows, state, t) || [];
         }
-        return resolveBinding(element.rows, state, t) || []
-    }, [element, dataSources, state, t])
+
+        // 🔹 Normalize rows if they come in "cells" format
+        if (Array.isArray(raw) && raw.length > 0 && raw[0]?.cells) {
+            return raw.map((r: any) => {
+                const obj: AnyObj = {};
+                element.columns.forEach((col, i) => {
+                    obj[col.key] = r.cells[i];
+                });
+                return obj;
+            });
+        }
+
+        return raw;
+    }, [element, resolvedDataSources, state, t]);
+
 
     const totalCount = resolveBinding(element.totalCount, state, t) ?? data.length
 
@@ -316,10 +354,6 @@ export function DataGrid({ element, runtime }: DataGridProps) {
                     }} />
             case 'checkbox':
                 return <Checkbox checked={!!value} disabled />
-            case 'custom':
-                // Assume customRender is a component name, resolve from registry or something
-                const CustomComp = col.customRender ? runtime.customComponents?.[col.customRender] : null
-                return CustomComp ? <CustomComp data={rowData} /> : value
             default:
                 return value
         }
@@ -363,22 +397,6 @@ export function DataGrid({ element, runtime }: DataGridProps) {
             // Add more as needed
             default:
                 return <Input defaultValue={value} onBlur={(e) => handleChange(e.target.value)} autoFocus />
-        }
-    }
-
-    const getFilterFn = (type?: string) => {
-        switch (type) {
-            case 'number':
-            case 'range':
-                return 'inNumberRange'
-            case 'date':
-            case 'datetime':
-            case 'time':
-                return 'equals'
-            case 'bool':
-                return 'equals'
-            default:
-                return 'includesString'
         }
     }
 
@@ -496,7 +514,7 @@ export function DataGrid({ element, runtime }: DataGridProps) {
                 <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
                         <TableRow key={headerGroup.id}>
-                            {headerGroup.headers.map((header) => {
+                            {headerGroup.headers?.map((header) => {
                                 const meta = header.column.columnDef.meta as any
                                 return (
                                     <TableHead
@@ -604,6 +622,7 @@ export function DataGrid({ element, runtime }: DataGridProps) {
                             element={element.editForm}
                             defaultData={currentEditData}
                             onFormSubmit={handleModalSubmit}
+                            runtime={runtime}
                         />
                     </DialogContent>
                 </Dialog>

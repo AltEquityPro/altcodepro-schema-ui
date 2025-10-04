@@ -38,8 +38,8 @@ function toCsv(rows: any[]): string {
         const escaped = s.replace(/"/g, '""');
         return needsQuotes ? `"${escaped}"` : escaped;
     };
-    const headerLine = headers.map(escapeCell).join(',');
-    const lines = rows.map(r => headers.map(h => escapeCell(r?.[h])).join(','));
+    const headerLine = headers?.map(escapeCell).join(',');
+    const lines = rows.map(r => headers?.map(h => escapeCell(r?.[h])).join(','));
     return [headerLine, ...lines].join('\n');
 }
 

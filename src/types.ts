@@ -567,7 +567,7 @@ export interface CarouselElement extends BaseElement {
     type: ElementType.carousel;
     autoPlay?: boolean;
     interval?: number;
-    items: (UIElement & { interval?: number })[] | Binding;
+    items: UIElement[]
     loop?: boolean;
     orientation?: 'horizontal' | 'vertical';
     showControls?: boolean;
@@ -714,21 +714,6 @@ export interface CommentsElement extends BaseElement {
 
 export interface ContainerElement extends BaseElement {
     type: ElementType.container;
-    align?: 'start' | 'center' | 'end' | 'stretch' | 'baseline';
-    autoCols?: 'auto' | 'min' | 'max' | 'fr';
-    autoRows?: 'auto' | 'min' | 'max' | 'fr';
-    cols?: number;
-    gap?: number | string;
-    justify?: 'start' | 'center' | 'end' | 'between' | 'around' | 'evenly';
-    layout: 'flex' | 'grid' | 'block' | 'row' | 'column';
-    responsiveLayout?: {
-        sm?: Partial<Omit<ContainerElement, 'id' | 'name' | 'type' | 'children'>>;
-        md?: Partial<Omit<ContainerElement, 'id' | 'name' | 'type' | 'children'>>;
-        lg?: Partial<Omit<ContainerElement, 'id' | 'name' | 'type' | 'children'>>;
-        xl?: Partial<Omit<ContainerElement, 'id' | 'name' | 'type' | 'children'>>;
-    };
-    rows?: number;
-    wrap?: boolean;
 }
 
 export type ContextMenuItem =
@@ -1037,7 +1022,7 @@ export interface InputElement extends BaseElement {
     name: string;
     onChange?: EventHandler;
     onCreate?: EventHandler;
-    options?: Binding | { value: string; label: Binding }[];
+    options?: { value: string; label: Binding }[];
     placeholder?: Binding;
     uploadUrl?: string;
     step?: number;
@@ -1970,7 +1955,6 @@ export interface GuardRule {
 }
 
 export interface IRoute {
-    file: string;
     guard?: GuardRule;
     href: string;
     icon: string;

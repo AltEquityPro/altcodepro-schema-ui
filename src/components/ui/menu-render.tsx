@@ -501,7 +501,7 @@ export function MenuRenderer({
     case "menubar":
       return wrapWithMotion(
         element,
-        <Menubar.Root className="bg-background flex h-9 items-center gap-1 rounded-md border p-1 shadow-xs">
+        <Menubar.Root className="bg-background text-foreground flex h-9 items-center gap-1 rounded-md border p-1 shadow-xs">
           {element.menus?.map((menu) => (
             <Menubar.Menu key={menu.id}>
               <Menubar.Trigger className="px-2 py-1 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
@@ -522,7 +522,7 @@ export function MenuRenderer({
         <div className="w-full">
           {/* Desktop */}
           <div className="hidden lg:flex">
-            <Navigation.Root className="relative z-10 w-full bg-background">
+            <Navigation.Root className="relative z-10 w-full bg-background text-foreground">
               <Navigation.List className={cn("flex items-center", element.styles?.className)}>
                 {renderNavigationDesktop(
                   element.items || [],

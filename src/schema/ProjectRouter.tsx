@@ -17,6 +17,7 @@ import { resolveBinding } from "@/lib/utils";
 import { useAppState } from "./StateContext";
 import { Button } from "@/components/ui/button";
 import { CookieBannerRenderer } from "@/components/ui/cookie_render";
+import { SidebarProvider } from "@/components/ui/sidebar";
 /* -----------------------------
  * THEME: CSS Vars + utility classes
  * ----------------------------- */

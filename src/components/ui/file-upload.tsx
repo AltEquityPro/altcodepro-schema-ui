@@ -445,7 +445,7 @@ export function FileUpload({
                         <li
                             key={f.id}
                             className={[
-                                "flex items-center gap-3 rounded border p-2 text-sm bg-background",
+                                "flex items-center gap-3 rounded border p-2 text-sm bg-background text-foreground",
                                 f.status === "uploading" ? "animate__animated animate__fadeIn" : "",
                             ].join(" ")}
                         >

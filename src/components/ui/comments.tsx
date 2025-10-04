@@ -470,7 +470,7 @@ function CommentNode({
 
             {/* Reply composer */}
             {isReplying && (
-                <div className="mt-2 rounded-md border bg-background p-2">
+                <div className="mt-2 rounded-md border bg-background text-foreground p-2">
                     <Input
                         value={replyContent}
                         onChange={(e) => setReplyContent(e.target.value)}

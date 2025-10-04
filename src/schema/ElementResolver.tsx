@@ -20,7 +20,7 @@ const BreadcrumbRenderer = lazy(() => import("../components/ui/breadcrumb").then
 const ButtonRenderer = lazy(() => import("../components/ui/button").then(module => ({ default: module.ButtonRenderer })));
 const CalendarRenderer = lazy(() => import("../components/ui/calendar").then(module => ({ default: module.CalendarRenderer })));
 const CardRenderer = lazy(() => import("../components/ui/card").then(module => ({ default: module.CardRenderer })));
-const CarouselRenderer = lazy(() => import("../components/ui/carousel").then(module => ({ default: module.CarouselRenderer })));
+const CarouselRenderer = lazy(() => import("../components/ui/carousel").then(module => ({ default: module.Carousel })));
 const Chart = lazy(() => import("../components/ui/chart").then(module => ({ default: module.Chart })));
 const CollapsibleRenderer = lazy(() => import("../components/ui/collapsible").then(module => ({ default: module.CollapsibleRenderer })));
 const CommandRenderer = lazy(() => import("../components/ui/command").then(module => ({ default: module.CommandRenderer })));
@@ -75,7 +75,7 @@ const ChatRenderer = lazy(() => import("../components/ui/chat").then(module => (
 const CommentsRenderer = lazy(() => import("../components/ui/comments").then(module => ({ default: module.CommentsRenderer })));
 const ListRenderer = lazy(() => import("../components/ui/list").then(module => ({ default: module.ListRenderer })));
 const ListItemRenderer = lazy(() => import("../components/ui/list_item").then(module => ({ default: module.ListItemRenderer })));
-const LottieRenderer = lazy(() => import("../components/ui/lottie"));
+const LottieRenderer = lazy(() => import("../components/ui/lottie").then(module => ({ default: module.LottieRenderer })));
 const RatingInput = lazy(() => import("../components/ui/rating-input").then(module => ({ default: module.RatingInput })));
 const SearchRenderer = lazy(() => import("../components/ui/search").then(module => ({ default: module.SearchRenderer })));
 const SignaturePadRenderer = lazy(() => import("../components/ui/signature").then(module => ({ default: module.SignaturePadRenderer })));
@@ -314,7 +314,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
         case ElementType.datagrid:
             return (
                 <LazyComponent>
-                    <DataGrid element={resolvedElement as DataGridElement} runtime={runtime} />
+                    <DataGrid element={resolvedElement as DataGridElement} runEventHandler={runEventHandler} runtime={runtime} />
                 </LazyComponent>
             );
 
@@ -379,20 +379,21 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
                 <DynamicIcon name={icon.name} size={icon.size} aria-label={resolveBinding(icon.label, state, t)} />
             </LazyComponent>
 
-        case ElementType.image:
         case ElementType.image: {
             const image = resolvedElement as ImageElement;
             const accessibilityProps = getAccessibilityProps(image.accessibility, state, t);
+            if (!image.src)
+                return null
 
             return (
-                image.src ? <img
-                    src={resolveBinding(image.src, state, t)}
+                <img
+                    src={image.src}
                     alt={resolveBinding(image.alt, state, t)}
                     width={image.width}
                     height={image.height}
                     className={className}
                     {...accessibilityProps}
-                /> : null
+                />
             );
         }
         case ElementType.list:
@@ -562,7 +563,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            {headers.map((header: string, i: number) => (
+                            {headers?.map((header: string, i: number) => (
                                 <TableHead key={i}>{header}</TableHead>
                             ))}
                         </TableRow>
@@ -695,11 +696,11 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
 
         case ElementType.video:
             const video = resolvedElement as VideoElement;
-            return video.src ? (
-                <LazyComponent>
-                    <VideoRenderer element={video} state={state} t={t} runEventHandler={runEventHandler} />
-                </LazyComponent>
-            ) : null
+            if (!video)
+                return null
+            return <LazyComponent>
+                <VideoRenderer element={video} state={state} t={t} runEventHandler={runEventHandler} />
+            </LazyComponent>
 
         case ElementType.voice:
             const voice = resolvedElement as VoiceElement;

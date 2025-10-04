@@ -191,7 +191,7 @@ function AlertDialogRenderer({
           <AnimatedBox
             animations={element.animations}
             className={cn(
-              "bg-background fixed z-50 grid w-full max-w-[calc(100%-2rem)]",
+              "bg-background text-foreground fixed z-50 grid w-full max-w-[calc(100%-2rem)]",
               posClass,
               sizeClass,
               "gap-4 rounded-lg p-6 shadow-lg duration-200",

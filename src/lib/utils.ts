@@ -256,71 +256,47 @@ export function resolveBinding(
 ): any {
     if (val == null) return val;
 
-    // // --- 1) Handle direct string bindings ---
-    if (typeof val === "string") {
-        // i18n.key
-        if (val.startsWith("i18n.")) {
-            const key = val.slice(5);
-            const out = t(key);
-            return out === key ? "" : out;
-        }
+    // 🔹 Normalize: if object has { binding }, unwrap to raw key
+    const key = typeof val === "object" && "binding" in val ? String(val.binding) : String(val);
 
-        // translations.<locale>.<path>
-        if (val.startsWith("translations.")) {
-            const parts = val.split(".");
-            if (parts.length >= 3) {
-                const path = parts.slice(2).join(".");
-                const out = t(path);
-                return out === path ? "" : out;
-            }
-        }
-
-        // Direct ENV (ALL_CAPS or contains API_ENDPOINT)
-        if (/^[A-Z0-9_]+$/.test(val)) return readEnv(val);
-        if (val.includes("API_ENDPOINT")) return readEnv("API_ENDPOINT");
-
-        // Fallback: return as-is
-        return val;
+    // --- i18n.key ---
+    if (key.startsWith("i18n.")) {
+        const k = key.slice(5);
+        const out = t(k);
+        return out === k ? "" : out;
     }
 
-    // --- 2) Handle { binding: "..." } objects ---
-    if (typeof val === "object" && "binding" in val) {
-        const key = String(val.binding);
+    // --- translations.<locale>.<path> ---
+    if (key.startsWith("translations.")) {
+        const parts = key.split(".");
+        if (parts.length >= 3) {
+            const locale = parts[1];                // "en"
+            const path = parts.slice(2).join(".");  // "nav.faq.hero.title"
 
-        // i18n.key
-        if (key.startsWith("i18n.")) {
-            const k = key.slice(5);
-            const out = t(k);
-            return out === k ? "" : out;
+            // Try with locale
+            let out = t(`${locale}.${path}`);
+            if (out !== `${locale}.${path}`) return out;
+
+            // Fallback: try without locale
+            out = t(path);
+            return out === path ? "" : out;
         }
-
-        // translations.<locale>.<path>
-        if (key.startsWith("translations.")) {
-            const parts = key.split(".");
-            if (parts.length >= 3) {
-                const path = parts.slice(2).join(".");
-                const out = t(path);
-                return out === path ? "" : out;
-            }
-        }
-
-        // state.path
-        if (key.startsWith("state.")) {
-            const valFromState = getPath(state, key.slice(6));
-            return Array.isArray(valFromState) ? valFromState : (valFromState ?? null);
-        }
-
-        // env.X or DIRECT_ENV
-        if (key.startsWith("env.")) return readEnv(key.slice(4));
-        if (/^[A-Z0-9_]+$/.test(key)) return readEnv(key);
-        if (key.includes("API_ENDPOINT")) return readEnv("API_ENDPOINT");
-
-        // fallback: attempt state lookup with full key, expand env templates if string
-        const maybe = getPath(state, key);
-        return typeof maybe === "string" ? expandEnvTemplates(maybe) : maybe;
     }
 
-    return val;
+    // --- state.<path> ---
+    if (key.startsWith("state.")) {
+        const valFromState = getPath(state, key.slice(6));
+        return Array.isArray(valFromState) ? valFromState : (valFromState ?? null);
+    }
+
+    // --- env or ALL_CAPS ---
+    if (key.startsWith("env.")) return readEnv(key.slice(4));
+    if (/^[A-Z0-9_]+$/.test(key)) return readEnv(key);
+    if (key.includes("API_ENDPOINT")) return readEnv("API_ENDPOINT");
+
+    // --- fallback: try state lookup or return literal ---
+    const maybe = getPath(state, key);
+    return typeof maybe === "string" ? expandEnvTemplates(maybe) : maybe ?? key;
 }
 
 const isPlainObj = (v: any) =>
@@ -334,7 +310,18 @@ export function deepResolveBindings(
     if (input == null) return input;
 
     if (Array.isArray(input)) {
-        return input.map(v => deepResolveBindings(v, state, t));
+        return input.map(v => {
+            if (isPlainObj(v)) {
+                // option object like { value, label }
+                const out: any = {};
+                for (const [k, val] of Object.entries(v)) {
+                    out[k] = deepResolveBindings(val, state, t);
+                }
+                return out;
+            }
+            // primitive string/number/boolean
+            return deepResolveBindings(v, state, t);
+        });
     }
 
     // only treat *plain* objects specially
@@ -840,7 +827,7 @@ export function anySignal(signals: AbortSignal[]): AbortSignal {
 }
 
 export const variants = cva(
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[1px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
     {
         variants: {
             variant: {
@@ -849,7 +836,7 @@ export const variants = cva(
                 destructive:
                     "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
                 outline:
-                    "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+                    "border bg-background text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
                 secondary:
                     "bg-secondary text-secondary-foreground hover:bg-secondary/80",
                 ghost:

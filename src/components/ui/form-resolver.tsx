@@ -17,7 +17,7 @@ import {
 } from "../../types";
 import { useAppState } from "../../schema/StateContext";
 import { useActionHandler } from "../../schema/Actions";
-import { resolveBinding, classesFromStyleProps, luhnCheck, getAccessibilityProps, cn } from "../../lib/utils";
+import { resolveBinding, classesFromStyleProps, luhnCheck, getAccessibilityProps, cn, deepResolveBindings } from "../../lib/utils";
 
 import { Button, ButtonRenderer } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -67,31 +67,31 @@ const numberCoerce = (val: unknown) => {
 /** ---------- UI-Only Elements ---------- */
 
 function Heading({ text, className }: { text: string; className?: string }) {
-    return <h2 className={cn(className)}>{text}</h2>;
+    return <h2 className={cn("text-lg font-semibold", className)}>{text}</h2>;
 }
 
 function Subheading({ text, className }: { text: string; className?: string }) {
-    return <h3 className={cn(className)}>{text}</h3>;
+    return <h3 className={cn("text-md font-medium", className)}>{text}</h3>;
 }
 
 function Description({ text, className }: { text: string; className?: string }) {
-    return <p className={cn(className)}>{text}</p>;
+    return <p className={cn("text-sm text-muted-foreground", className)}>{text}</p>;
 }
 
 function HelpMessage({ text, className }: { text: string; className?: string }) {
-    return <p className={cn(className)}>{text}</p>;
+    return <p className={cn("text-xs text-muted-foreground italic", className)}>{text}</p>;
 }
 
 function Divider({ className }: { className?: string }) {
-    return <div className={cn(className)} />;
+    return <div className={cn("border-t my-6", className)} />;
 }
 
 function ContainerWrapper({ children, className }: { children: React.ReactNode; className?: string }) {
-    return <div className={cn(className)}>{children}</div>;
+    return <div className={cn("space-y-4 p-4", className)}>{children}</div>;
 }
 
 function CardWrapper({ children, className }: { children: React.ReactNode; className?: string }) {
-    return <div className={cn(className)}>{children}</div>;
+    return <div className={cn("rounded-md p-6 space-y-4", className)}>{children}</div>;
 }
 
 interface FormResolverProps {
@@ -432,7 +432,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                     const placeholder = resolveBinding(input.placeholder, state, t);
 
                     return (
-                        <FormItem className={classesFromStyleProps(input.styles)}>
+                        <FormItem className={'space-y-2 w-full px-3 py-2'}>
                             {label && <FormLabel>{label}</FormLabel>}
                             <FormControl>
                                 {(() => {
@@ -484,7 +484,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
 
                                         case InputType.select: {
                                             const options: SelectOption[] =
-                                                (resolveBinding(input.options, state, t) as
+                                                (deepResolveBindings(input.options, state, t) as
                                                     | SelectOption[]
                                                     | undefined) || [];
                                             return (
@@ -492,12 +492,20 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                     value={(formField.value as string) ?? ""}
                                                     onValueChange={(v) => formField.onChange(v)}
                                                     {...commonProps}
+
                                                 >
-                                                    <SelectTrigger>
+                                                    <SelectTrigger className={cn(
+                                                        " min-w-sm",
+                                                        commonProps.className
+                                                    )}
+                                                        disabled={commonProps.disabled}>
                                                         <SelectValue placeholder={placeholder} />
                                                     </SelectTrigger>
-                                                    <SelectContent>
-                                                        {options.map((opt) => (
+                                                    <SelectContent className={cn(
+                                                        "z-50 bg-background text-foreground shadow-md border border-border rounded-md min-w-sm",
+                                                        input.styles?.className
+                                                    )}>
+                                                        {options?.map((opt) => (
                                                             <SelectItem key={opt.value} value={opt.value}>
                                                                 {opt.label}
                                                             </SelectItem>
@@ -509,7 +517,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
 
                                         case InputType.multiselect: {
                                             const options: MultiSelectOption[] =
-                                                (resolveBinding(input.options, state, t) as
+                                                (deepResolveBindings(input.options, state, t) as
                                                     | MultiSelectOption[]
                                                     | undefined) || [];
                                             return (
@@ -682,10 +690,10 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
 
                                         case InputType.radio: {
                                             const options: SelectOption[] =
-                                                (resolveBinding(input.options, state, t) as SelectOption[]) || [];
+                                                (deepResolveBindings(input.options, state, t) as SelectOption[]) || [];
                                             return (
                                                 <div className="space-y-2">
-                                                    {options.map((opt) => (
+                                                    {options?.map((opt) => (
                                                         <label key={opt.value} className="flex items-center gap-2">
                                                             <input
                                                                 type="radio"
@@ -833,7 +841,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                     {...commonProps}
                                                 >
                                                     <InputOTPGroup>
-                                                        {Array.from({ length: 6 }).map((_, i) => (
+                                                        {Array.from({ length: 6 })?.map((_, i) => (
                                                             <InputOTPSlot key={i} index={i} />
                                                         ))}
                                                     </InputOTPGroup>
@@ -842,7 +850,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                         }
                                         case InputType.createselect: {
                                             const options: CreateSelectOption[] =
-                                                (resolveBinding(input.options, state, t) as CreateSelectOption[]) || [];
+                                                (deepResolveBindings(input.options, state, t) as CreateSelectOption[]) || [];
 
                                             return (
                                                 <CreateSelect
@@ -878,18 +886,19 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
     };
 
     const renderGroup = (group: FormElement) => {
+
         switch (group.formGroupType) {
             case FormGroupType.card:
                 return (
                     <CardWrapper key={group.id}>
-                        {group.formFields.map(renderField)}
+                        {group.formFields?.map(renderField)}
                     </CardWrapper>
                 );
 
             case FormGroupType.container:
                 return (
                     <ContainerWrapper key={group.id}>
-                        {group.formFields.map(renderField)}
+                        {group.formFields?.map(renderField)}
                     </ContainerWrapper>
                 );
 
@@ -914,20 +923,39 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                 );
 
             default:
-                return <div key={group.id}>{group.formFields.map(renderField)}</div>;
+                return <div key={group.id} className="space-y-6">{group.formFields?.map(renderField)}</div>;
         }
     };
     const accessibilityProps = getAccessibilityProps(element.accessibility);
     const className = classesFromStyleProps(element.styles);
+    const renderContent = () => {
+
+        // Case 1: element is a group (card, container, tabs, wizard, etc.)
+        if (element.formGroupType) {
+            return renderGroup(element);
+        }
+
+        // Case 2: element has formFields directly (normal form)
+        if (element.formFields) {
+            return (
+                <div className="space-y-6">
+                    {element.formFields.map(renderField)}
+                </div>
+            );
+        }
+
+        return null;
+    };
+
     return (
         <Form {...form}>
             <form
                 onSubmit={form.handleSubmit(onSubmit)}
-                className={className}
+                className={cn("space-y-6 max-w-md mx-auto", className)}
                 {...accessibilityProps}
             >
-                {renderGroup(element)}
-                <div className=" flex justify-between">
+                {renderContent()}
+                <div className="flex justify-center gap-4 pt-4">
                     {element.cancel && <ButtonRenderer element={element.cancel} runtime={runtime} />}
                     {element.submit && <ButtonRenderer element={element.submit} runtime={runtime} />}
                 </div>
@@ -935,5 +963,3 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
         </Form>
     );
 }
-
-

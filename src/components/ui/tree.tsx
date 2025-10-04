@@ -384,7 +384,7 @@ export function TreeRenderer(props: TreeRendererProps) {
                 <div className="p-2 border-b">
                     <input
                         type="text"
-                        className="w-full rounded-md border bg-background px-3 py-2"
+                        className="w-full rounded-md border bg-background text-foreground px-3 py-2"
                         placeholder={searchPlaceholder}
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}

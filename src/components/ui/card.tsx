@@ -5,22 +5,24 @@ import {
   classesFromStyleProps,
   getAccessibilityProps,
   resolveAnimation,
+  resolveBinding,
 } from "../../lib/utils";
 import { CardElement, UIElement } from "../../types";
 import { ElementResolver } from "../../schema/ElementResolver";
+import { RenderChildren } from "../../schema/RenderChildren";
 
-// Card Variants
+// Card Variants (professional, minimal borders, smooth hovers)
 const cardVariants: Record<NonNullable<CardElement["variant"]>, string> = {
   default:
-    "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm transition hover:shadow-md",
+    "bg-card text-card-foreground flex flex-col gap-4 rounded-xl p-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5",
   outline:
-    "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border-2 border-border py-6 shadow-sm",
+    "bg-background text-foreground text-foreground flex flex-col gap-4 rounded-xl border border-border p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-sm",
   ghost:
-    "bg-transparent text-foreground flex flex-col gap-6 rounded-xl py-6 shadow-none hover:bg-muted/20",
+    "bg-transparent text-foreground flex flex-col gap-4 rounded-xl p-6 transition-all duration-300 hover:bg-muted/20",
   elevated:
-    "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-md hover:shadow-lg",
+    "bg-card text-card-foreground flex flex-col gap-4 rounded-xl p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5",
   borderless:
-    "bg-card text-card-foreground flex flex-col gap-6 rounded-xl py-6 shadow-none border-none",
+    "bg-card text-card-foreground flex flex-col gap-4 rounded-xl p-6 transition-all duration-300 hover:shadow-sm",
 };
 
 function Card({ className, ...props }: React.ComponentProps<"div">) {
@@ -32,7 +34,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-header"
       className={cn(
-        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6",
+        "grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 px-0", // Removed padding for cleaner look
         className
       )}
       {...props}
@@ -44,7 +46,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-title"
-      className={cn("leading-none font-semibold", className)}
+      className={cn("leading-tight font-semibold text-lg", className)}
       {...props}
     />
   );
@@ -54,7 +56,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn("text-muted-foreground text-sm leading-relaxed", className)}
       {...props}
     />
   );
@@ -74,14 +76,14 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="card-content" className={cn("px-6", className)} {...props} />;
+  return <div data-slot="card-content" className={cn("flex-1", className)} {...props} />;
 }
 
 function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-footer"
-      className={cn("flex items-center px-6 [.border-t]:pt-6", className)}
+      className={cn("flex items-center justify-between pt-4 mt-auto", className)}
       {...props}
     />
   );
@@ -93,11 +95,6 @@ interface CardRendererProps {
 }
 
 function CardRenderer({ element, runtime = {} }: CardRendererProps) {
-  const renderChildren = (children?: UIElement[]) =>
-    children?.map((child) => (
-      <ElementResolver key={child.id} element={child} runtime={runtime} />
-    ));
-
   const variantClass = cardVariants[element.variant ?? "default"];
   const schemaClass = classesFromStyleProps(element.styles);
   const acc = getAccessibilityProps(element.accessibility);
@@ -117,30 +114,40 @@ function CardRenderer({ element, runtime = {} }: CardRendererProps) {
         element.description ||
         element.action ||
         element.header) && (
-          <CardHeader>
-            {element.media && renderChildren([element.media])}
-            {element.badge && renderChildren([element.badge])}
-            {element.title && <CardTitle>{renderChildren([element.title])}</CardTitle>}
+          <CardHeader className="mb-4">
+            {element.media && <ElementResolver element={element.media} runtime={runtime} />}
+            {element.badge && <ElementResolver element={element.badge} runtime={runtime} />}
+            {element.title && <CardTitle><ElementResolver element={element.title} runtime={runtime} /></CardTitle>}
             {element.description && (
-              <CardDescription>{renderChildren([element.description])}</CardDescription>
+              <CardDescription><ElementResolver element={element.description} runtime={runtime} /></CardDescription>
             )}
-            {element.action && <CardAction>{renderChildren([element.action])}</CardAction>}
-            {element.header && renderChildren([element.header])}
+            {element.action && <CardAction><ElementResolver element={element.action} runtime={runtime} /></CardAction>}
+            {element.header && <ElementResolver element={element.header} runtime={runtime} />}
           </CardHeader>
         )}
 
       {/* Content */}
-      <CardContent>{renderChildren(element.content)}</CardContent>
+      <CardContent>
+        {element.content && <RenderChildren children={element.content} runtime={runtime} />}
+        {element.children && <RenderChildren children={element.children} runtime={runtime} />}
+      </CardContent>
 
       {/* Footer */}
-      {element.footer && <CardFooter>{renderChildren(element.footer)}</CardFooter>}
+      {element.footer && (
+        <CardFooter>
+          <RenderChildren children={element.footer} runtime={runtime} />
+        </CardFooter>
+      )}
     </Card>
   );
 
-  // Clickable wrapper
+  // Clickable wrapper (smooth transition)
   if (element.clickable && element.href) {
     return (
-      <a href={String(element.href)} className="block">
+      <a
+        href={String(resolveBinding(element.href, runtime, {} as any))}
+        className="block transition-colors duration-200 hover:opacity-80"
+      >
         {cardBody}
       </a>
     );
@@ -151,11 +158,4 @@ function CardRenderer({ element, runtime = {} }: CardRendererProps) {
 
 export {
   CardRenderer,
-  Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardAction,
-  CardDescription,
-  CardContent,
 };

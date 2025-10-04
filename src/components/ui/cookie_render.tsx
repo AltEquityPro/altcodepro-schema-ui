@@ -85,7 +85,7 @@ export function CookieBannerRenderer({
             >
                 <div
                     className={clsx(
-                        "mx-auto max-w-5xl rounded-md shadow-md p-4 flex flex-col gap-3 bg-background",
+                        "mx-auto max-w-5xl rounded-md shadow-md p-4 flex flex-col gap-3 bg-background text-foreground",
                         c.styles?.className
                     )}
                 >

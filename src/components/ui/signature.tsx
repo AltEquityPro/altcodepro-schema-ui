@@ -192,7 +192,7 @@ export function SignaturePadRenderer({
     return (
         <div
             className={cn(
-                "flex flex-col gap-2 border rounded-md p-2 bg-background",
+                "flex flex-col gap-2 border rounded-md p-2 bg-background text-foreground",
                 element.styles?.className
             )}
         >

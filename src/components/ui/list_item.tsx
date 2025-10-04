@@ -100,7 +100,7 @@ export function ListItemRenderer(props: ListItemRendererProps) {
             className={cn(
                 "group relative cursor-pointer rounded-md outline-none",
                 basePad,
-                "hover:bg-accent/60 focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                "hover:bg-accent/60 focus-visible:ring-[1px] focus-visible:ring-ring/50",
                 selected && "bg-accent",
                 element.styles?.className
             )}
