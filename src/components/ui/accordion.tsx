@@ -12,7 +12,6 @@ import {
   resolveAnimation,
 } from "../../lib/utils";
 import { ElementResolver } from "../../schema/ElementResolver";
-import { useAppState } from "../../schema/StateContext";
 import { AccordionElement, AnyObj, EventHandler, UIElement } from "../../types";
 
 /** Wrapper that applies animations around its children (root-level only) */
@@ -72,13 +71,15 @@ function AnimatedWrapper({
 }
 
 function AccordionRenderer({
+  state, t,
   element,
   runEventHandler,
 }: {
+  state: AnyObj,
+  t: (key: string) => string
   element: AccordionElement;
   runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>;
 }) {
-  const { state, t } = useAppState();
   const multiple = !!element.multiple;
   const collapsible = !!element.collapsible;
   const expanded = resolveBinding(element.expandedItem, state, t); // string | string[]
@@ -122,7 +123,7 @@ function AccordionRenderer({
             <AccordionPrimitive.Content className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden text-sm">
               <div className="pt-0 pb-4">
                 {item.content.map((child: UIElement) => (
-                  <ElementResolver key={child.id} element={child} runEventHandler={runEventHandler} />
+                  <ElementResolver state={state} t={t} key={child.id} element={child} runEventHandler={runEventHandler} />
                 ))}
               </div>
             </AccordionPrimitive.Content>

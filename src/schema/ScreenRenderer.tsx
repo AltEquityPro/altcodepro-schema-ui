@@ -9,7 +9,6 @@ import {
     ActionRuntime,
     UIElement,
 } from "../types";
-import { useAppState } from "./StateContext";
 import { useActionHandler } from "./useActionHandler";
 import {
     deepResolveBindings,
@@ -23,6 +22,9 @@ import { useDataSources } from "./useDataSources";
 
 export interface ScreenRendererProps {
     project: UIProject;
+    state: AnyObj;
+    t: (key: string) => string;
+    setState: (path: string, value: any) => void;
     currentScreenDef: UIScreenDef;
     runtime: ActionRuntime;
     showDebug?: boolean;
@@ -116,9 +118,11 @@ export function ScreenRenderer({
     showDebug = false,
     loadingFallback,
     errorFallback,
+    state,
+    setState,
+    t,
     CustomElementResolver
 }: ScreenRendererProps) {
-    const { state, setState, t } = useAppState();
     // Filter out POST methods from dataSources, as they should be action-triggered
     const dataSourcesToFetch = currentScreenDef.dataSources?.filter(ds => ds.method !== "POST") || [];
     const dataMap: Record<string, any> = useDataSources({
@@ -191,6 +195,8 @@ export function ScreenRenderer({
                 return (
                     <ElementResolver
                         key={key}
+                        state={state}
+                        t={t}
                         element={resolved}
                         runEventHandler={runEventHandler}
                         globalConfig={project.globalConfig}

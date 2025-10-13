@@ -14,7 +14,7 @@ interface CarouselProps {
   t: (key: string) => string
 }
 
-export function Carousel({ element, runEventHandler }: CarouselProps) {
+export function Carousel({ element, state, t, runEventHandler }: CarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -111,7 +111,7 @@ export function Carousel({ element, runEventHandler }: CarouselProps) {
                 className="max-h-[80vh] w-auto object-contain rounded-lg"
               />
             ) : (
-              <ElementResolver element={item} runEventHandler={runEventHandler} />
+              <ElementResolver state={state} t={t} element={item} runEventHandler={runEventHandler} />
             )}
           </div>
         ))}
@@ -123,14 +123,14 @@ export function Carousel({ element, runEventHandler }: CarouselProps) {
         <div className="absolute inset-0 flex items-center justify-between px-4">
           <button
             onClick={goToPrev}
-            className="bg-background text-foreground/80 text-foreground hover:bg-primary/20 rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="bg-background text-foreground/80 hover:bg-primary/20 rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-primary"
             aria-label="Previous"
           >
             <ChevronDown className="h-6 w-6 rotate-90" />
           </button>
           <button
             onClick={goToNext}
-            className="bg-background text-foreground/80 text-foreground hover:bg-primary/20 rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="bg-background text-foreground/80  hover:bg-primary/20 rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-primary"
             aria-label="Next"
           >
             <ChevronDown className="h-6 w-6 -rotate-90" />

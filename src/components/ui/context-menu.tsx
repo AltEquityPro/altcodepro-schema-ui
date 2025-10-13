@@ -340,7 +340,7 @@ function ContextMenuRenderer({
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <ElementResolver element={element.trigger} runEventHandler={runEventHandler} />
+        <ElementResolver element={element.trigger} state={state} t={t} runEventHandler={runEventHandler} />
       </ContextMenuTrigger>
       <ContextMenuContent>
         {renderContextMenuItems(element.items, state, t, runEventHandler)}

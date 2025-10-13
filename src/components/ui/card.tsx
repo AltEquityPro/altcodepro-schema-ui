@@ -117,14 +117,14 @@ function CardRenderer({ element, runEventHandler, state, t }: CardRendererProps)
         element.action ||
         element.header) && (
           <CardHeader className="mb-4">
-            {element.media && <ElementResolver element={element.media} runEventHandler={runEventHandler} />}
-            {element.badge && <ElementResolver element={element.badge} runEventHandler={runEventHandler} />}
-            {element.title && <CardTitle><ElementResolver element={element.title} runEventHandler={runEventHandler} /></CardTitle>}
+            {element.media && <ElementResolver state={state} t={t} element={element.media} runEventHandler={runEventHandler} />}
+            {element.badge && <ElementResolver state={state} t={t} element={element.badge} runEventHandler={runEventHandler} />}
+            {element.title && <CardTitle><ElementResolver state={state} t={t} element={element.title} runEventHandler={runEventHandler} /></CardTitle>}
             {element.description && (
-              <CardDescription><ElementResolver element={element.description} runEventHandler={runEventHandler} /></CardDescription>
+              <CardDescription><ElementResolver state={state} t={t} element={element.description} runEventHandler={runEventHandler} /></CardDescription>
             )}
-            {element.action && <CardAction><ElementResolver element={element.action} runEventHandler={runEventHandler} /></CardAction>}
-            {element.header && <ElementResolver element={element.header} runEventHandler={runEventHandler} />}
+            {element.action && <CardAction><ElementResolver state={state} t={t} element={element.action} runEventHandler={runEventHandler} /></CardAction>}
+            {element.header && <ElementResolver state={state} t={t} element={element.header} runEventHandler={runEventHandler} />}
           </CardHeader>
         )}
 

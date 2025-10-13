@@ -10,7 +10,6 @@ import {
   getAccessibilityProps,
   resolveAnimation,
 } from "../../lib/utils";
-import { useAppState } from "../../schema/StateContext";
 import { ElementResolver } from "../../schema/ElementResolver";
 import { AnyObj, BreadcrumbElement, EventHandler, UIElement } from "../../types";
 import {
@@ -20,7 +19,7 @@ import {
 } from "../../components/ui/tooltip";
 
 /* ------------------------
-   Base subcomponents
+  Base subcomponents
 ------------------------- */
 function Breadcrumb({ ...props }: React.ComponentProps<"nav">) {
   return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />;
@@ -115,11 +114,12 @@ function BreadcrumbEllipsis({ className, ...props }: React.ComponentProps<"span"
 ------------------------- */
 interface BreadcrumbRendererProps {
   element: BreadcrumbElement;
+  state: AnyObj;
+  t: (key: string) => string,
   runEventHandler?: ((handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>) | undefined
 }
+function BreadcrumbRenderer({ state, t, element, runEventHandler }: BreadcrumbRendererProps) {
 
-function BreadcrumbRenderer({ element, runEventHandler }: BreadcrumbRendererProps) {
-  const { state, t } = useAppState();
 
   // Styles, accessibility, animations
   const schemaClass = classesFromStyleProps(element.styles);
@@ -187,21 +187,21 @@ function BreadcrumbRenderer({ element, runEventHandler }: BreadcrumbRendererProp
               }}
             >
               {item.iconLeft && (
-                <ElementResolver element={item.iconLeft as UIElement} runEventHandler={runEventHandler} />
+                <ElementResolver state={state} t={t} element={item.iconLeft as UIElement} runEventHandler={runEventHandler} />
               )}
               {label}
               {item.iconRight && (
-                <ElementResolver element={item.iconRight as UIElement} runEventHandler={runEventHandler} />
+                <ElementResolver state={state} t={t} element={item.iconRight as UIElement} runEventHandler={runEventHandler} />
               )}
             </BreadcrumbLink>
           ) : (
             <BreadcrumbPage>
               {item.iconLeft && (
-                <ElementResolver element={item.iconLeft as UIElement} runEventHandler={runEventHandler} />
+                <ElementResolver state={state} t={t} element={item.iconLeft as UIElement} runEventHandler={runEventHandler} />
               )}
               {label}
               {item.iconRight && (
-                <ElementResolver element={item.iconRight as UIElement} runEventHandler={runEventHandler} />
+                <ElementResolver state={state} t={t} element={item.iconRight as UIElement} runEventHandler={runEventHandler} />
               )}
             </BreadcrumbPage>
           );

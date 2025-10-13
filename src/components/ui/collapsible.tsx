@@ -68,13 +68,13 @@ function CollapsibleRenderer({
     >
       {element.trigger && (
         <CollapsibleTrigger asChild>
-          <ElementResolver element={element.trigger} runEventHandler={runEventHandler} />
+          <ElementResolver state={state} t={t} element={element.trigger} runEventHandler={runEventHandler} />
         </CollapsibleTrigger>
       )}
 
       <CollapsibleContent>
         {element.content?.map((child: UIElement) => (
-          <ElementResolver key={child.id} element={child} runEventHandler={runEventHandler} />
+          <ElementResolver state={state} t={t} key={child.id} element={child} runEventHandler={runEventHandler} />
         ))}
       </CollapsibleContent>
     </Collapsible>

@@ -4,13 +4,12 @@ import * as React from "react"
 import Lottie, { LottieRefCurrentProps } from "lottie-react"
 import type { AnyObj, EventHandler, LottieElement } from "../../types"
 import { cn, resolveBinding } from "../../lib/utils"
-import { useAppState } from "../../schema/StateContext"
 
 /** ─────────────── Types ─────────────── */
 export interface LottieRendererProps {
     element?: LottieElement | null
-    state?: AnyObj
-    t?: (key: string) => string
+    state: AnyObj
+    t: (key: string) => string
     runEventHandler?: (
         handler?: EventHandler,
         dataOverride?: AnyObj
@@ -34,20 +33,16 @@ export function LottieRenderer({
         )
     }
 
-    const ctx = tryUseAppState()
-    const _state = state ?? ctx.state ?? {}
-    const _t = t ?? ctx.t ?? ((k: string) => k)
-
     /** Playback props */
     const autoplay = element.autoplay ?? true
     const loopFlag = element.loop ?? true
-    const loopCount = numberOrNull(resolveBinding(element.loopCount, _state, _t))
+    const loopCount = numberOrNull(resolveBinding(element.loopCount, state, t))
     const speed = numberOrNull(element.speed)
     const direction = numberOrNull(element.direction) as 1 | -1 | null
-    const isPlaying = booleanOrNull(resolveBinding(element.isPlaying, _state, _t))
-    const progressBinding = numberOrNull(resolveBinding(element.progress, _state, _t))
+    const isPlaying = booleanOrNull(resolveBinding(element.isPlaying, state, t))
+    const progressBinding = numberOrNull(resolveBinding(element.progress, state, t))
     const renderer = (element.renderer as "svg" | "canvas" | "html") || "svg"
-    const rendererSettings = resolveBinding(element.rendererSettings, _state, _t) as AnyObj | undefined
+    const rendererSettings = resolveBinding(element.rendererSettings, state, t) as AnyObj | undefined
 
     const playOnVisible = !!element.playOnVisible
     const pauseWhenHidden = !!element.pauseWhenHidden
@@ -55,11 +50,11 @@ export function LottieRenderer({
     const pauseOnHover = !!element.pauseOnHover
     const forceAutoplayEvenIfReducedMotion = !!element.forceAutoplayEvenIfReducedMotion
 
-    const ariaLabel = resolveBinding(element.ariaLabel, _state, _t)
-    const title = resolveBinding(element.title, _state, _t)
+    const ariaLabel = resolveBinding(element.ariaLabel, state, t)
+    const title = resolveBinding(element.title, state, t)
 
     /** ─────────────── Source ─────────────── */
-    const src = resolveBinding(element.src, _state, _t)
+    const src = resolveBinding(element.src, state, t)
     const [animationData, setAnimationData] = React.useState<any>(null)
     const [dataError, setDataError] = React.useState<string | null>(null)
 
@@ -267,14 +262,6 @@ export function LottieRenderer({
     )
 }
 
-/** ─────────────── Helpers ─────────────── */
-function tryUseAppState() {
-    try {
-        return useAppState()
-    } catch {
-        return { state: {} as AnyObj, t: (k: string) => k }
-    }
-}
 function numberOrNull(v: any): number | null {
     const n = typeof v === "number" ? v : v != null ? Number(v) : NaN
     return isNaN(n) ? null : n

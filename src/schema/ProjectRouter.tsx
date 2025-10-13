@@ -38,7 +38,7 @@ export function ProjectRouter({
             </div>
         );
     }
-    const { state, t } = useAppState();
+    const { state, t, setState } = useAppState();
 
     const navType = isMobile
         ? project.routeList.responsiveNavType
@@ -59,6 +59,9 @@ export function ProjectRouter({
                 <main className="flex-1">
                     {currentScreenDef?.screens?.map((sc) => (
                         <ScreenRenderer
+                            state={state}
+                            t={t}
+                            setState={setState}
                             key={sc.id}
                             project={project}
                             currentScreenDef={sc}
@@ -69,7 +72,9 @@ export function ProjectRouter({
                 </main>
 
                 {/* 5. Footer */}
-                {project.footer && <ElementResolver element={project.footer} />}
+                {project.footer && <ElementResolver
+                    state={state}
+                    t={t} element={project.footer} />}
 
                 {/* 6. Cookie banner */}
                 <CookieBannerRenderer project={project} state={state} t={t} />

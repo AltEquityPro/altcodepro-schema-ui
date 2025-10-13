@@ -714,7 +714,7 @@ function SidebarRenderer({
       {/* Header */}
       {element.header && (
         <SidebarHeader>
-          <ElementResolver element={element.header} runEventHandler={runEventHandler} />
+          <ElementResolver state={state} t={t} element={element.header} runEventHandler={runEventHandler} />
         </SidebarHeader>
       )}
 
@@ -730,7 +730,7 @@ function SidebarRenderer({
                 {group.items?.map((item) => (
                   <SidebarMenuItem key={item.id}>
                     <SidebarMenuButton asChild>
-                      <ElementResolver element={item} runEventHandler={runEventHandler} />
+                      <ElementResolver state={state} t={t} element={item} runEventHandler={runEventHandler} />
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -743,7 +743,7 @@ function SidebarRenderer({
       {/* Footer */}
       {element.footer && (
         <SidebarFooter>
-          <ElementResolver element={element.footer} runEventHandler={runEventHandler} />
+          <ElementResolver state={state} t={t} element={element.footer} runEventHandler={runEventHandler} />
         </SidebarFooter>
       )}
 

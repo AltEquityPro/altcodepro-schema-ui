@@ -11,7 +11,7 @@ import clsx from "clsx";
 import { motion } from "framer-motion";
 import React, { useMemo } from "react";
 import { DynamicIcon } from "./dynamic-icon";
-import { useAppState } from "@/schema/StateContext";
+
 
 /* ----------------------------
  * Variant + Size Maps
@@ -78,12 +78,16 @@ export function Button({
 export function ButtonRenderer({
   element,
   runEventHandler,
+  state,
+  t
 
 }: {
+  state: AnyObj;
+  t: (key: string) => string,
   element: ButtonElement;
   runEventHandler?: ((handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>) | undefined
 }) {
-  const { state, t } = useAppState();
+
   const sizeClass = sizeClasses[element.size ?? "default"] ?? "";
   const styles = classesFromStyleProps(element.styles);
   const accessibilityProps = getAccessibilityProps(element.accessibility);

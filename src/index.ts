@@ -15,7 +15,7 @@ export * from "./lib/utils";
 export * from "./hooks/use-mobile";
 export * from "./hooks/use-telemetry";
 export * from "./components/ui/global-theme-provider";
-export * from "radix-ui";
+
 export const AccordionRenderer = lazy(() => import("./components/ui/accordion").then(m => ({ default: m.AccordionRenderer })));
 export const Alert = lazy(() => import("./components/ui/alert").then(m => ({ default: m.Alert })));
 export const AlertDescription = lazy(() => import("./components/ui/alert").then(m => ({ default: m.AlertDescription })));
@@ -311,3 +311,20 @@ export {
 } from "./components/ui/sidebar";
 
 export { Toaster, toast } from "./components/ui/sonner";
+
+export { AccessibleIcon } from "@radix-ui/react-accessible-icon";
+export {
+    Accordion,
+    AccordionContent,
+    AccordionHeader,
+    AccordionItem,
+    AccordionTrigger,
+} from "@radix-ui/react-accordion";
+export { AspectRatio } from "@radix-ui/react-aspect-ratio";
+export { DirectionProvider } from "@radix-ui/react-direction";
+export { HoverCard, HoverCardTrigger, HoverCardContent } from "@radix-ui/react-hover-card";
+export { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuTrigger, NavigationMenuContent } from "@radix-ui/react-navigation-menu";
+export { Portal } from "@radix-ui/react-portal";
+export { Slot } from "@radix-ui/react-slot";
+export { Toolbar, ToolbarButton, ToolbarToggleGroup, ToolbarSeparator } from "@radix-ui/react-toolbar";
+export { VisuallyHidden } from "@radix-ui/react-visually-hidden";

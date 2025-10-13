@@ -8,8 +8,8 @@ import {
   getAccessibilityProps,
   resolveAnimation,
 } from "../../lib/utils";
-import { useAppState } from "../../schema/StateContext";
-import { AvatarElement } from "../../types";
+
+import { AnyObj, AvatarElement } from "../../types";
 
 function Avatar({
   className,
@@ -77,8 +77,10 @@ function stringToGradient(input: string): string {
 const animatedGradientClass =
   "bg-[linear-gradient(270deg,#ff6ec4,#7873f5,#4ade80,#facc15)] bg-[length:600%_600%] animate-[gradientShift_8s_ease_infinite]";
 
-function AvatarRenderer({ element }: { element: AvatarElement }) {
-  const { state, t } = useAppState();
+function AvatarRenderer({ element, state, t }: {
+  element: AvatarElement, state: AnyObj;
+  t: (key: string) => string
+}) {
 
   const src = resolveBinding(element.src, state, t);
   const alt = resolveBinding(element.alt, state, t);

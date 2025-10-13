@@ -95,6 +95,7 @@ export function CookieBannerRenderer({
                     <div className="flex items-center justify-end gap-3">
                         {c.manageButton && (
                             <ElementResolver
+                                state={state} t={t}
                                 element={{
                                     ...c.manageButton,
                                     onClick: {
@@ -117,6 +118,7 @@ export function CookieBannerRenderer({
             {/* Preferences Modal */}
             {c.preferencesModal && (
                 <ModalRenderer
+                    state={state} t={t}
                     element={{
                         ...c.preferencesModal,
                         isOpen: showModal,

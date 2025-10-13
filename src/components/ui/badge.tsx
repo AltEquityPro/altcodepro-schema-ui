@@ -10,10 +10,7 @@ import {
   getAccessibilityProps,
   resolveAnimation,
 } from "../../lib/utils";
-import { useActionHandler } from "../../schema/useActionHandler";
-import { ElementResolver } from "../../schema/ElementResolver";
-import { useAppState } from "../../schema/StateContext";
-import { AnyObj, BadgeElement, EventHandler, UIElement } from "../../types";
+import { AnyObj, BadgeElement, EventHandler } from "../../types";
 import {
   Tooltip,
   TooltipTrigger,
@@ -62,11 +59,12 @@ function Badge({
 
 interface BadgeRendererProps {
   element: BadgeElement;
+  state: AnyObj;
+  t: (key: string) => string,
   runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj) => Promise<void>
 }
 
-function BadgeRenderer({ element, runEventHandler }: BadgeRendererProps) {
-  const { state, t } = useAppState();
+function BadgeRenderer({ element, state, t, runEventHandler }: BadgeRendererProps) {
 
   const label = resolveBinding(
     element.text ?? element.value ?? element.name,

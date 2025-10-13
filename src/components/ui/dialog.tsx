@@ -6,7 +6,6 @@ import { XIcon } from "lucide-react"
 import { cn, resolveBinding } from "../../lib/utils"
 import { ElementResolver } from "../../schema/ElementResolver"
 import { RenderChildren } from "../../schema/RenderChildren"
-import { useAppState } from "../../schema/StateContext"
 import { ModalElement, AnyObj, EventHandler } from "../../types"
 import wrapWithMotion from "./wrapWithMotion"
 
@@ -134,11 +133,13 @@ function DialogDescription({
 }
 interface ModalRendererProps {
   element: ModalElement
+  state: AnyObj;
+  t: (key: string) => string,
   runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }
 
-function ModalRenderer({ element, runEventHandler }: ModalRendererProps) {
-  const { state, t } = useAppState()
+function ModalRenderer({ element, state, t, runEventHandler }: ModalRendererProps) {
+
   const modal = element
 
   // Resolve title/description but ignore external isOpen binding
@@ -209,6 +210,7 @@ function ModalRenderer({ element, runEventHandler }: ModalRendererProps) {
         {modal.closeButton && (
           <DialogFooter>
             <ElementResolver
+              state={state} t={t}
               element={modal.closeButton}
               runEventHandler={handleActionWrapper}
             />

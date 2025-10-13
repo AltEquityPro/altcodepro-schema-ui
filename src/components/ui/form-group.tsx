@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { resolveBinding, classesFromStyleProps } from "../../lib/utils";
-import { useAppState } from "../../schema/StateContext";
 import { FieldType, AnyObj, FormElement, FormField as FormFieldType, } from "../../types";
 import { Button } from "./button";
 
@@ -95,13 +94,15 @@ export function TabGroup({
     group,
     form,
     renderField,
+    state,
+    t,
 }: {
     group: FormElement;
     form: any;
+    state: AnyObj;
+    t: (key: string) => string;
     renderField: (f: FormFieldType) => React.ReactNode;
 }) {
-    const { state, t } = useAppState();
-
     // Prefer explicit group.tabs; otherwise derive from fields' tabId
     const derivedTabIds = unique(
         group.formFields
@@ -142,14 +143,15 @@ export function TabGroup({
 export function WizardGroup({
     group,
     form,
+    state, t,
     renderField,
 }: {
     group: FormElement;
     form: any;
+    state: AnyObj;
+    t: (key: string) => string;
     renderField: (f: FormFieldType) => React.ReactNode;
 }) {
-    const { state, t } = useAppState();
-
     // Prefer explicit group.steps; otherwise derive from fields' stepId
     const derivedStepIds = unique(
         group.formFields

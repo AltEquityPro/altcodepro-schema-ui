@@ -1,7 +1,6 @@
 "use client"
 
 import { resolveBinding } from "../../lib/utils"
-import { useAppState } from "../../schema/StateContext"
 import * as React from "react"
 import { useDropzone } from "react-dropzone"
 import wrapWithMotion from "./wrapWithMotion"
@@ -612,6 +611,8 @@ function stripQuery(u: string) {
 
 interface FileUploadRendererProps {
     element: FileUploadElement
+    state: AnyObj;
+    t: (key: string) => string,
     runEventHandler?: (
         handler?: EventHandler,
         dataOverride?: AnyObj
@@ -620,10 +621,10 @@ interface FileUploadRendererProps {
 
 export function FileUploadRenderer({
     element,
+    state, t,
     runEventHandler,
-}: FileUploadRendererProps) {
-    const { state, t } = useAppState()
 
+}: FileUploadRendererProps) {
     const accept = element.accept
     const multiple = element.multiple ?? true
     const maxSize = element.maxSize

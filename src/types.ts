@@ -457,6 +457,7 @@ export interface BadgeElement extends BaseElement {
 export interface BreadcrumbElement extends BaseElement {
     type: ElementType.breadcrumb;
     ellipsisAfter?: number;
+
     items: {
         id: string;
         href?: string | Binding;

@@ -6,10 +6,11 @@ import { jsPDF } from "jspdf"; // for PDF export
 import { Button } from "./button";
 import { cn } from "../../lib/utils";
 import { AnyObj, SignaturePadElement, EventHandler } from "../../types";
-import { useAppState } from "../../schema/StateContext";
 
 interface SignaturePadRendererProps {
     element: SignaturePadElement;
+    state: AnyObj
+    t: (key: string) => string
     runEventHandler?: (
         handler?: EventHandler,
         dataOverride?: AnyObj
@@ -19,8 +20,10 @@ interface SignaturePadRendererProps {
 export function SignaturePadRenderer({
     element,
     runEventHandler,
+    state,
+    t
 }: SignaturePadRendererProps) {
-    const { state, t } = useAppState();
+
     const sigRef = useRef<SignatureCanvas | null>(null);
 
     const exportType = element.exportType || "png";

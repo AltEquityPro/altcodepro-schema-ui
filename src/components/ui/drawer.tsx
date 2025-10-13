@@ -5,7 +5,6 @@ import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn, resolveBinding } from "../../lib/utils"
 import { RenderChildren } from "../../schema/RenderChildren"
-import { useAppState } from "../../schema/StateContext"
 import { AnyObj, DrawerElement, EventHandler } from "../../types"
 import wrapWithMotion from "./wrapWithMotion"
 function Drawer({
@@ -125,11 +124,13 @@ function DrawerDescription({
 }
 interface DrawerRendererProps {
   element: DrawerElement
+  state: AnyObj;
+  t: (key: string) => string,
   runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }
 
-function DrawerRenderer({ element, runEventHandler }: DrawerRendererProps) {
-  const { state, t } = useAppState()
+function DrawerRenderer({ element, state, t, runEventHandler }: DrawerRendererProps) {
+
   const drawer = element
 
   // resolve bindings

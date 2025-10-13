@@ -12,7 +12,6 @@ import { Calendar } from "../../components/ui/calendar"
 import { DataGridElement, DataGridCol, ElementType, InputType, ActionRuntime, DataSource, EventHandler, AnyObj } from "../../types"
 import { resolveBinding, deepResolveBindings, cn } from "../../lib/utils"
 import { useDataSources } from "../../schema/useDataSources"
-import { useAppState } from "../../schema/StateContext"
 import { Checkbox } from "../../components/ui/checkbox"
 import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuCheckboxItem } from "../../components/ui/dropdown-menu"
@@ -34,6 +33,8 @@ import { Badge } from "./badge"
 interface DataGridProps {
     element: DataGridElement
     dataSources?: DataSource[];
+    state: AnyObj;
+    t: (key: string) => string;
     runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj) => Promise<void>
 }
 
@@ -53,8 +54,7 @@ const getFilterFn = (type?: string) => {
     }
 }
 
-export function DataGrid({ element, dataSources, runEventHandler }: DataGridProps) {
-    const { state, t } = useAppState()
+export function DataGrid({ element, dataSources, state, t, runEventHandler }: DataGridProps) {
 
     const [sorting, setSorting] = useState<SortingState>(resolveBinding(element.sorting, state, t) || [])
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(resolveBinding(element.filters, state, t) || [])
@@ -325,7 +325,6 @@ export function DataGrid({ element, dataSources, runEventHandler }: DataGridProp
     }
 
     const renderCell = (col: DataGridCol, value: any, rowData: any) => {
-        let cellValue = value
         const cellClass = typeof col.cellClass === 'function' ? col.cellClass(rowData) :
             Array.isArray(col.cellClass) ? col.cellClass.find((c: { condition: any }) => resolveBinding(c.condition, { ...state, row: rowData }, t))?.class :
                 resolveBinding(col.cellClass, { ...state, row: rowData }, t)
@@ -620,6 +619,8 @@ export function DataGrid({ element, dataSources, runEventHandler }: DataGridProp
                         <FormResolver
                             element={element.editForm}
                             defaultData={currentEditData}
+                            state={state}
+                            t={t}
                             onFormSubmit={handleModalSubmit}
                             runEventHandler={runEventHandler}
                         />

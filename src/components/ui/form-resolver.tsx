@@ -16,7 +16,6 @@ import {
     FormGroupType,
     EventHandler,
 } from "../../types";
-import { useAppState } from "../../schema/StateContext";
 import { resolveBinding, classesFromStyleProps, luhnCheck, getAccessibilityProps, cn, deepResolveBindings, resolveDataSourceValue } from "../../lib/utils";
 
 import { Button } from "../../components/ui/button";
@@ -98,12 +97,13 @@ interface FormResolverProps {
     defaultData?: Record<string, any>;
     onFormSubmit?: (data: Record<string, any>) => void;
     onFormCancel?: () => void;
+    state: AnyObj;
+    t: (key: string) => string;
     runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj) => Promise<void>
 
 }
 const trimString = z.string().transform(v => (v ?? '').trim());
-export function FormResolver({ element, defaultData, onFormSubmit, onFormCancel, runEventHandler }: FormResolverProps) {
-    const { state, t } = useAppState();
+export function FormResolver({ element, state, t, defaultData, onFormSubmit, onFormCancel, runEventHandler }: FormResolverProps) {
 
     const formSchema = useMemo(() => {
         const shape: Record<string, z.ZodTypeAny> = {};
@@ -960,6 +960,7 @@ export function FormResolver({ element, defaultData, onFormSubmit, onFormCancel,
                 return (
                     <TabGroup
                         key={group.id}
+                        state={state} t={t}
                         group={group}
                         form={form}
                         renderField={renderField}
@@ -969,6 +970,7 @@ export function FormResolver({ element, defaultData, onFormSubmit, onFormCancel,
             case FormGroupType.step_wizard:
                 return (
                     <WizardGroup
+                        state={state} t={t}
                         key={group.id}
                         group={group}
                         form={form}

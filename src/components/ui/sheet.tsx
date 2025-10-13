@@ -128,7 +128,7 @@ function SheetRenderer({
     <Sheet open={open} onOpenChange={handleOpenChange}>
       {element.trigger && (
         <SheetTrigger asChild>
-          <ElementResolver element={element.trigger} runEventHandler={runEventHandler} />
+          <ElementResolver state={state} t={t} element={element.trigger} runEventHandler={runEventHandler} />
         </SheetTrigger>
       )}
       <SheetContent
@@ -139,7 +139,7 @@ function SheetRenderer({
           {element.title && <SheetTitle>{resolveBinding(element.title, state, t)}</SheetTitle>}
           {element.description && <SheetDescription>{resolveBinding(element.description, state, t)}</SheetDescription>}
         </SheetHeader>
-        <RenderChildren children={element.content}  />
+        <RenderChildren children={element.content} />
         {element.footer && (
           <SheetFooter>
             <RenderChildren children={element.footer} />
