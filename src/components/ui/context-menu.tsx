@@ -240,7 +240,7 @@ function renderContextMenuItems(
   items: ContextMenuItemType[],
   state: AnyObj,
   t: (s: string) => string,
-  runEventHandler: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+  runEventHandler?: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 ): React.ReactNode {
   // group radios by group name
   const groupedRadios = items.filter(i => i.type === "radio").reduce<Record<string, ContextMenuItemType[]>>((acc, item: any) => {
@@ -249,7 +249,7 @@ function renderContextMenuItems(
     return acc
   }, {})
 
-  return items.map(item => {
+  return items?.map(item => {
     const label = "label" in item ? resolveBinding(item.label, state, t) : null
 
     switch (item.type) {
@@ -268,7 +268,7 @@ function renderContextMenuItems(
           <ContextMenuCheckboxItem
             key={item.id}
             checked={resolveBinding(item.checked, state, t) ?? false}
-            onCheckedChange={val => runEventHandler(item.onSelect, { checked: val })}
+            onCheckedChange={val => runEventHandler?.(item.onSelect, { checked: val })}
           >
             {label}
           </ContextMenuCheckboxItem>
@@ -284,7 +284,7 @@ function renderContextMenuItems(
             value={radioGrpup}
             onValueChange={val => {
               const selected: any = groupedRadios[item.group].find((r: any) => r.value === val)
-              if (selected?.onSelect) runEventHandler(selected.onSelect)
+              if (selected?.onSelect) runEventHandler?.(selected.onSelect)
             }}
           >
             {groupedRadios[item.group].map((radio: any) => (
@@ -313,7 +313,7 @@ function renderContextMenuItems(
         return (
           <ContextMenuItem
             key={item.id}
-            onSelect={() => runEventHandler(item.onSelect)}
+            onSelect={() => runEventHandler?.(item.onSelect)}
             data-variant={item.variant}
             disabled={item.disabled}
           >
@@ -335,12 +335,12 @@ function ContextMenuRenderer({
   element: ContextMenuElement
   state: AnyObj
   t: (s: string) => string
-  runEventHandler: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+  runEventHandler?: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }) {
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <ElementResolver element={element.trigger} runtime={{}} />
+        <ElementResolver element={element.trigger} runEventHandler={runEventHandler} />
       </ContextMenuTrigger>
       <ContextMenuContent>
         {renderContextMenuItems(element.items, state, t, runEventHandler)}

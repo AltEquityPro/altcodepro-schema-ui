@@ -10,15 +10,16 @@ import {
   getAccessibilityProps,
   resolveAnimation,
 } from "../../lib/utils";
-import { useActionHandler } from "../../schema/Actions";
+import { useActionHandler } from "../../schema/useActionHandler";
 import { ElementResolver } from "../../schema/ElementResolver";
 import { useAppState } from "../../schema/StateContext";
-import { AnyObj, BadgeElement, UIElement } from "../../types";
+import { AnyObj, BadgeElement, EventHandler, UIElement } from "../../types";
 import {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
 } from "../../components/ui/tooltip";
+import { DynamicIcon } from "./dynamic-icon";
 
 const badgeVariants = cva(
   "inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[1px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
@@ -61,12 +62,11 @@ function Badge({
 
 interface BadgeRendererProps {
   element: BadgeElement;
-  runtime?: AnyObj;
+  runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj) => Promise<void>
 }
 
-function BadgeRenderer({ element, runtime = {} }: BadgeRendererProps) {
+function BadgeRenderer({ element, runEventHandler }: BadgeRendererProps) {
   const { state, t } = useAppState();
-  const { runEventHandler } = useActionHandler({ runtime });
 
   const label = resolveBinding(
     element.text ?? element.value ?? element.name,
@@ -84,13 +84,13 @@ function BadgeRenderer({ element, runtime = {} }: BadgeRendererProps) {
   ) : (
     <>
       {element.iconLeft && (
-        <ElementResolver element={element.iconLeft as UIElement} runtime={runtime} />
+        <DynamicIcon  {...element.iconLeft} />
       )}
       {element.maxLength && label?.length > element.maxLength
         ? label.slice(0, element.maxLength) + "…"
         : label}
       {element.iconRight && (
-        <ElementResolver element={element.iconRight as UIElement} runtime={runtime} />
+        <DynamicIcon {...element.iconRight} />
       )}
     </>
   );
@@ -106,7 +106,7 @@ function BadgeRenderer({ element, runtime = {} }: BadgeRendererProps) {
         (anim as any)?.className
       )}
       style={(anim as any)?.style}
-      onClick={element.onClick ? () => runEventHandler(element.onClick) : undefined}
+      onClick={element.onClick ? () => runEventHandler?.(element.onClick) : undefined}
       {...acc}
       {...(element.animations?.framework === "framer-motion" ? (anim as any) : {})}
     >

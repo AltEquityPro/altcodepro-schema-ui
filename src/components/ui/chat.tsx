@@ -66,7 +66,7 @@ interface ChatRendererProps {
     element: ChatElement
     state: AnyObj
     t: (key: string) => string
-    runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+    runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }
 
 /* ========== ChatRenderer ========== */
@@ -150,7 +150,7 @@ export function ChatRenderer({
         }
         appendMessage(localMsg)
 
-        await runEventHandler(element.onSend, {
+        await runEventHandler?.(element.onSend, {
             message: text,
             attachments,
             replyTo: payload?.replyTo,
@@ -163,7 +163,7 @@ export function ChatRenderer({
 
     /* Reaction handler */
     const toggleReaction = (msgId: string, emoji: string) => {
-        runEventHandler(x.onMessageAction, { action: "react", id: msgId, emoji })
+        runEventHandler?.(x.onMessageAction, { action: "react", id: msgId, emoji })
     }
 
     /* Virtualized row renderer */
@@ -175,8 +175,8 @@ export function ChatRenderer({
                     msg={msg}
                     onReply={(replyText) => handleSend({ text: replyText, replyTo: msg.id })}
                     onReact={(emoji) => toggleReaction(msg.id, emoji)}
-                    onCopy={() => runEventHandler(x.onCopyMessage, { id: msg.id, text: msg.text })}
-                    onDelete={() => runEventHandler(x.onDeleteMessage, { id: msg.id })}
+                    onCopy={() => runEventHandler?.(x.onCopyMessage, { id: msg.id, text: msg.text })}
+                    onDelete={() => runEventHandler?.(x.onDeleteMessage, { id: msg.id })}
                 />
             </div>
         )
@@ -197,7 +197,7 @@ export function ChatRenderer({
                             key={qa.id}
                             size="sm"
                             onClick={() =>
-                                runEventHandler(x.onMessageAction, { action: qa.id, payload: qa.payload })
+                                runEventHandler?.(x.onMessageAction, { action: qa.id, payload: qa.payload })
                             }
                         >
                             {qa.label}

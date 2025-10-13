@@ -9,7 +9,7 @@ interface CalendarEventRendererProps {
     element: CalendarEventElement
     state: AnyObj
     t: (key: string) => string
-    runEventHandler: (
+    runEventHandler?: (
         handler?: EventHandler | undefined,
         dataOverride?: AnyObj
     ) => Promise<void>
@@ -28,7 +28,7 @@ export function CalendarEventRenderer({
     const description = element.description ? resolveBinding(element.description, state, t) : undefined
     const btnLabel = element.eventBtnLabel ? resolveBinding(element.eventBtnLabel, state, t) : null
 
-    const handleClick = () => runEventHandler(element.onClick, { id: element.id })
+    const handleClick = () => runEventHandler?.(element.onClick, { id: element.id })
 
     return (
         <div

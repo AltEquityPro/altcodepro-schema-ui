@@ -703,20 +703,18 @@ function SidebarRenderer({
   runEventHandler,
   state,
   t,
-  runtime,
 }: {
   element: SidebarElement
-  runEventHandler: (h?: EventHandler, d?: AnyObj) => Promise<void>
+  runEventHandler?: (h?: EventHandler, d?: AnyObj) => Promise<void>
   state: AnyObj
   t: (key: string) => string
-  runtime: AnyObj
 }) {
   const content = (
     <Sidebar>
       {/* Header */}
       {element.header && (
         <SidebarHeader>
-          <ElementResolver element={element.header} runtime={runtime} />
+          <ElementResolver element={element.header} runEventHandler={runEventHandler} />
         </SidebarHeader>
       )}
 
@@ -729,10 +727,10 @@ function SidebarRenderer({
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {group.items.map((item) => (
+                {group.items?.map((item) => (
                   <SidebarMenuItem key={item.id}>
                     <SidebarMenuButton asChild>
-                      <ElementResolver element={item} runtime={runtime} />
+                      <ElementResolver element={item} runEventHandler={runEventHandler} />
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -745,7 +743,7 @@ function SidebarRenderer({
       {/* Footer */}
       {element.footer && (
         <SidebarFooter>
-          <ElementResolver element={element.footer} runtime={runtime} />
+          <ElementResolver element={element.footer} runEventHandler={runEventHandler} />
         </SidebarFooter>
       )}
 

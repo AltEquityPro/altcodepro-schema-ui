@@ -1,7 +1,6 @@
 "use client";
 import * as React from "react";
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
-import { ChevronDownIcon } from "lucide-react";
 import { motion } from "framer-motion";
 
 import {
@@ -13,9 +12,8 @@ import {
   resolveAnimation,
 } from "../../lib/utils";
 import { ElementResolver } from "../../schema/ElementResolver";
-import { AlertDialogElement, UIElement } from "../../types";
+import { AlertDialogElement, AnyObj, EventHandler, UIElement } from "../../types";
 import { useAppState } from "../../schema/StateContext";
-import { useActionHandler } from "../../schema/Actions";
 
 /** -----------------------------------
  * AnimatedBox — works with Radix `asChild`
@@ -142,15 +140,14 @@ function variantChrome(variant: AlertDialogElement["variant"]) {
 function AlertDialogRenderer({
   element,
   className,
-  runtime,
+  runEventHandler,
   ...rest
 }: {
   element: AlertDialogElement;
-  runtime: any;
   className?: string;
+  runEventHandler: ((handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>) | undefined
 }) {
   const { state, t } = useAppState();
-  const { runEventHandler } = useActionHandler({ runtime });
 
   const isOpen = resolveBinding(element.isOpen, state, t);
   const acc = getAccessibilityProps(element.accessibility);
@@ -166,12 +163,12 @@ function AlertDialogRenderer({
     <AlertDialogPrimitive.Root
       data-slot="alert-dialog"
       open={!!isOpen}
-      onOpenChange={(open) => runEventHandler(element.onOpenChange, { open })}
+      onOpenChange={(open) => runEventHandler?.(element.onOpenChange, { open })}
       {...rest}
     >
       {element.trigger && (
         <AlertDialogPrimitive.Trigger asChild>
-          <ElementResolver element={element.trigger} runtime={runtime} />
+          <ElementResolver element={element.trigger} runEventHandler={runEventHandler} />
         </AlertDialogPrimitive.Trigger>
       )}
 
@@ -214,20 +211,20 @@ function AlertDialogRenderer({
 
             {/* Custom content */}
             {element.content?.map((child: UIElement) => (
-              <ElementResolver key={child.id} element={child} runtime={runtime} />
+              <ElementResolver key={child.id} element={child} runEventHandler={runEventHandler} />
             ))}
 
             {/* Footer actions */}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               {element.cancelButton && (
                 <AlertDialogPrimitive.Cancel className={cn(variants({ variant: "outline" }))} asChild>
-                  <ElementResolver element={element.cancelButton} runtime={runtime} />
+                  <ElementResolver element={element.cancelButton} runEventHandler={runEventHandler} />
                 </AlertDialogPrimitive.Cancel>
               )}
 
               {element.actionButton && (
                 <AlertDialogPrimitive.Action className={cn(variants())} asChild>
-                  <ElementResolver element={element.actionButton} runtime={runtime} />
+                  <ElementResolver element={element.actionButton} runEventHandler={runEventHandler} />
                 </AlertDialogPrimitive.Action>
               )}
 
@@ -239,7 +236,7 @@ function AlertDialogRenderer({
                       className={cn(variants({ variant: "outline" }))}
                       asChild
                     >
-                      <ElementResolver element={btn} runtime={runtime} />
+                      <ElementResolver element={btn} runEventHandler={runEventHandler} />
                     </AlertDialogPrimitive.Cancel>
                   );
                 }
@@ -253,7 +250,7 @@ function AlertDialogRenderer({
                     )}
                     asChild
                   >
-                    <ElementResolver element={btn} runtime={runtime} />
+                    <ElementResolver element={btn} runEventHandler={runEventHandler} />
                   </AlertDialogPrimitive.Action>
                 );
               })}

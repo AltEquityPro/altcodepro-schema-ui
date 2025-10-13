@@ -1,14 +1,13 @@
 "use client";
-import React from "react";
-import type { ActionRuntime, UIElement } from "../types";
+import type { AnyObj, EventHandler, UIElement } from "../types";
 import { ElementResolver } from "./ElementResolver";
 
 
-export function RenderChildren({ children, runtime }: { children: UIElement[]; runtime: ActionRuntime; }) {
+export function RenderChildren({ children, runEventHandler }: { children: UIElement[]; runEventHandler?: ((handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>) | undefined }) {
     return (
         <>
             {children?.map((child) => (
-                <ElementResolver key={child.id} element={child} runtime={runtime} />
+                <ElementResolver key={child.id} element={child} runEventHandler={runEventHandler} />
             ))}
         </>
     );

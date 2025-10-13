@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -14,12 +14,12 @@ import {
     FieldType,
     FormField as FormFieldType,
     FormGroupType,
+    EventHandler,
 } from "../../types";
 import { useAppState } from "../../schema/StateContext";
-import { useActionHandler } from "../../schema/Actions";
-import { resolveBinding, classesFromStyleProps, luhnCheck, getAccessibilityProps, cn, deepResolveBindings } from "../../lib/utils";
+import { resolveBinding, classesFromStyleProps, luhnCheck, getAccessibilityProps, cn, deepResolveBindings, resolveDataSourceValue } from "../../lib/utils";
 
-import { Button, ButtonRenderer } from "../../components/ui/button";
+import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -53,7 +53,6 @@ import { MarkdownInput } from "./markdown-input";
 import { CurrencyInput } from "./currency-input";
 import { TabGroup, WizardGroup } from "./form-group";
 import { FileUpload } from "./file-upload";
-
 /** ---------- Helpers ---------- */
 type SelectOption = { value: string; label: string };
 
@@ -98,12 +97,13 @@ interface FormResolverProps {
     element: FormElement;
     defaultData?: Record<string, any>;
     onFormSubmit?: (data: Record<string, any>) => void;
-    runtime: Record<string, any>
+    onFormCancel?: () => void;
+    runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj) => Promise<void>
 
 }
-export function FormResolver({ element, defaultData, runtime, onFormSubmit }: FormResolverProps) {
+const trimString = z.string().transform(v => (v ?? '').trim());
+export function FormResolver({ element, defaultData, onFormSubmit, onFormCancel, runEventHandler }: FormResolverProps) {
     const { state, t } = useAppState();
-    const { runEventHandler } = useActionHandler({ runtime: {} as any });
 
     const formSchema = useMemo(() => {
         const shape: Record<string, z.ZodTypeAny> = {};
@@ -117,29 +117,41 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
 
             switch (input.inputType) {
                 case InputType.text:
-                case InputType.email:
                 case InputType.password:
                 case InputType.textarea: {
-                    let s = z.string()
-                    if (input.validation?.required) s = s.min(1, err("field_required"));
+                    let s: any = trimString;
+                    if (input.validation?.required)
+                        s = s.refine((v: any) => v.length > 0, { message: err("field_required") });
+
                     if (input.validation?.regex)
-                        s = s.regex(new RegExp(input.validation.regex), err("invalid_format"));
-                    if (input.validation?.min !== undefined)
-                        s = s.min(input.validation.min, err("too_short"));
-                    if (input.validation?.max !== undefined)
-                        s = s.max(input.validation.max, err("too_long"));
+                        s = s.regex(new RegExp(input.validation.regex), { message: err("invalid_format") });
                     shape[input.name] = s;
                     break;
                 }
+                case InputType.email: {
+                    let s: any = trimString;
 
+                    // Prefer the new helper if present; otherwise fall back to classic method
+                    const emailCheck =
+                        (z as any).email
+                            ? (z as any).email({ message: err("invalid_email") })
+                            : z.string().email({ message: err("invalid_email") });
+
+                    // Pipe the trimmed value into the email validator
+                    s = s.pipe(emailCheck);
+
+                    if (input.validation?.required)
+                        s = s.refine((v: any) => v.length > 0, { message: err("field_required") });
+
+                    shape[input.name] = s;
+                    break;
+                }
                 case InputType.number: {
                     let s: any = z.preprocess(numberCoerce, z.number());
                     if (input.validation?.required)
-                        s = s.refine((val: any) => val !== undefined, err("field_required"));
-                    if (input.validation?.min !== undefined)
-                        s = s.min(input.validation.min, err("too_small"));
+                        s = s.refine((val: any) => val !== undefined, { message: err("field_required") });
                     if (input.validation?.max !== undefined)
-                        s = s.max(input.validation.max, err("too_large"));
+                        s = s.max(input.validation.max, { message: err("too_large") });
                     shape[input.name] = s;
                     break;
                 }
@@ -382,12 +394,22 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
         defaultValues,
         mode: "onSubmit",
     });
+    const [isSubmitting, setSubmitting] = useState(false);
 
-    const onSubmit: SubmitHandler<FormValues> = (data) => {
+    const [error, setError] = useState<string | null>(null);
+    const onSubmit: SubmitHandler<FormValues> = async (data) => {
         if (onFormSubmit) {
             onFormSubmit(data);
         } else {
-            runEventHandler(element.submit?.onClick, data as AnyObj);
+            setSubmitting(true);
+            setError(null);
+            try {
+                await runEventHandler?.(element.submit?.onClick, data);
+            } catch (e: any) {
+                setError(String(e.message || e));
+            } finally {
+                setSubmitting(false);
+            }
         }
     };
 
@@ -430,14 +452,18 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                     const label =
                         input.label != null ? resolveBinding(input.label, state, t) : null;
                     const placeholder = resolveBinding(input.placeholder, state, t);
-
+                    const error = form.formState.errors[name];
+                    const inputClass = cn(
+                        "border rounded-md px-3 py-2 w-full transition-colors",
+                        error ? "border-red-500 focus-visible:ring-red-500" : "border-input focus-visible:ring-ring",
+                        classesFromStyleProps(input.styles)
+                    );
                     return (
                         <FormItem className={'space-y-2 w-full px-3 py-2'}>
                             {label && <FormLabel>{label}</FormLabel>}
                             <FormControl>
                                 {(() => {
                                     switch (input.inputType) {
-
                                         case InputType.number: {
                                             return (
                                                 <Input
@@ -456,6 +482,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                     max={input.max}
                                                     step={input.step}
                                                     {...commonProps}
+                                                    className={inputClass}
                                                 />
                                             );
                                         }
@@ -467,6 +494,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                 onChange={formField.onChange}
                                                 rows={input.rows ?? 3} // optional support if schema has it
                                                 {...commonProps}
+                                                className={inputClass}
                                             />;
                                         }
 
@@ -478,6 +506,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                         formField.onChange(Boolean(checked))
                                                     }
                                                     {...commonProps}
+                                                    className={inputClass}
                                                 />
                                             );
                                         }
@@ -492,11 +521,10 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                     value={(formField.value as string) ?? ""}
                                                     onValueChange={(v) => formField.onChange(v)}
                                                     {...commonProps}
-
                                                 >
                                                     <SelectTrigger className={cn(
                                                         " min-w-sm",
-                                                        commonProps.className
+                                                        inputClass
                                                     )}
                                                         disabled={commonProps.disabled}>
                                                         <SelectValue placeholder={placeholder} />
@@ -527,6 +555,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                     onChange={(vals) => formField.onChange(vals)}
                                                     placeholder={placeholder}
                                                     {...commonProps}
+                                                    className={inputClass}
                                                 />
                                             );
                                         }
@@ -547,6 +576,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                         step={step}
                                                         onValueChange={(vals) => formField.onChange(vals[0])}
                                                         {...commonProps}
+                                                        className={inputClass}
                                                     />
                                                     <div className="text-xs text-muted-foreground">
                                                         {current}
@@ -555,7 +585,8 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                             );
                                         }
 
-                                        case InputType.file: {
+                                        case InputType.file:
+                                        case InputType.image: {
                                             return (
                                                 <FileUpload
                                                     multiple={!!input.multiple}
@@ -563,7 +594,8 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                     maxSize={input.maxSize}
                                                     files={(formField.value as File[]) || []}
                                                     onFiles={(files) => formField.onChange(files)}
-                                                    {...commonProps}
+                                                    disabled={input.disabled}
+                                                    presignUrl={resolveDataSourceValue(input.uploadUrl, state, undefined)}
                                                 />
                                             );
                                         }
@@ -637,6 +669,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                     mode="single"
                                                     selected={value}
                                                     {...commonProps}
+                                                    className={inputClass}
                                                     onSelect={(date) =>
                                                         formField.onChange(date ? date.toISOString().split("T")[0] : "")
                                                     }
@@ -649,6 +682,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                 <Input
                                                     type="datetime-local"
                                                     {...commonProps}
+                                                    className={inputClass}
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
                                                 />
@@ -660,6 +694,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                 <Input
                                                     type="time"
                                                     {...commonProps}
+                                                    className={inputClass}
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
                                                 />
@@ -670,6 +705,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                             return (
                                                 <Input
                                                     {...commonProps}
+                                                    className={inputClass}
                                                     type="month"
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
@@ -681,6 +717,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                             return (
                                                 <Input
                                                     {...commonProps}
+                                                    className={inputClass}
                                                     type="week"
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
@@ -726,6 +763,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                             return (
                                                 <Checkbox
                                                     {...commonProps}
+                                                    className={inputClass}
                                                     checked={Boolean(formField.value)}
                                                     onCheckedChange={(checked) => formField.onChange(Boolean(checked))}
                                                 />
@@ -768,6 +806,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                 <input
                                                     type="range"
                                                     {...commonProps}
+                                                    className={inputClass}
                                                     min={min}
                                                     max={max}
                                                     step={step}
@@ -785,6 +824,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
                                                     {...commonProps}
+                                                    className={inputClass}
                                                 />
                                             );
                                         }
@@ -796,6 +836,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                     onChange={formField.onChange}
                                                     placeholder={placeholder}
                                                     {...commonProps}
+                                                    className={inputClass}
                                                 />
                                             );
 
@@ -806,6 +847,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                     onChange={formField.onChange}
                                                     placeholder={placeholder}
                                                     {...commonProps}
+                                                    className={inputClass}
                                                 />
                                             );
                                         case InputType.markdown:
@@ -815,6 +857,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                     onChange={formField.onChange}
                                                     placeholder={placeholder}
                                                     {...commonProps}
+                                                    className={inputClass}
                                                 />
                                             );
                                         case InputType.currency: {
@@ -829,6 +872,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                     currency={resolveBinding(input.currency, state, t) as string | undefined}
                                                     minFractionDigits={input.minFractionDigits || 2}
                                                     maxFractionDigits={input.maxFractionDigits || 2}
+                                                    className={inputClass}
                                                 />
                                             );
                                         }
@@ -839,6 +883,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                     value={formField.value as string}
                                                     onChange={formField.onChange}
                                                     {...commonProps}
+                                                    className={inputClass}
                                                 >
                                                     <InputOTPGroup>
                                                         {Array.from({ length: 6 })?.map((_, i) => (
@@ -860,6 +905,7 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                     onChange={(val) => formField.onChange(val)}
                                                     onCreateAction={input.onCreate}
                                                     {...commonProps}
+                                                    className={inputClass}
                                                 />
                                             );
                                         }
@@ -869,9 +915,17 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
                                                 <Input
                                                     type={input.inputType}
                                                     {...commonProps}
+                                                    onBlur={(e) => {
+                                                        const v = e.target.value.trim();
+                                                        if (v !== e.target.value) {
+                                                            e.target.value = v;
+                                                            form.trigger(name as any);
+                                                        }
+                                                    }}
                                                     placeholder={placeholder}
                                                     value={(formField.value as string) ?? ""}
                                                     onChange={formField.onChange}
+                                                    className={inputClass}
                                                 />
                                             );
                                     }
@@ -946,18 +1000,28 @@ export function FormResolver({ element, defaultData, runtime, onFormSubmit }: Fo
 
         return null;
     };
-
+    const submitAccProps = element.submit ? getAccessibilityProps(element.submit.accessibility) : {};
+    const submitClassName = element.submit ? classesFromStyleProps(element.submit.styles) : '';
+    const cancelAccProps = element.cancel ? getAccessibilityProps(element.cancel.accessibility) : {};
+    const cancelClassName = element.cancel ? classesFromStyleProps(element.cancel.styles) : '';
     return (
         <Form {...form}>
             <form
                 onSubmit={form.handleSubmit(onSubmit)}
                 className={cn("space-y-6 max-w-md mx-auto", className)}
-                {...accessibilityProps}
             >
                 {renderContent()}
                 <div className="flex justify-center gap-4 pt-4">
-                    {element.cancel && <ButtonRenderer element={element.cancel} runtime={runtime} />}
-                    {element.submit && <ButtonRenderer element={element.submit} runtime={runtime} />}
+                    {element.cancel && (
+                        <Button type="button" className={cancelClassName} onClick={onFormCancel || (() => form.reset())} {...cancelAccProps}>
+                            {resolveBinding(element.cancel.text, state, t)}
+                        </Button>
+                    )}
+                    {element.submit && (
+                        <Button type="submit" disabled={isSubmitting} className={submitClassName} {...submitAccProps}>
+                            {isSubmitting ? t("submitting") : resolveBinding(element.submit.text, state, t)}
+                        </Button>
+                    )}
                 </div>
             </form>
         </Form>

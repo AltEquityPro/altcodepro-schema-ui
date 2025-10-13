@@ -107,14 +107,14 @@ function SheetRenderer({
   t,
 }: {
   element: SheetElement
-  runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+  runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
   state: AnyObj
   t: (key: string) => string
 }) {
   const open = resolveBinding(element.isOpen, state, t) ?? false
 
   const handleOpenChange = (next: boolean) => {
-    runEventHandler(element.onOpenChange, { open: next })
+    runEventHandler?.(element.onOpenChange, { open: next })
   }
 
   useSheetShortcuts(
@@ -128,7 +128,7 @@ function SheetRenderer({
     <Sheet open={open} onOpenChange={handleOpenChange}>
       {element.trigger && (
         <SheetTrigger asChild>
-          <ElementResolver element={element.trigger} runtime={{}} />
+          <ElementResolver element={element.trigger} runEventHandler={runEventHandler} />
         </SheetTrigger>
       )}
       <SheetContent
@@ -139,7 +139,7 @@ function SheetRenderer({
           {element.title && <SheetTitle>{resolveBinding(element.title, state, t)}</SheetTitle>}
           {element.description && <SheetDescription>{resolveBinding(element.description, state, t)}</SheetDescription>}
         </SheetHeader>
-        <RenderChildren children={element.content} />
+        <RenderChildren children={element.content}  />
         {element.footer && (
           <SheetFooter>
             <RenderChildren children={element.footer} />

@@ -53,18 +53,16 @@ function PopoverRenderer({
   runEventHandler,
   state,
   t,
-  runtime,
 }: {
   element: PopoverElement
-  runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+  runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
   state: AnyObj
   t: (key: string) => string
-  runtime: any
 }) {
   const open = resolveBinding(element.open, state, t) ?? undefined
 
   const handleOpenChange = (next: boolean) => {
-    runEventHandler(element.onOpenChange, { open: next })
+    runEventHandler?.(element.onOpenChange, { open: next })
   }
 
   return wrapWithMotion(

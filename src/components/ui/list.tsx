@@ -3,6 +3,7 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
 import type {
+    ActionRuntime,
     AnyObj,
     EventHandler,
     ListElement,
@@ -22,7 +23,7 @@ type Density = "comfortable" | "compact"
 
 interface ListRendererProps {
     element: ListElement
-    runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+    runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
     /** Optional – if not provided, uses AppState context */
     state?: AnyObj
     t?: (key: string) => string
@@ -84,9 +85,8 @@ export function ListRenderer(props: ListRendererProps) {
                 {items.length === 0 ? (
                     <EmptyState />
                 ) : (
-                    items.map((item, i) => {
+                    items?.map((item, i) => {
                         const resolved = resolveItem(item, state, t)
-                        const hasChildren = !!resolved.children?.length
                         return (
                             <div
                                 key={resolved.id || i}
@@ -97,7 +97,7 @@ export function ListRenderer(props: ListRendererProps) {
                                     element={resolved}
                                     runEventHandler={async (h, data) => {
                                         setSelectedIndex(i)
-                                        await runEventHandler(h, data)
+                                        await runEventHandler?.(h, data)
                                     }}
                                     state={state}
                                     t={t}
@@ -150,7 +150,7 @@ export function ListRenderer(props: ListRendererProps) {
                     element={resolved}
                     runEventHandler={async (h, data) => {
                         setSelectedIndex(index)
-                        await runEventHandler(h, data)
+                        await runEventHandler?.(h, data)
                     }}
                     state={state}
                     t={t}

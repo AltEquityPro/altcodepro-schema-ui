@@ -27,7 +27,7 @@ export function WalletRenderer({
     element: WalletElement;
     state: Record<string, any>;
     t: (k: string) => string;
-    runEventHandler: (h?: any, d?: any) => Promise<void>;
+    runEventHandler?: (h?: any, d?: any) => Promise<void>;
 }) {
     const [address, setAddress] = useState<string | null>(null);
     const [chainId, setChainId] = useState<number | null>(null);
@@ -60,11 +60,11 @@ export function WalletRenderer({
                         txHash: eventObj?.transactionHash,
                         blockNumber: eventObj?.blockNumber,
                     };
-                    await runEventHandler(evt.onEvent, payload);
+                    await runEventHandler?.(evt.onEvent, payload);
                 });
             } catch (err) {
                 if (element.onError)
-                    runEventHandler(element.onError, { message: String(err) });
+                    runEventHandler?.(element.onError, { message: String(err) });
             }
         });
 
@@ -96,7 +96,7 @@ export function WalletRenderer({
                 setAddress(addr);
                 setChainId(Number(net.chainId));
                 if (element.onConnect)
-                    await runEventHandler(element.onConnect, {
+                    await runEventHandler?.(element.onConnect, {
                         address: addr,
                         chainId: net.chainId,
                     });
@@ -116,14 +116,14 @@ export function WalletRenderer({
                 setAddress(addr);
                 setChainId(Number(net.chainId));
                 if (element.onConnect)
-                    await runEventHandler(element.onConnect, {
+                    await runEventHandler?.(element.onConnect, {
                         address: addr,
                         chainId: net.chainId,
                     });
             }
         } catch (err) {
             if (element.onError)
-                runEventHandler(element.onError, { message: String(err) });
+                runEventHandler?.(element.onError, { message: String(err) });
         }
     };
 
@@ -131,7 +131,7 @@ export function WalletRenderer({
         setProvider(null);
         setAddress(null);
         setChainId(null);
-        if (element.onDisconnect) await runEventHandler(element.onDisconnect, {});
+        if (element.onDisconnect) await runEventHandler?.(element.onDisconnect, {});
     };
 
     // --- Contract call ---
@@ -151,11 +151,11 @@ export function WalletRenderer({
         try {
             const result = await contract[fn.name](...args);
             if (fn.onResult)
-                await runEventHandler(fn.onResult, { result: result?.toString?.() });
+                await runEventHandler?.(fn.onResult, { result: result?.toString?.() });
             return result;
         } catch (err) {
             if (element.onError)
-                await runEventHandler(element.onError, { message: String(err) });
+                await runEventHandler?.(element.onError, { message: String(err) });
         }
     };
 
@@ -179,7 +179,7 @@ export function WalletRenderer({
                         txHash: eventObj?.transactionHash,
                         blockNumber: eventObj?.blockNumber,
                     };
-                    await runEventHandler(evt.onEvent, payload);
+                    await runEventHandler?.(evt.onEvent, payload);
                 });
             });
         });

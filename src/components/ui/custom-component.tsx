@@ -1,11 +1,13 @@
 "use client";
 import { resolveBinding } from '../../lib/utils';
 import { RenderChildren } from '../../schema/RenderChildren';
-import { AnyObj, CustomElement } from '../../types';
+import { AnyObj, CustomElement, EventHandler } from '../../types';
 import wrapWithMotion from './wrapWithMotion';
 
-export default function CustomComponentRender({ element, runtime, state, t }: {
-    element: CustomElement, runtime: any, state: AnyObj,
+export default function CustomComponentRender({ element, runEventHandler, state, t }: {
+    element: CustomElement,
+    runEventHandler?: ((handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>),
+    state: AnyObj,
     t: (key: string) => string
 }) {
 
@@ -20,7 +22,7 @@ export default function CustomComponentRender({ element, runtime, state, t }: {
 
     const children = componentNames.map((name: any, idx: any) => {
         const Comp =
-            runtime?.elementComponents?.[name] ??
+            element?.component?.[name] ??
             (() => (
                 <div
                     key={`${element.id}-${idx}`}
@@ -43,7 +45,7 @@ export default function CustomComponentRender({ element, runtime, state, t }: {
                 aria-label={resolveBinding(element.accessibility?.ariaLabel, state, t)}
                 aria-hidden={!element.visibility?.show}
             >
-                {element.children && <RenderChildren children={element.children} />}
+                {element.children && <RenderChildren children={element.children} runEventHandler={runEventHandler} />}
             </Comp>
         );
     });

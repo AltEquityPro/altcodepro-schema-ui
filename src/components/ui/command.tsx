@@ -194,7 +194,7 @@ function CommandRenderer({
   runEventHandler,
 }: {
   element: CommandElement
-  runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+  runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }) {
   const {
     placeholder = "Search…",
@@ -271,11 +271,11 @@ function CommandRenderer({
                   data-slot="command-group"
                   className="text-foreground overflow-hidden p-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium"
                 >
-                  {group.items.map(item => (
+                  {group.items?.map(item => (
                     <CommandPrimitive.Item
                       key={item.id}
                       disabled={item.disabled}
-                      onSelect={() => runEventHandler(item.onSelect)}
+                      onSelect={() => runEventHandler?.(item.onSelect)}
                       data-slot="command-item"
                       className="data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:opacity-50"
                     >

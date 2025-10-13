@@ -3,18 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { ElementResolver } from "../../schema/ElementResolver";
-import { CarouselElement, UIElement, ActionRuntime, AnyObj } from "../../types";
+import { CarouselElement, UIElement, ActionRuntime, AnyObj, EventHandler } from "../../types";
 import { Progress } from "./progress";
 import { ChevronDown } from "lucide-react";
 
 interface CarouselProps {
   element: CarouselElement;
-  runtime: ActionRuntime;
+  runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>;
   state: AnyObj;
   t: (key: string) => string
 }
 
-export function Carousel({ element, runtime }: CarouselProps) {
+export function Carousel({ element, runEventHandler }: CarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -99,7 +99,7 @@ export function Carousel({ element, runtime }: CarouselProps) {
           height: element.orientation === "vertical" ? "auto" : undefined,
         }}
       >
-        {element.items.map((item, index) => (
+        {element.items?.map((item, index) => (
           <div
             key={item.id}
             className={clsx(itemClasses, "flex justify-center items-center")}
@@ -111,7 +111,7 @@ export function Carousel({ element, runtime }: CarouselProps) {
                 className="max-h-[80vh] w-auto object-contain rounded-lg"
               />
             ) : (
-              <ElementResolver element={item} runtime={runtime} />
+              <ElementResolver element={item} runEventHandler={runEventHandler} />
             )}
           </div>
         ))}
@@ -141,7 +141,7 @@ export function Carousel({ element, runtime }: CarouselProps) {
       {/* Indicators */}
       {element.showIndicators && element.items.length > 1 && (
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-          {element.items.map((_, index) => (
+          {element.items?.map((_, index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}

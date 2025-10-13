@@ -471,7 +471,7 @@ export interface BreadcrumbElement extends BaseElement {
 
 export interface ButtonElement extends BaseElement {
     type: ElementType.button;
-    asChild?: boolean;
+    htmlType: string;
     disabled?: boolean | Binding;
     iconLeft?: IconElement;
     iconRight?: IconElement;
@@ -1471,6 +1471,8 @@ export interface ThreeDModelElement extends BaseElement {
         videoId?: string;
     };
     loop?: boolean;
+    streaming?: 'hls' | 'dash';
+    stereo?: boolean;
     multiPeerSpawn?: {
         enabled: boolean;
         layout?: "circle" | "grid" | "spiral";
@@ -1623,6 +1625,8 @@ export interface VideoElement extends BaseElement {
         skippableAfter?: number;
     };
     analytics?: boolean;
+    is360?: boolean;
+    stereo?: boolean;
     autoPlay?: boolean;
     caching?: boolean;
     captions?: Array<{
@@ -1901,45 +1905,30 @@ export interface DataMapping {
 }
 
 export interface DataSource {
-    auth?: { type: 'basic' | 'bearer' | 'api_key'; value: Binding };
-    baseUrl?: string | Binding;
-    body?: Record<string, any> | Binding;
+    auth?: { type: 'basic' | 'bearer' | 'api_key'; value: string };
+    baseUrl?: string;
+    body?: Record<string, any>;
     credentials?: 'include' | 'omit' | 'same-origin';
     errorKey?: string;
     graphql_operation?: 'query' | 'mutation' | 'subscription';
-    headers?: Record<string, string | Binding>;
-    heartbeat?: { interval: number; message: Binding };
+    headers?: Record<string, string>;
+    heartbeat?: { interval: number; message: string };
     id: string;
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'WEBSOCKET' | 'GRAPHQL';
-    path?: string | Binding;
+    path?: string;
     pollingInterval?: number;
     protocol?: 'graphql-ws' | 'subscriptions-transport-ws' | 'graphql-transport-ws';
     query?: string;
-    queryParams?: Record<string, string | Binding>;
+    queryParams?: Record<string, string>;
     refId?: string;
     retry?: { attempts: number; delay: number; strategy?: 'exponential' | 'linear' | 'jitter' };
-}
-
-export interface DataSourceRef {
-    auth?: { type: 'basic' | 'bearer' | 'api_key'; value: Binding };
-    baseUrl?: string | Binding;
-    body?: Record<string, any> | Binding;
-    headers?: Record<string, string | Binding>;
-    heartbeat?: { interval: number; message: Binding };
-    id: string;
-    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'WEBSOCKET' | 'GRAPHQL';
-    path?: string | Binding;
-    pollingInterval?: number;
-    query?: string | Binding;
-    queryParams?: Record<string, string | Binding>;
-    retry?: { attempts: number; delay: number };
 }
 
 export interface EndpointEnvironments {
     default: string;
     values: Record<string, {
-        baseUrl?: string | Binding;
-        headers?: Record<string, string | Binding>;
+        baseUrl?: string;
+        headers?: Record<string, string>;
     }>;
 }
 
@@ -1961,32 +1950,29 @@ export interface IRoute {
     isDynamic: boolean;
     label: string;
     metadata: {
+        title?: string;
+        description?: string;
+        keywords?: string[];
         dateModified?: string;
         datePublished?: string;
-        description?: string;
-        formatDetection?: {
-            address?: boolean;
-            date?: boolean;
-            email?: boolean;
-            telephone?: boolean;
-            url?: boolean;
-        };
-        keywords?: string[];
+
         openGraph?: {
             description?: string;
             siteName?: string;
             title?: string;
             url?: string;
         };
-        pagination?: {
-            next?: null | string | URL | undefined;
-            previous?: null | string | URL | undefined;
-        };
-        title?: string;
         twitter?: {
             card?: string;
             description?: string;
             title?: string;
+        };
+        formatDetection?: {
+            address?: boolean;
+            date?: boolean;
+            email?: boolean;
+            telephone?: boolean;
+            url?: boolean;
         };
     };
     nested?: IRoute[];
@@ -2171,8 +2157,8 @@ export interface UIProject {
         auth?: AuthGlobalConfig;
         endpoints?: {
             dataMappings?: DataMapping[];
-            auth?: { type: 'basic' | 'bearer' | 'api_key'; value: Binding };
-            defaultHeaders?: Record<string, string | Binding>;
+            auth?: { type: 'basic' | 'bearer' | 'api_key'; value: string };
+            defaultHeaders?: Record<string, string>;
             environments?: EndpointEnvironments;
             registry?: DataSource[];
         };
@@ -2225,8 +2211,7 @@ export interface UIProject {
         walletConnectUrl?: string;
     };
     globalStyles?: {
-        animationFramework?: string;
-        projectStyle?: string;
+        projectStyle?: string;  // Custom Sytles to add at project style
         theme?: {
             colorScheme?: 'normal' | 'light' | 'dark' | 'light dark' | 'dark light' | 'only light';
             fontFamily?: string;
@@ -2236,7 +2221,10 @@ export interface UIProject {
             secondaryColorDark?: string;
             secondaryColorLight?: string;
         };
-        headerStyle?: StyleProps;
+        headerStyle?: {
+            className?: string;
+            customCss?: string;
+        };
     };
     initialData?: Record<string, any>;
     projectId?: string;

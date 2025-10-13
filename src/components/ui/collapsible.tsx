@@ -3,7 +3,7 @@ import * as React from "react"
 import * as CollapsiblePrimitive from "@radix-ui/react-collapsible"
 import { cn, resolveBinding } from "../../lib/utils"
 import { ElementResolver } from "../../schema/ElementResolver"
-import { CollapsibleElement, UIElement } from "../../types"
+import { AnyObj, CollapsibleElement, EventHandler, UIElement } from "../../types"
 
 function Collapsible({
   className,
@@ -52,30 +52,29 @@ interface CollapsibleRendererProps {
   runtime?: Record<string, any>
   state?: Record<string, any>
   t?: (key: string) => string
-  runEventHandler?: (handler?: any, ctx?: any) => void
+  runEventHandler?: ((handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>) | undefined
 }
 
 function CollapsibleRenderer({
   element,
-  runtime = {},
   state = {},
   t = (s) => s,
-  runEventHandler = () => { },
+  runEventHandler
 }: CollapsibleRendererProps) {
   return (
     <Collapsible
       open={resolveBinding(element.open, state, t)}
-      onOpenChange={(open) => runEventHandler(element.onOpenChange, { open })}
+      onOpenChange={(open) => runEventHandler?.(element.onOpenChange, { open })}
     >
       {element.trigger && (
         <CollapsibleTrigger asChild>
-          <ElementResolver element={element.trigger} runtime={runtime} />
+          <ElementResolver element={element.trigger} runEventHandler={runEventHandler} />
         </CollapsibleTrigger>
       )}
 
       <CollapsibleContent>
         {element.content?.map((child: UIElement) => (
-          <ElementResolver key={child.id} element={child} runtime={runtime} />
+          <ElementResolver key={child.id} element={child} runEventHandler={runEventHandler} />
         ))}
       </CollapsibleContent>
     </Collapsible>

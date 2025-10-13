@@ -11,7 +11,7 @@ import { ArrowUpDown, MoreHorizontal, ChevronDown } from "lucide-react"
 import { Calendar } from "../../components/ui/calendar"
 import { DataGridElement, DataGridCol, ElementType, InputType, ActionRuntime, DataSource, EventHandler, AnyObj } from "../../types"
 import { resolveBinding, deepResolveBindings, cn } from "../../lib/utils"
-import { useDataSources } from "../../schema/Datasource"
+import { useDataSources } from "../../schema/useDataSources"
 import { useAppState } from "../../schema/StateContext"
 import { Checkbox } from "../../components/ui/checkbox"
 import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog"
@@ -34,8 +34,7 @@ import { Badge } from "./badge"
 interface DataGridProps {
     element: DataGridElement
     dataSources?: DataSource[];
-    runtime: ActionRuntime
-    runEventHandler: (handler?: EventHandler | undefined, dataOverride?: AnyObj) => Promise<void>
+    runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj) => Promise<void>
 }
 
 const getFilterFn = (type?: string) => {
@@ -54,7 +53,7 @@ const getFilterFn = (type?: string) => {
     }
 }
 
-export function DataGrid({ element, dataSources, runtime, runEventHandler }: DataGridProps) {
+export function DataGrid({ element, dataSources, runEventHandler }: DataGridProps) {
     const { state, t } = useAppState()
 
     const [sorting, setSorting] = useState<SortingState>(resolveBinding(element.sorting, state, t) || [])
@@ -78,7 +77,7 @@ export function DataGrid({ element, dataSources, runtime, runEventHandler }: Dat
         let raw = [];
 
         if (element.serverSide && element.dataSourceId) {
-            raw = resolvedDataSources[element.dataSourceId] ?? [];
+            raw = resolvedDataSources?.data[element.dataSourceId] ?? [];
         } else {
             raw = resolveBinding(element.rows, state, t) || [];
         }
@@ -210,7 +209,7 @@ export function DataGrid({ element, dataSources, runtime, runEventHandler }: Dat
                                     return (
                                         <DropdownMenuItem
                                             key={action.id}
-                                            onClick={() => runEventHandler(action.onClick, { row: row.original })}
+                                            onClick={() => runEventHandler?.(action.onClick, { row: row.original })}
                                         >
                                             {action.icon && <span className="mr-2">{action.icon}</span>}
                                             {action.label}
@@ -234,12 +233,12 @@ export function DataGrid({ element, dataSources, runtime, runEventHandler }: Dat
         onSortingChange: (updater) => {
             const newSorting = typeof updater === 'function' ? updater(sorting) : updater
             setSorting(newSorting)
-            if (element.onSortChange) runEventHandler(element.onSortChange, { sorting: newSorting })
+            if (element.onSortChange) runEventHandler?.(element.onSortChange, { sorting: newSorting })
         },
         onColumnFiltersChange: (updater) => {
             const newFilters = typeof updater === 'function' ? updater(columnFilters) : updater
             setColumnFilters(newFilters)
-            if (element.onFilterChange) runEventHandler(element.onFilterChange, { filters: newFilters })
+            if (element.onFilterChange) runEventHandler?.(element.onFilterChange, { filters: newFilters })
         },
         onGlobalFilterChange: setGlobalFilter,
         globalFilterFn: "includesString",
@@ -250,12 +249,12 @@ export function DataGrid({ element, dataSources, runtime, runEventHandler }: Dat
         onColumnVisibilityChange: (updater) => {
             const newVisibility = typeof updater === 'function' ? updater(columnVisibility) : updater
             setColumnVisibility(newVisibility)
-            if (element.onColumnVisibilityChange) runEventHandler(element.onColumnVisibilityChange, { visibility: newVisibility })
+            if (element.onColumnVisibilityChange) runEventHandler?.(element.onColumnVisibilityChange, { visibility: newVisibility })
         },
         onRowSelectionChange: (updater) => {
             const newSelection = typeof updater === 'function' ? updater(rowSelection) : updater
             setRowSelection(newSelection)
-            if (element.onSelectionChange) runEventHandler(element.onSelectionChange, { selection: newSelection })
+            if (element.onSelectionChange) runEventHandler?.(element.onSelectionChange, { selection: newSelection })
         },
         getExpandedRowModel: getExpandedRowModel(),
         onPaginationChange: setPagination,
@@ -294,7 +293,7 @@ export function DataGrid({ element, dataSources, runtime, runEventHandler }: Dat
         if (element.infinite && rowVirtualizer.getVirtualItems().length > 0) {
             const lastItem = rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1]
             if (lastItem && lastItem.index >= rows.length - 1 && element.onLoadMore) {
-                runEventHandler(element.onLoadMore)
+                runEventHandler?.(element.onLoadMore)
             }
         }
     }, [rowVirtualizer.getVirtualItems()])
@@ -302,7 +301,7 @@ export function DataGrid({ element, dataSources, runtime, runEventHandler }: Dat
     const handleCellEdit = (rowId: string, colKey: string, value: any) => {
         // Update data
         if (element.onCellEdit) {
-            runEventHandler(element.onCellEdit, { rowId, colKey, value })
+            runEventHandler?.(element.onCellEdit, { rowId, colKey, value })
         }
         setEditingCell(null)
     }
@@ -320,7 +319,7 @@ export function DataGrid({ element, dataSources, runtime, runEventHandler }: Dat
 
     const handleModalSubmit = (data: any) => {
         if (element.onCellEdit) { // Reuse onCellEdit for row edit
-            runEventHandler(element.onCellEdit, { rowId: currentEditData.id, data })
+            runEventHandler?.(element.onCellEdit, { rowId: currentEditData.id, data })
         }
         setModalOpen(false)
     }
@@ -473,7 +472,7 @@ export function DataGrid({ element, dataSources, runtime, runEventHandler }: Dat
                     value={globalFilter ?? ""}
                     onChange={(event) => {
                         setGlobalFilter(event.target.value)
-                        if (element.onGlobalFilterChange) runEventHandler(element.onGlobalFilterChange, { globalFilter: event.target.value })
+                        if (element.onGlobalFilterChange) runEventHandler?.(element.onGlobalFilterChange, { globalFilter: event.target.value })
                     }}
                     className="max-w-sm"
                 />
@@ -503,7 +502,7 @@ export function DataGrid({ element, dataSources, runtime, runEventHandler }: Dat
                     <Button
                         key={action.id}
                         variant={action.variant as any || 'default'}
-                        onClick={() => runEventHandler(action.onClick, { selectedRows: table.getSelectedRowModel().rows.map(r => r.original) })}
+                        onClick={() => runEventHandler?.(action.onClick, { selectedRows: table.getSelectedRowModel().rows.map(r => r.original) })}
                     >
                         {action.icon && <span className="mr-2">{action.icon}</span>}
                         {resolveBinding(action.label, state, t)}
@@ -554,7 +553,7 @@ export function DataGrid({ element, dataSources, runtime, runEventHandler }: Dat
                                     data-state={row.getIsSelected() && "selected"}
                                     className={cn(rowClass(row))}
                                     onClick={() => {
-                                        if (element.onRowClick) runEventHandler(element.onRowClick, { row: row.original })
+                                        if (element.onRowClick) runEventHandler?.(element.onRowClick, { row: row.original })
                                     }}
                                 >
                                     {row.getVisibleCells().map((cell) => {
@@ -622,7 +621,7 @@ export function DataGrid({ element, dataSources, runtime, runEventHandler }: Dat
                             element={element.editForm}
                             defaultData={currentEditData}
                             onFormSubmit={handleModalSubmit}
-                            runtime={runtime}
+                            runEventHandler={runEventHandler}
                         />
                     </DialogContent>
                 </Dialog>

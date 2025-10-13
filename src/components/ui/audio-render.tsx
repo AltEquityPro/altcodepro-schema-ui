@@ -14,7 +14,7 @@ interface AudioRendererProps {
     element: AudioElement;
     state: AnyObj;
     t: (key: string) => string;
-    runEventHandler: (
+    runEventHandler?: (
         handler?: EventHandler,
         dataOverride?: AnyObj
     ) => Promise<void>;
@@ -67,9 +67,9 @@ export function AudioRenderer({
                 muted={element.muted}
                 className={cn("w-full", className, (anim as any)?.className)}
                 style={(anim as any)?.style}
-                onPlay={() => runEventHandler(element.onPlay, { id: element.id })}
-                onPause={() => runEventHandler(element.onPause, { id: element.id })}
-                onEnded={() => runEventHandler(element.onEnded, { id: element.id })}
+                onPlay={() => runEventHandler?.(element.onPlay, { id: element.id })}
+                onPause={() => runEventHandler?.(element.onPause, { id: element.id })}
+                onEnded={() => runEventHandler?.(element.onEnded, { id: element.id })}
                 {...acc}
             >
                 Your browser does not support the <code>audio</code> element.
@@ -91,9 +91,9 @@ export function AudioRenderer({
                 loop={element.loop}
                 muted={element.muted}
                 className={cn("w-full", className)}
-                onPlay={() => runEventHandler(element.onPlay, { id: element.id })}
-                onPause={() => runEventHandler(element.onPause, { id: element.id })}
-                onEnded={() => runEventHandler(element.onEnded, { id: element.id })}
+                onPlay={() => runEventHandler?.(element.onPlay, { id: element.id })}
+                onPause={() => runEventHandler?.(element.onPause, { id: element.id })}
+                onEnded={() => runEventHandler?.(element.onEnded, { id: element.id })}
                 {...motionProps}
                 {...acc}
             >
@@ -123,9 +123,9 @@ export function AudioRenderer({
                 muted={element.muted}
                 className={cn("w-full", className, (anim as any)?.className)}
                 style={(anim as any)?.style}
-                onPlay={() => runEventHandler(element.onPlay, { id: element.id })}
-                onPause={() => runEventHandler(element.onPause, { id: element.id })}
-                onEnded={() => runEventHandler(element.onEnded, { id: element.id })}
+                onPlay={() => runEventHandler?.(element.onPlay, { id: element.id })}
+                onPause={() => runEventHandler?.(element.onPause, { id: element.id })}
+                onEnded={() => runEventHandler?.(element.onEnded, { id: element.id })}
                 {...acc}
             >
                 Your browser does not support the <code>audio</code> element.
@@ -143,9 +143,9 @@ export function AudioRenderer({
             loop={element.loop}
             muted={element.muted}
             className={cn("w-full", className)}
-            onPlay={() => runEventHandler(element.onPlay, { id: element.id })}
-            onPause={() => runEventHandler(element.onPause, { id: element.id })}
-            onEnded={() => runEventHandler(element.onEnded, { id: element.id })}
+            onPlay={() => runEventHandler?.(element.onPlay, { id: element.id })}
+            onPause={() => runEventHandler?.(element.onPause, { id: element.id })}
+            onEnded={() => runEventHandler?.(element.onEnded, { id: element.id })}
             {...acc}
         >
             Your browser does not support the <code>audio</code> element.

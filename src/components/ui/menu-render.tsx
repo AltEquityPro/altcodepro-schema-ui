@@ -19,13 +19,13 @@ function MenuShortcut({ children }: { children: React.ReactNode }) {
  * ------------------------------------------------ */
 function renderItems(
   items: MenuElement["items"],
-  runEventHandler: (h?: EventHandler, d?: AnyObj) => Promise<void>,
   state: AnyObj,
   t: (key: string) => string,
   Primitive: any,
-  variant: Exclude<MenuElement["variant"], "navigation">
+  variant: Exclude<MenuElement["variant"], "navigation">,
+  runEventHandler?: (h?: EventHandler, d?: AnyObj) => Promise<void>,
 ): React.ReactNode {
-  return items.map((item) => {
+  return items?.map((item) => {
     switch (item.type) {
       case "item": {
         return (
@@ -35,7 +35,7 @@ function renderItems(
               "px-4 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
               item.variant === "destructive" && "text-red-600 dark:text-red-400"
             )}
-            onSelect={() => runEventHandler(item.onSelect)}
+            onSelect={() => runEventHandler?.(item.onSelect)}
           >
             {item.icon && <DynamicIcon name={item.icon} className="size-5 mr-3" />}
             <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -52,7 +52,7 @@ function renderItems(
           <Primitive.CheckboxItem
             key={item.id}
             checked={resolveBinding(item.checked, state, t)}
-            onCheckedChange={() => runEventHandler(item.onSelect)}
+            onCheckedChange={() => runEventHandler?.(item.onSelect)}
             className="px-4 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -65,7 +65,7 @@ function renderItems(
           <Primitive.RadioItem
             key={item.id}
             value={item.value}
-            onSelect={() => runEventHandler(item.onSelect)}
+            onSelect={() => runEventHandler?.(item.onSelect)}
             className="px-4 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -98,7 +98,7 @@ function renderItems(
               <ChevronRightIcon className="ml-auto size-5 text-gray-500 dark:text-gray-400" />
             </Primitive.SubTrigger>
             <Primitive.SubContent className="z-50 rounded-md border bg-gray-100 dark:bg-gray-800 p-1 shadow-lg">
-              {renderItems(item.items, runEventHandler, state, t, Primitive, variant)}
+              {renderItems(item.items, state, t, Primitive, variant, runEventHandler)}
             </Primitive.SubContent>
           </Primitive.Sub>
         )
@@ -113,13 +113,13 @@ function renderItems(
  * ------------------------------------------------ */
 function renderNavigationDesktop(
   items: MenuItem[],
-  runEventHandler: (h?: EventHandler, d?: AnyObj) => Promise<void>,
   state: AnyObj,
   t: (key: string) => string,
   pathname: string,
-  schemaClassName?: string
+  runEventHandler?: (h?: EventHandler, d?: AnyObj) => Promise<void>,
+  schemaClassName?: string,
 ): React.ReactNode {
-  return items.map((item: any) => {
+  return items?.map((item: any) => {
     if (item.type === "sub") {
       return (
         <Navigation.Item key={item.id}>
@@ -139,7 +139,7 @@ function renderNavigationDesktop(
           </Navigation.Trigger>
           <Navigation.Content className="absolute top-full left-0 mt-2 rounded-md border bg-gray-100 dark:bg-gray-800 shadow-lg p-2">
             <div className="grid gap-1 min-w-[12rem]">
-              {renderNavigationDesktop(item.items, runEventHandler, state, t, pathname)}
+              {renderNavigationDesktop(item.items, state, t, pathname, runEventHandler)}
             </div>
           </Navigation.Content>
         </Navigation.Item>
@@ -174,7 +174,7 @@ function renderNavigationDesktop(
               onClick={(e) => {
                 if (item.onSelect) {
                   e.preventDefault()
-                  runEventHandler(item.onSelect)
+                  runEventHandler?.(item.onSelect)
                 }
               }}
             >
@@ -190,7 +190,7 @@ function renderNavigationDesktop(
               schemaClassName,
               item.variant === "destructive" && "text-red-600 dark:text-red-400"
             )}
-            onClick={() => runEventHandler(item.onSelect)}
+            onClick={() => runEventHandler?.(item.onSelect)}
           >
             {content}
           </button>
@@ -221,7 +221,7 @@ function renderNavigationDesktop(
               "px-4 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
               schemaClassName
             )}
-            onClick={() => runEventHandler(item.onSelect)}
+            onClick={() => runEventHandler?.(item.onSelect)}
           >
             <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {resolveBinding(item.label, state, t) || item.label}
@@ -247,7 +247,7 @@ function MobileSubMenu({
   schemaClassName,
 }: {
   item: any
-  runEventHandler: (h?: EventHandler, d?: AnyObj) => Promise<void>
+  runEventHandler?: (h?: EventHandler, d?: AnyObj) => Promise<void>
   state: AnyObj
   t: (key: string) => string
   pathname: string
@@ -277,7 +277,7 @@ function MobileSubMenu({
       </button>
       {open && (
         <div className="ml-6 border-l border-gray-200 dark:border-gray-700 pl-4 space-y-1">
-          {renderMobileItems(item.items, runEventHandler, state, t, pathname, schemaClassName)}
+          {renderMobileItems(item.items, state, t, pathname, schemaClassName, runEventHandler)}
         </div>
       )}
     </div>
@@ -289,13 +289,13 @@ function MobileSubMenu({
  * ------------------------ */
 function renderMobileItems(
   items: MenuElement["items"],
-  runEventHandler: (h?: EventHandler, d?: AnyObj) => Promise<void>,
   state: AnyObj,
   t: (key: string) => string,
   pathname: string,
-  schemaClassName?: string
+  schemaClassName?: string,
+  runEventHandler?: (h?: EventHandler, d?: AnyObj) => Promise<void>,
 ): React.ReactNode {
-  return items.map((item: any) => {
+  return items?.map((item: any) => {
     if (item.type === "sub") {
       return (
         <MobileSubMenu
@@ -335,7 +335,7 @@ function renderMobileItems(
         onClick={(e) => {
           if (item.onSelect) {
             e.preventDefault()
-            runEventHandler(item.onSelect)
+            runEventHandler?.(item.onSelect)
           }
         }}
         aria-current={pathname === item.href ? "page" : undefined}
@@ -354,7 +354,7 @@ function renderMobileItems(
           schemaClassName,
           item.variant === "destructive" && "text-red-600 dark:text-red-400"
         )}
-        onClick={() => runEventHandler(item.onSelect)}
+        onClick={() => runEventHandler?.(item.onSelect)}
       >
         {item.icon && <DynamicIcon name={item.icon} className="size-5" />}
         <span className="text-base text-gray-900 dark:text-gray-100">
@@ -383,7 +383,7 @@ function MobileMenu({
   isOpen: boolean
   onClose: () => void
   items: MenuElement["items"]
-  runEventHandler: (h?: EventHandler, d?: AnyObj) => Promise<void>
+  runEventHandler?: (h?: EventHandler, d?: AnyObj) => Promise<void>
   state: AnyObj
   t: (key: string) => string
   pathname: string
@@ -422,7 +422,7 @@ function MobileMenu({
         </button>
       </div>
       <nav className="flex-1 overflow-y-auto p-4">
-        {renderMobileItems(items || [], runEventHandler, state, t, pathname, schemaClassName) || (
+        {renderMobileItems(items || [], state, t, pathname, schemaClassName, runEventHandler) || (
           <div className="text-gray-900 dark:text-gray-100 text-center py-4">
             No items to display
           </div>
@@ -440,13 +440,11 @@ export function MenuRenderer({
   runEventHandler,
   state,
   t,
-  runtime
 }: {
   element: MenuElement
-  runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+  runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
   state: AnyObj
   t: (key: string) => string
-  runtime: ActionRuntime
 }) {
   const [pathname, setPathname] = React.useState("")
   const [isOpen, setIsOpen] = React.useState(false)
@@ -477,10 +475,10 @@ export function MenuRenderer({
         element,
         <Dropdown.Root>
           <Dropdown.Trigger asChild>
-            {element.trigger && <RenderChildren children={[element.trigger]} runtime={runtime} />}
+            {element.trigger && <RenderChildren children={[element.trigger]} runEventHandler={runEventHandler} />}
           </Dropdown.Trigger>
           <Dropdown.Content className="z-50 rounded-md border bg-popover p-1 shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out">
-            {renderItems(element.items, runEventHandler, state, t, Dropdown, "dropdown")}
+            {renderItems(element.items, state, t, Dropdown, "dropdown", runEventHandler)}
           </Dropdown.Content>
         </Dropdown.Root>
       )
@@ -490,10 +488,10 @@ export function MenuRenderer({
         element,
         <Context.Root>
           <Context.Trigger asChild>
-            {element.trigger && <RenderChildren children={[element.trigger]} runtime={runtime} />}
+            {element.trigger && <RenderChildren children={[element.trigger]} runEventHandler={runEventHandler} />}
           </Context.Trigger>
           <Context.Content className="z-50 rounded-md border bg-popover p-1 shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out">
-            {renderItems(element.items, runEventHandler, state, t, Context, "context")}
+            {renderItems(element.items, state, t, Context, "context", runEventHandler)}
           </Context.Content>
         </Context.Root>
       )
@@ -508,7 +506,7 @@ export function MenuRenderer({
                 {resolveBinding(menu.label, state, t) || menu.label}
               </Menubar.Trigger>
               <Menubar.Content className="z-50 rounded-md border bg-popover p-1 shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out">
-                {renderItems(menu.items, runEventHandler, state, t, Menubar, "menubar")}
+                {renderItems(menu.items, state, t, Menubar, "menubar", runEventHandler)}
               </Menubar.Content>
             </Menubar.Menu>
           ))}
@@ -526,10 +524,10 @@ export function MenuRenderer({
               <Navigation.List className={cn("flex items-center", element.styles?.className)}>
                 {renderNavigationDesktop(
                   element.items || [],
-                  runEventHandler,
                   state,
                   t,
                   pathname,
+                  runEventHandler,
                   element.styles?.className
                 )}
               </Navigation.List>

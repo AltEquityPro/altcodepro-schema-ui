@@ -54,7 +54,7 @@ function RadioGroupRenderer({
   element: RadioGroupElement
   state: AnyObj
   t: (key: string) => string
-  runEventHandler: (
+  runEventHandler?: (
     handler?: EventHandler,
     dataOverride?: AnyObj
   ) => Promise<void>
@@ -67,7 +67,7 @@ function RadioGroupRenderer({
     <RadioGroup
       value={value}
       onValueChange={(v) =>
-        runEventHandler(element.onChange, { value: v })
+        runEventHandler?.(element.onChange, { value: v })
       }
       className={element.styles?.className}
     >

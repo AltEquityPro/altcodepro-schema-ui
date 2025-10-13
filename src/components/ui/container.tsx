@@ -4,7 +4,7 @@ import {
     isVisible,
     getAccessibilityProps,
 } from "../../lib/utils";
-import { ContainerElement, AnyObj, ActionRuntime } from "../../types";
+import { ContainerElement, AnyObj, ActionRuntime, EventHandler } from "../../types";
 import { RenderChildren } from "../../schema/RenderChildren";
 import clsx from "clsx";
 
@@ -16,12 +16,11 @@ export function ContainerRenderer({
     element,
     state = {},
     t = (s) => s,
-    runtime
-
+    runEventHandler
 }: {
     element: ContainerElement;
     state?: AnyObj;
-    runtime: ActionRuntime;
+    runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>;
     t?: (s: string) => string;
 }) {
     const container = element;
@@ -45,7 +44,7 @@ export function ContainerRenderer({
             {...accessibilityProps}
         >
             {container.children && (
-                <RenderChildren children={container.children} runtime={runtime} />
+                <RenderChildren children={container.children} runEventHandler={runEventHandler} />
             )}
         </div>
     );

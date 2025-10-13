@@ -11,9 +11,8 @@ import {
   resolveAnimation,
 } from "../../lib/utils";
 import { useAppState } from "../../schema/StateContext";
-import { useActionHandler } from "../../schema/Actions";
 import { ElementResolver } from "../../schema/ElementResolver";
-import { BreadcrumbElement, UIElement } from "../../types";
+import { AnyObj, BreadcrumbElement, EventHandler, UIElement } from "../../types";
 import {
   Tooltip,
   TooltipTrigger,
@@ -116,12 +115,11 @@ function BreadcrumbEllipsis({ className, ...props }: React.ComponentProps<"span"
 ------------------------- */
 interface BreadcrumbRendererProps {
   element: BreadcrumbElement;
-  runtime?: Record<string, any>;
+  runEventHandler?: ((handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>) | undefined
 }
 
-function BreadcrumbRenderer({ element, runtime = {} }: BreadcrumbRendererProps) {
+function BreadcrumbRenderer({ element, runEventHandler }: BreadcrumbRendererProps) {
   const { state, t } = useAppState();
-  const { runEventHandler } = useActionHandler({ runtime });
 
   // Styles, accessibility, animations
   const schemaClass = classesFromStyleProps(element.styles);
@@ -167,7 +165,7 @@ function BreadcrumbRenderer({ element, runtime = {} }: BreadcrumbRendererProps) 
       {...(element.animations?.framework === "framer-motion" ? (anim as any) : {})}
     >
       <BreadcrumbList>
-        {items.map((item, i) => {
+        {items?.map((item, i) => {
           if (item.id === "ellipsis") {
             return (
               <React.Fragment key={`ellipsis-${i}`}>
@@ -184,26 +182,26 @@ function BreadcrumbRenderer({ element, runtime = {} }: BreadcrumbRendererProps) 
               onClick={(e) => {
                 if (item.onClick) {
                   e.preventDefault();
-                  runEventHandler(item.onClick, { item });
+                  runEventHandler?.(item.onClick, { item });
                 }
               }}
             >
               {item.iconLeft && (
-                <ElementResolver element={item.iconLeft as UIElement} runtime={runtime} />
+                <ElementResolver element={item.iconLeft as UIElement} runEventHandler={runEventHandler} />
               )}
               {label}
               {item.iconRight && (
-                <ElementResolver element={item.iconRight as UIElement} runtime={runtime} />
+                <ElementResolver element={item.iconRight as UIElement} runEventHandler={runEventHandler} />
               )}
             </BreadcrumbLink>
           ) : (
             <BreadcrumbPage>
               {item.iconLeft && (
-                <ElementResolver element={item.iconLeft as UIElement} runtime={runtime} />
+                <ElementResolver element={item.iconLeft as UIElement} runEventHandler={runEventHandler} />
               )}
               {label}
               {item.iconRight && (
-                <ElementResolver element={item.iconRight as UIElement} runtime={runtime} />
+                <ElementResolver element={item.iconRight as UIElement} runEventHandler={runEventHandler} />
               )}
             </BreadcrumbPage>
           );

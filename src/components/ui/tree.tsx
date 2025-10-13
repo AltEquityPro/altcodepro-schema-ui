@@ -125,7 +125,7 @@ interface TreeRendererProps {
     // If you’re using inside a scope without StateProvider, pass state + t; otherwise taken from context
     state?: AnyObj
     t?: (key: string) => string
-    runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+    runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }
 
 export function TreeRenderer(props: TreeRendererProps) {
@@ -192,8 +192,8 @@ export function TreeRenderer(props: TreeRendererProps) {
 
         // Node event + element event
         await Promise.all([
-            runEventHandler((node as any).onExpand, { id: node.id, expanded: willExpand }),
-            runEventHandler(element.onNodeExpand, { id: node.id, expanded: willExpand }),
+            runEventHandler?.((node as any).onExpand, { id: node.id, expanded: willExpand }),
+            runEventHandler?.(element.onNodeExpand, { id: node.id, expanded: willExpand }),
         ])
 
         // Handle lazy children
@@ -201,7 +201,7 @@ export function TreeRenderer(props: TreeRendererProps) {
         if (isLazy && element.onLoadChildren && !loadingIds.has(node.id)) {
             setLoadingIds((s) => new Set(s).add(node.id))
             // Ask schema to load; it should call callback(children)
-            await runEventHandler(element.onLoadChildren, {
+            await runEventHandler?.(element.onLoadChildren, {
                 id: node.id,
                 callback: (children: TreeNodeElement[]) => {
                     // Put into state so that next render resolves them
@@ -253,8 +253,8 @@ export function TreeRenderer(props: TreeRendererProps) {
 
         setSelected(next)
         await Promise.all([
-            runEventHandler((node as any).onSelect, { id: node.id, selected: next.has(node.id) }),
-            runEventHandler(element.onNodeSelect, { id: node.id, selected: next.has(node.id) }),
+            runEventHandler?.((node as any).onSelect, { id: node.id, selected: next.has(node.id) }),
+            runEventHandler?.(element.onNodeSelect, { id: node.id, selected: next.has(node.id) }),
         ])
     }
 
@@ -348,7 +348,7 @@ export function TreeRenderer(props: TreeRendererProps) {
         if (!d) return
         if (d.parentId !== parentId || d.fromIndex === toIndex) return
         // Schema layer does actual reordering and state update:
-        await runEventHandler(element.onReorder, {
+        await runEventHandler?.(element.onReorder, {
             parentId,
             fromIndex: d.fromIndex,
             toIndex,
@@ -360,8 +360,8 @@ export function TreeRenderer(props: TreeRendererProps) {
         (node: TreeNodeResolved) => async (e: React.MouseEvent) => {
             e.preventDefault()
             await Promise.all([
-                runEventHandler((node as any).onContextMenu, { id: node.id }),
-                runEventHandler(element.onContextMenu, { id: node.id }),
+                runEventHandler?.((node as any).onContextMenu, { id: node.id }),
+                runEventHandler?.(element.onContextMenu, { id: node.id }),
             ])
         }
 
@@ -418,7 +418,7 @@ export function TreeRenderer(props: TreeRendererProps) {
                                 onToggleSelect={toggleSelect}
                                 onContextMenu={handleContextMenu}
                                 onAction={(actionId) =>
-                                    runEventHandler((n as any).onAction, { id: n.id, actionId })
+                                    runEventHandler?.((n as any).onAction, { id: n.id, actionId })
                                 }
                                 // DnD
                                 draggable={draggable}
@@ -691,7 +691,7 @@ function Menu({
                     role="menu"
                     className="absolute right-0 z-10 mt-1 min-w-36 rounded-md border bg-popover p-1 shadow-lg"
                 >
-                    {items.map((it) => (
+                    {items?.map((it) => (
                         <button
                             key={it.id}
                             role="menuitem"

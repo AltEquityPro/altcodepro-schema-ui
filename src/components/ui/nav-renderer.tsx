@@ -78,7 +78,7 @@ function CollapsibleNavItem({
     state: AnyObj;
     t: (key: string) => string;
     openRoutes: Set<string>;
-    setOpenRoutes: (routes: Set<string>) => void;
+    setOpenRoutes: (routes: any) => void;
     level?: number;
     variant?: "sidebar" | "mobile";
 }) {
@@ -105,7 +105,7 @@ function CollapsibleNavItem({
             {hasChildren ? (
                 <button
                     onClick={() => {
-                        setOpenRoutes((prev) => {
+                        setOpenRoutes((prev: any) => {
                             const newSet = new Set(prev);
                             if (newSet.has(route.href)) {
                                 newSet.delete(route.href);
@@ -290,7 +290,7 @@ function MobileBurger({
     overlayStyle?: string;
     sheetStyle?: string;
 }) {
-    const drawerRef = useRef<HTMLElement>(null);
+    const drawerRef = useRef<HTMLElement>(undefined);
     const [openRoutes, setOpenRoutes] = useState<Set<string>>(new Set());
 
     useClickOutside(drawerRef, onClose);
@@ -315,7 +315,7 @@ function MobileBurger({
     return (
         <div className={clsx("fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate__animated animate__fadeIn animate__faster", overlayStyle)}>
             <div
-                ref={drawerRef}
+                ref={drawerRef as any}
                 className={clsx(
                     "absolute left-0 top-0 h-full w-80 shadow-2xl p-6 flex flex-col animate__animated animate__slideInLeft border-r border-border/50",
                     sheetStyle

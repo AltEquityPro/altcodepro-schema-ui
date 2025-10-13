@@ -202,7 +202,7 @@ interface CalendarRendererProps {
   element: CalendarElement
   state: AnyObj
   t: (key: string) => string
-  runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+  runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }
 
 function CalendarRenderer({
@@ -295,7 +295,7 @@ function CalendarRenderer({
       <Calendar
         mode={(element.selectionMode || "single") as any}
         selected={selectedDate}
-        onSelect={(date: any) => element.onSelect && runEventHandler(element.onSelect, { date })}
+        onSelect={(date: any) => element.onSelect && runEventHandler?.(element.onSelect, { date })}
         modifiers={{
           custom: (day: Date) => !!dayEventColors[day.toDateString()],
         }}
@@ -317,10 +317,10 @@ function CalendarRenderer({
               className="rounded-md border bg-card p-3 shadow-sm hover:bg-accent/50 transition"
               role="button"
               tabIndex={0}
-              onClick={() => e.onClick && runEventHandler(e.onClick, { id: e.id })}
+              onClick={() => e.onClick && runEventHandler?.(e.onClick, { id: e.id })}
               onKeyDown={(ev) => {
                 if (ev.key === "Enter" || ev.key === " ") {
-                  e.onClick && runEventHandler(e.onClick, { id: e.id })
+                  e.onClick && runEventHandler?.(e.onClick, { id: e.id })
                 }
               }}
             >
@@ -344,7 +344,7 @@ function CalendarRenderer({
                   className="mt-2"
                   onClick={(ev) => {
                     ev.stopPropagation()
-                    runEventHandler(e.onClick, { id: e.id })
+                    runEventHandler?.(e.onClick, { id: e.id })
                   }}
                 >
                   {e.btnLabel}

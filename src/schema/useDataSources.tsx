@@ -2,9 +2,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DataSource, AnyObj, UIProject, DataMapping, UIScreenDef } from "../types";
 import { useAppState } from "./StateContext";
-import { deepResolveBindings, joinUrl, resolveBinding } from "../lib/utils";
+import { resolveDataSource, deepResolveDataSource, joinUrl, anySignal } from "../lib/utils";
 
-type Fetcher = (ds: DataSource, state: AnyObj, t: (k: string) => string, signal?: AbortSignal) => Promise<any>;
+type Fetcher = (
+    ds: DataSource,
+    state: AnyObj,
+    signal?: AbortSignal,
+    formData?: AnyObj
+) => Promise<any>;
 
 async function withRetry<T>(
     fn: () => Promise<T>,
@@ -38,7 +43,12 @@ async function withRetry<T>(
     throw lastError;
 }
 
-function applyDataMappings(out: any, ds: DataSource, mappings: DataMapping[] | undefined, setState: (path: string, value: any) => void): any {
+function applyDataMappings(
+    out: any,
+    ds: DataSource,
+    mappings: DataMapping[] | undefined,
+    setState: (path: string, value: any) => void
+): any {
     if (!mappings) return out;
     let result = out;
     for (const m of mappings) {
@@ -60,48 +70,35 @@ function applyDataMappings(out: any, ds: DataSource, mappings: DataMapping[] | u
     return result;
 }
 
-const defaultFetcher: Fetcher = async (ds, state, t, signal) => {
-    if (!ds.baseUrl) {
-        throw new Error('baseUrl is required for DataSource');
-    }
-
-    const baseUrl = String(resolveBinding(ds.baseUrl, state, t));
-    const path = String(resolveBinding(ds.path || '', state, t));
+const defaultFetcher: Fetcher = async (ds, state, signal, formData) => {
+    const baseUrl = ds.baseUrl || '';
+    const path = ds.path || '';
     let url = joinUrl(baseUrl, path);
+    const headers: Record<string, string> = ds.headers || {};
 
-    const headers: Record<string, string> = Object.entries(ds.headers || {}).reduce(
-        (acc, [k, v]) => ({ ...acc, [k]: String(resolveBinding(v, state, t)) }),
-        {}
-    );
-    if (ds.body && !headers['Content-Type']) {
-        headers['Content-Type'] = 'application/json';
-    }
-
-    const authValue = ds.auth ? String(resolveBinding(ds.auth.value, state, t)) : '';
-    if (ds.auth && authValue) {
+    if (ds.auth && ds.auth.value) {
         switch (ds.auth.type) {
             case 'bearer':
-                headers['Authorization'] = `Bearer ${authValue}`;
+                headers['Authorization'] = `Bearer ${ds.auth.value}`;
                 break;
             case 'basic':
-                headers['Authorization'] = `Basic ${btoa(authValue)}`;
+                headers['Authorization'] = `Basic ${btoa(ds.auth.value)}`;
                 break;
             case 'api_key':
-                headers['X-Api-Key'] = authValue;
+                headers['X-Api-Key'] = ds.auth.value;
                 break;
         }
     }
 
     if (ds.method === "GRAPHQL") {
         const isSubscription = ds.graphql_operation === 'subscription';
-        const variables = resolveBinding(ds.body || {}, state, t);
-        const query = String(resolveBinding(ds.query || '', state, t));
+        const variables = ds.body || {};
+        const query = ds.query || '';
         const body = { query, variables };
-
         if (isSubscription) {
-            if (ds.auth?.type === 'bearer' && authValue) {
+            if (ds.auth?.type === 'bearer' && ds.auth.value) {
                 url += url.includes('?') ? '&' : '?';
-                url += `access_token=${encodeURIComponent(authValue)}`;
+                url += `access_token=${encodeURIComponent(ds.auth.value)}`;
             }
             return { _sub: true, url, query, variables, headers, protocol: ds.protocol || 'graphql-ws' };
         } else {
@@ -118,25 +115,26 @@ const defaultFetcher: Fetcher = async (ds, state, t, signal) => {
     }
 
     if (ds.method === "WEBSOCKET") {
-        if (ds.auth?.type === 'bearer' && authValue) {
+        if (ds.auth?.type === 'bearer' && ds.auth.value) {
             url += url.includes('?') ? '&' : '?';
-            url += `access_token=${encodeURIComponent(authValue)}`;
+            url += `access_token=${encodeURIComponent(ds.auth.value)}`;
         }
-        return { _ws: true, url, initialMessage: resolveBinding(ds.body, state, t), headers };
+        return { _ws: true, url, initialMessage: ds.body, headers };
     }
 
     const queryParams = ds.queryParams
-        ? new URLSearchParams(Object.entries(ds.queryParams).map(([k, v]) => [k, String(resolveBinding(v, state, t))]))
+        ? new URLSearchParams(Object.entries(ds.queryParams).map(([k, v]) => [k, String(v)]))
         : null;
     if (queryParams) url += (url.includes('?') ? '&' : '?') + queryParams.toString();
 
     const r = await fetch(url, {
         method: ds.method || "GET",
         headers,
-        body: ds.body ? (headers['Content-Type'] === 'application/json' ? JSON.stringify(resolveBinding(ds.body, state, t)) : resolveBinding(ds.body, state, t)) : undefined,
+        body: (ds.body ? (headers['Content-Type'] === 'application/json' ? JSON.stringify(ds.body) : ds.body) : undefined) as any,
         credentials: ds.credentials || 'same-origin',
         signal,
     });
+
     if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
     const ct = r.headers.get("content-type") || "";
     return ct.includes("application/json") ? await r.json() : await r.text();
@@ -158,7 +156,6 @@ function setupWebSocket(
 
     const connect = () => {
         ws = new WebSocket(url, protocol);
-
         ws.onopen = () => {
             backoff = 1000;
             const initPayload = authHeaders && authHeaders['Authorization'] ? { Authorization: authHeaders['Authorization'] } : {};
@@ -175,7 +172,6 @@ function setupWebSocket(
                 }, heartbeat.interval);
             }
         };
-
         ws.onmessage = (event) => {
             let data;
             try {
@@ -189,7 +185,6 @@ function setupWebSocket(
                 onMessage(data);
             }
         };
-
         ws.onclose = (event) => {
             if (heartbeatInterval) clearInterval(heartbeatInterval);
             if (!event.wasClean) {
@@ -197,13 +192,11 @@ function setupWebSocket(
                 backoff = Math.min(backoff * 2, maxBackoff);
             }
         };
-
         ws.onerror = (error) => {
             console.error('WebSocket error', error);
             ws?.close();
         };
     };
-
     connect();
 
     return () => {
@@ -250,37 +243,16 @@ export function useDataSources({
     screen?: UIScreenDef;
     fetcher?: Fetcher;
 }) {
-    const { state, setState, t } = useAppState();
+    const { state, setState } = useAppState();
     const [data, setData] = useState<Record<string, any>>({});
     const timers = useRef<Record<string, NodeJS.Timeout>>({});
     const wsCleanups = useRef<Record<string, () => void>>({});
     const abortControllers = useRef<Record<string, AbortController>>({});
 
     const resolved = useMemo(() => {
-        const env = globalConfig?.endpoints?.environments?.default || 'prod';
-        const envConfig = globalConfig?.endpoints?.environments?.values[env] || {};
-        const defaultHeaders = globalConfig?.endpoints?.defaultHeaders || {};
-        const globalAuth = globalConfig?.endpoints?.auth;
-        const globalEndpoints = globalConfig?.endpoints?.registry || [];
-
-        return dataSources.map((ds) => {
-            let resolvedDs: DataSource = { ...ds };
-
-            if (ds.refId) {
-                const globalRef = globalEndpoints.find(ref => ref.id === ds.refId);
-                if (globalRef) {
-                    resolvedDs = { ...globalRef, ...resolvedDs };
-                }
-            }
-
-            if (envConfig.baseUrl) resolvedDs.baseUrl = envConfig.baseUrl;
-            if (envConfig.headers) resolvedDs.headers = { ...resolvedDs.headers, ...envConfig.headers };
-            resolvedDs.headers = { ...defaultHeaders, ...resolvedDs.headers };
-            if (!resolvedDs.auth && globalAuth) resolvedDs.auth = globalAuth;
-
-            return deepResolveBindings(resolvedDs, state, t) as DataSource;
-        });
-    }, [dataSources, state, t, globalConfig]);
+        // Filter out POST methods unless explicitly triggered by an action
+        return dataSources.filter(ds => ds.method !== "POST").map((ds) => resolveDataSource(ds, globalConfig, state));
+    }, [dataSources, globalConfig, state]);
 
     const mappings = useMemo(() => {
         const globalMappings = globalConfig?.endpoints?.dataMappings || [];
@@ -291,17 +263,15 @@ export function useDataSources({
     useEffect(() => {
         let mounted = true;
         const stops: Array<() => void> = [];
-
         (async () => {
             for (const ds of resolved) {
                 const controller = new AbortController();
                 abortControllers.current[ds.id] = controller;
-
                 const run = async () => {
                     try {
                         const out = ds.retry
-                            ? await withRetry(() => fetcher(ds, state, t, controller.signal), ds.retry.attempts, ds.retry.delay, ds.retry.strategy, controller.signal)
-                            : await fetcher(ds, state, t, controller.signal);
+                            ? await withRetry(() => fetcher(ds, state, controller.signal), ds.retry.attempts, ds.retry.delay, ds.retry.strategy, controller.signal)
+                            : await fetcher(ds, state, controller.signal);
                         const mapped = applyDataMappings(out, ds, mappings, setState);
                         if (mounted) setData(prev => ({ ...prev, [ds.id]: mapped }));
                     } catch (e: any) {
@@ -323,7 +293,7 @@ export function useDataSources({
                 } else {
                     let out;
                     try {
-                        out = await fetcher(ds, state, t);
+                        out = await fetcher(ds, state, undefined);
                     } catch (e: any) {
                         if (e.name === 'AbortError') continue;
                         const errorObj = {
@@ -337,7 +307,6 @@ export function useDataSources({
                         }
                         continue;
                     }
-
                     if (out._ws || out._sub) {
                         const cleanup = out._sub
                             ? setupGraphQLSubscription(out.url, out.query, out.variables, (newData) => {
@@ -352,7 +321,6 @@ export function useDataSources({
                                     setData(prev => ({ ...prev, [ds.id]: mapped }));
                                 }
                             }, out.initialMessage, ds.heartbeat, out.headers, out.protocol);
-
                         wsCleanups.current[ds.id] = cleanup;
                         stops.push(cleanup);
                     }
@@ -373,7 +341,6 @@ export function useDataSources({
                 }
             }
         })();
-
         return () => {
             mounted = false;
             stops.forEach(s => s());
@@ -384,7 +351,14 @@ export function useDataSources({
             Object.values(wsCleanups.current).forEach(c => c());
             wsCleanups.current = {};
         };
-    }, [resolved, fetcher, state, t, setState, mappings]);
+    }, [resolved, fetcher, state, setState, mappings]);
+
+    useEffect(() => {
+        if (!data) return;
+        for (const [id, val] of Object.entries(data)) {
+            setState(id, val);
+        }
+    }, [data, setState]);
 
     return data;
 }

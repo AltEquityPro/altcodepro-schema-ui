@@ -102,7 +102,6 @@ export function CookieBannerRenderer({
                                         params: { fn: () => setShowModal(true) },
                                     },
                                 }}
-                                runtime={{}}
                             />
                         )}
                         {c.acceptButton && (
@@ -127,8 +126,6 @@ export function CookieBannerRenderer({
                                 id: "cookie-options",
                                 name: "Cookie Options",
                                 type: ElementType.container,
-                                layout: "flex",
-                                gap: 3,
                                 children: c.options?.map((opt) => ({
                                     id: opt.id,
                                     name: opt.label as string,
@@ -161,7 +158,6 @@ export function CookieBannerRenderer({
                         ],
                     }}
                     runEventHandler={localRunEventHandler}
-                    runtime={{}}
                 />
             )}
         </>

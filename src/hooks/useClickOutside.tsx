@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { RefObject } from "react";
 
 export function useClickOutside<T extends HTMLElement = HTMLElement>(
-    ref: RefObject<T>,
+    ref: RefObject<T | undefined>,
     handler: () => void,
     options?: boolean | AddEventListenerOptions
 ): void {

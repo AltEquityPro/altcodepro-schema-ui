@@ -13,7 +13,8 @@ import {
     Volume2Icon,
     VolumeXIcon,
 } from "lucide-react";
-import { VideoElement } from "../../types";
+import { ElementType, ThreeDModelElement, VideoElement } from "../../types";
+import { ThreeDRenderer } from "./threed-render";
 
 export function VideoRenderer({
     element,
@@ -21,10 +22,10 @@ export function VideoRenderer({
     t,
     runEventHandler,
 }: {
-    element: VideoElement;
+    element: VideoElement
     state: Record<string, any>;
     t: (key: string) => string;
-    runEventHandler: (h?: any, d?: any) => Promise<void>;
+    runEventHandler?: (h?: any, d?: any) => Promise<void>;
 }) {
     // Refs
     const mainRef = React.useRef<HTMLVideoElement>(null);
@@ -93,8 +94,9 @@ export function VideoRenderer({
         return h > 0 ? `${h}:${m.toString().padStart(2, "0")}:${sec}` : `${m}:${sec}`;
     };
 
-    // Initialize Video
+    // Initialize Video (for non-360 videos)
     React.useEffect(() => {
+        if (element.is360) return; // Skip for 360 videos
         const video = mainRef.current;
         if (!video || !src) {
             setIsLoading(true);
@@ -149,6 +151,7 @@ export function VideoRenderer({
             };
             video.onerror = (e) => {
                 setIsLoading(false);
+                setError(`Video error: ${e}`);
             };
         }
 
@@ -177,7 +180,7 @@ export function VideoRenderer({
             video.removeEventListener("ended", onEnd);
             if (hlsRef.current) hlsRef.current.destroy();
         };
-    }, [src, element.streaming, emit]);
+    }, [src, element.streaming, emit, element.is360]);
 
     // Attempt to play with muted fallback for autoplay
     const attemptPlay = (video: HTMLVideoElement) => {
@@ -193,6 +196,7 @@ export function VideoRenderer({
 
     // Resume position
     React.useEffect(() => {
+        if (element.is360) return; // Skip for 360 videos
         const video = mainRef.current;
         if (!video || !resumeKey) return;
         const saved = localStorage.getItem(resumeKey);
@@ -200,10 +204,11 @@ export function VideoRenderer({
         const handler = () => localStorage.setItem(resumeKey, String(video.currentTime || 0));
         video.addEventListener("timeupdate", handler);
         return () => video.removeEventListener("timeupdate", handler);
-    }, [resumeKey]);
+    }, [resumeKey, element.is360]);
 
     // Captions injection & control
     React.useEffect(() => {
+        if (element.is360) return; // Skip for 360 videos
         const video = mainRef.current;
         if (!video || !element.captions) return;
         [...video.querySelectorAll("track[data-managed=\"true\"]")].forEach((n) => n.remove());
@@ -218,7 +223,7 @@ export function VideoRenderer({
             video.appendChild(track);
         });
         setTextTracks(video.textTracks);
-    }, [element.captions, state, t]);
+    }, [element.captions, state, t, element.is360]);
 
     const setCaptionIndex = (idx: number | null) => {
         if (!textTracks) return;
@@ -235,7 +240,7 @@ export function VideoRenderer({
 
     // Hotkeys like YouTube
     React.useEffect(() => {
-        if (!element.hotkeys) return;
+        if (!element.hotkeys || element.is360) return; // Skip hotkeys for 360 videos
         const onKey = (e: KeyboardEvent) => {
             const v = mainRef.current;
             if (!v) return;
@@ -283,12 +288,22 @@ export function VideoRenderer({
         };
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
-    }, [element.hotkeys, element.showSkipIntro, element.showNextEpisode, element.onNextEpisode, activeCaption, textTracks, emit, runEventHandler]);
+    }, [
+        element.hotkeys,
+        element.showSkipIntro,
+        element.showNextEpisode,
+        element.onNextEpisode,
+        activeCaption,
+        textTracks,
+        emit,
+        runEventHandler,
+        element.is360,
+    ]);
 
     // Picture-in-Picture support flag
     React.useEffect(() => {
-        setPipSupported(!!document.pictureInPictureEnabled);
-    }, []);
+        setPipSupported(!!document.pictureInPictureEnabled && !element.is360); // Disable PiP for 360 videos
+    }, [element.is360]);
 
     // Thumbnails hover preview helpers
     const onTimelineHover = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -317,12 +332,13 @@ export function VideoRenderer({
 
     // Ads Handling
     React.useEffect(() => {
-        if (!element.ads) return;
+        if (element.is360 || !element.ads) return; // Skip ads for 360 videos
         const pre = (element.ads.preRoll || []).map((b) => resolveBinding(b, state, t) as string);
         setAdQueue(pre);
-    }, [element.ads, state, t]);
+    }, [element.ads, state, t, element.is360]);
 
     React.useEffect(() => {
+        if (element.is360) return; // Skip for 360 videos
         const v = mainRef.current;
         if (!v || !element.ads) return;
         const { midRoll, postRoll } = element.ads;
@@ -347,9 +363,10 @@ export function VideoRenderer({
             v.removeEventListener("timeupdate", onTime);
             v.removeEventListener("ended", onEnded);
         };
-    }, [element.ads, showAd, state, t]);
+    }, [element.ads, showAd, state, t, element.is360]);
 
     React.useEffect(() => {
+        if (element.is360) return; // Skip for 360 videos
         const adV = adRef.current;
         const mainV = mainRef.current;
         if (!adV || !mainV) return;
@@ -398,14 +415,14 @@ export function VideoRenderer({
             adV.removeEventListener("timeupdate", onTime);
             adV.removeEventListener("ended", onEnded);
         };
-    }, [adQueue]);
+    }, [adQueue, emit, state, t, element.is360]);
 
     React.useEffect(() => {
-        if (skipCountdown == null) return;
+        if (element.is360 || skipCountdown == null) return; // Skip for 360 videos
         if (skipCountdown <= 0) return;
         const id = setInterval(() => setSkipCountdown((n) => (n == null ? n : n - 1)), 1000);
         return () => clearInterval(id);
-    }, [skipCountdown]);
+    }, [skipCountdown, element.is360]);
 
     const finishAd = () => {
         setAdQueue((q) => q.slice(1));
@@ -500,162 +517,229 @@ export function VideoRenderer({
     const defaultHeight = element.height || `min(720px, calc(${defaultWidth} / ${aspectRatio}))`;
     const minHeight = element.height ? `${element.height}px` : "360px";
 
+    // Map VideoElement to ThreeDModelElement for 360 videos
+    const threeDElement: ThreeDModelElement = {
+        type: ElementType.three_d_model,
+        id: `three_${element.id}`,
+        name: `${element.name} 360 Video`,
+        src: element.src,
+        mode: "360_video",
+        autoplay: element.autoPlay,
+        loop: element.loop,
+        streaming: element.streaming,
+        stereo: element.stereo,
+        styles: { className: 'w-full  h-dvh' },
+    };
+
     return (
         <div
             ref={containerRef}
-            className="relative w-full bg-black rounded-lg overflow-hidden shadow-lg group"
+            className="relative  w-full bg-black rounded-lg overflow-hidden shadow-lg group"
             style={{ aspectRatio: "16/9", width: defaultWidth, height: defaultHeight, minHeight }}
         >
-            {/* Loading/Error Banner */}
-            {(isLoading || error) && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/90 text-white text-lg font-semibold z-10">
-                    {error || "Loading Video..."}
-                </div>
-            )}
+            {element.is360 ? (
+                <ThreeDRenderer
+                    threeElement={threeDElement}
+                    state={state}
+                    t={t}
+                    runEventHandler={runEventHandler}
+                />
+            ) : (
+                <>
+                    {/* Loading/Error Banner */}
+                    {(isLoading || error) && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/90 text-white text-lg font-semibold z-10">
+                            {error || "Loading Video..."}
+                        </div>
+                    )}
 
-            {/* MAIN VIDEO */}
-            <video
-                ref={mainRef}
-                className={cn("w-full h-full object-cover", showAd && "opacity-0 pointer-events-none")}
-                autoPlay={element.autoPlay}
-                muted={element.autoPlay ?? false}
-                loop={element.loop}
-                playsInline
-                preload={element.caching ? "auto" : "metadata"}
-                onLoadedMetadata={(e) => setDuration((e.currentTarget as HTMLVideoElement).duration || 0)}
-            />
+                    {/* MAIN VIDEO */}
+                    <video
+                        ref={mainRef}
+                        className={cn("w-full h-full object-cover", showAd && "opacity-0 pointer-events-none")}
+                        autoPlay={element.autoPlay}
+                        muted={element.autoPlay ?? false}
+                        loop={element.loop}
+                        playsInline
+                        preload={element.caching ? "auto" : "metadata"}
+                        onLoadedMetadata={(e) => setDuration((e.currentTarget as HTMLVideoElement).duration || 0)}
+                    />
 
-            {/* AD OVERLAY */}
-            {showAd && (
-                <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20">
-                    <video ref={adRef} className="w-full h-full object-cover" controls={false} playsInline />
-                    {element.ads?.skippableAfter != null && (
-                        <div className="absolute bottom-6 right-6">
-                            {skipCountdown != null && skipCountdown > 0 ? (
-                                <span className="text-white text-base bg-black/80 px-3 py-2 rounded-lg">{`Skip in ${skipCountdown}s`}</span>
-                            ) : (
-                                <Button size="sm" variant="default" onClick={skipAd} className="flex items-center gap-2 bg-white/90 text-black hover:bg-white">
-                                    <SkipForwardIcon className="size-5" /> Skip Ad
-                                </Button>
+                    {/* AD OVERLAY */}
+                    {showAd && (
+                        <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20">
+                            <video ref={adRef} className="w-full h-full object-cover" controls={false} playsInline />
+                            {element.ads?.skippableAfter != null && (
+                                <div className="absolute bottom-6 right-6">
+                                    {skipCountdown != null && skipCountdown > 0 ? (
+                                        <span className="text-white text-base bg-black/80 px-3 py-2 rounded-lg">{`Skip in ${skipCountdown}s`}</span>
+                                    ) : (
+                                        <Button
+                                            size="sm"
+                                            variant="default"
+                                            onClick={skipAd}
+                                            className="flex items-center gap-2 bg-white/90 text-black hover:bg-white"
+                                        >
+                                            <SkipForwardIcon className="size-5" /> Skip Ad
+                                        </Button>
+                                    )}
+                                </div>
                             )}
                         </div>
                     )}
-                </div>
-            )}
 
-            {/* CUSTOM CONTROL BAR (only if not using native controls) */}
-            {!element.controls && (
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30">
-                    {/* Timeline */}
-                    <div className="relative w-full mb-4" onMouseMove={onTimelineHover} onMouseLeave={onHoverLeave}>
-                        {element.showThumbnails && element.thumbnails && hoverTime != null && (
-                            <div className="absolute -top-28 left-1/2 -translate-x-1/2 border border-white/20 rounded-lg shadow-lg" style={thumbStyle} />
-                        )}
-                        <input
-                            type="range"
-                            min={0}
-                            max={Math.max(0, duration)}
-                            step={0.1}
-                            value={Math.min(currentTime, duration)}
-                            onChange={onSeek}
-                            className="w-full h-2 bg-gray-700/60 rounded-full cursor-pointer accent-red-600 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:bg-red-600 [&::-webkit-slider-thumb]:rounded-full"
-                        />
-                        {element.chapters && element.chapters.length > 0 && (
-                            <div className="absolute inset-x-0 -bottom-1 h-1 pointer-events-none">
-                                {element.chapters.map((c, i) => (
+                    {/* CUSTOM CONTROL BAR (only if not using native controls) */}
+                    {!element.controls && (
+                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30">
+                            {/* Timeline */}
+                            <div className="relative w-full mb-4" onMouseMove={onTimelineHover} onMouseLeave={onHoverLeave}>
+                                {element.showThumbnails && element.thumbnails && hoverTime != null && (
                                     <div
-                                        key={i}
-                                        title={c.title}
-                                        className="absolute top-0 h-1 w-1 bg-white/80 pointer-events-auto"
-                                        style={{ left: `${(c.start / Math.max(1, duration)) * 100}%` }}
-                                        onClick={() => seekTo(c.start)}
+                                        className="absolute -top-28 left-1/2 -translate-x-1/2 border border-white/20 rounded-lg shadow-lg"
+                                        style={thumbStyle}
                                     />
-                                ))}
+                                )}
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={Math.max(0, duration)}
+                                    step={0.1}
+                                    value={Math.min(currentTime, duration)}
+                                    onChange={onSeek}
+                                    className="w-full h-2 bg-gray-700/60 rounded-full cursor-pointer accent-red-600 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:bg-red-600 [&::-webkit-slider-thumb]:rounded-full"
+                                />
+                                {element.chapters && element.chapters.length > 0 && (
+                                    <div className="absolute inset-x-0 -bottom-1 h-1 pointer-events-none">
+                                        {element.chapters.map((c, i) => (
+                                            <div
+                                                key={i}
+                                                title={c.title}
+                                                className="absolute top-0 h-1 w-1 bg-white/80 pointer-events-auto"
+                                                style={{ left: `${(c.start / Math.max(1, duration)) * 100}%` }}
+                                                onClick={() => seekTo(c.start)}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
 
-                    {/* Controls Row */}
-                    <div className="flex items-center justify-between gap-4 text-white">
-                        <div className="flex items-center gap-3">
-                            <Button size="icon" variant="ghost" onClick={togglePlay} className="text-white hover:bg-white/20 rounded-full w-10 h-10">
-                                {isPlaying ? <PauseIcon className="size-6" /> : <PlayIcon className="size-6" />}
-                            </Button>
-                            <Button size="icon" variant="ghost" onClick={toggleMute} className="text-white hover:bg-white/20 rounded-full w-10 h-10">
-                                {isMuted ? <VolumeXIcon className="size-6" /> : <Volume2Icon className="size-6" />}
-                            </Button>
-                            <input
-                                type="range"
-                                min={0}
-                                max={1}
-                                step={0.05}
-                                onChange={onVolume}
-                                className="w-28 h-2 bg-gray-700/60 rounded-full cursor-pointer accent-red-600 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:bg-red-600 [&::-webkit-slider-thumb]:rounded-full"
-                            />
-                            <span className="text-sm tabular-nums">{formatTime(currentTime)} / {formatTime(duration)}</span>
-                            {element.showSkipIntro && (
-                                <Button size="sm" variant="outline" className="ml-3 bg-transparent text-white border-white/30 hover:bg-white/10">
-                                    Skip Intro
-                                </Button>
-                            )}
-                            {element.showNextEpisode && (
-                                <Button size="sm" variant="default" className="ml-3 bg-red-600 hover:bg-red-700 text-white" onClick={() => runEventHandler?.(element.onNextEpisode)}>
-                                    Next Episode
-                                </Button>
-                            )}
+                            {/* Controls Row */}
+                            <div className="flex items-center justify-between gap-4 text-white">
+                                <div className="flex items-center gap-3">
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={togglePlay}
+                                        className="text-white hover:bg-white/20 rounded-full w-10 h-10"
+                                    >
+                                        {isPlaying ? <PauseIcon className="size-6" /> : <PlayIcon className="size-6" />}
+                                    </Button>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={toggleMute}
+                                        className="text-white hover:bg-white/20 rounded-full w-10 h-10"
+                                    >
+                                        {isMuted ? <VolumeXIcon className="size-6" /> : <Volume2Icon className="size-6" />}
+                                    </Button>
+                                    <input
+                                        type="range"
+                                        min={0}
+                                        max={1}
+                                        step={0.05}
+                                        onChange={onVolume}
+                                        className="w-28 h-2 bg-gray-700/60 rounded-full cursor-pointer accent-red-600 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:bg-red-600 [&::-webkit-slider-thumb]:rounded-full"
+                                    />
+                                    <span className="text-sm tabular-nums">{formatTime(currentTime)} / {formatTime(duration)}</span>
+                                    {element.showSkipIntro && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="ml-3 bg-transparent text-white border-white/30 hover:bg-white/10"
+                                            onClick={() => seekTo(85)}
+                                        >
+                                            Skip Intro
+                                        </Button>
+                                    )}
+                                    {element.showNextEpisode && (
+                                        <Button
+                                            size="sm"
+                                            variant="default"
+                                            className="ml-3 bg-red-600 hover:bg-red-700 text-white"
+                                            onClick={() => runEventHandler?.(element.onNextEpisode)}
+                                        >
+                                            Next Episode
+                                        </Button>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    {element.qualitySelector && levels.length > 0 && (
+                                        <select
+                                            className="bg-black/80 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-600"
+                                            value={levelIndex}
+                                            onChange={(e) => switchLevel(parseInt(e.target.value, 10))}
+                                            title="Quality"
+                                        >
+                                            <option value={-1}>Auto</option>
+                                            {levels.map((lv, i) => (
+                                                <option key={i} value={i}>{`${lv.height || lv.width || ""}${lv.bitrate ? ` (${Math.round(lv.bitrate / 1000)}kbps)` : ""
+                                                    }`}</option>
+                                            ))}
+                                        </select>
+                                    )}
+                                    {element.showPlaybackRate && (
+                                        <select
+                                            className="bg-black/80 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-600"
+                                            value={playbackRate}
+                                            onChange={(e) => changeRate(parseFloat(e.target.value))}
+                                            title="Playback speed"
+                                        >
+                                            {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((r) => (
+                                                <option key={r} value={r}>{r}x</option>
+                                            ))}
+                                        </select>
+                                    )}
+                                    {element.showCaptions && textTracks && (
+                                        <select
+                                            className="bg-black/80 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-600"
+                                            value={activeCaption ?? -1}
+                                            onChange={(e) => setCaptionIndex(parseInt(e.target.value, 10) === -1 ? null : parseInt(e.target.value, 10))}
+                                            title="Subtitles"
+                                        >
+                                            <option value={-1}>Captions off</option>
+                                            {Array.from({ length: textTracks.length }).map((_, i) => (
+                                                <option key={i} value={i}>{textTracks[i].label || textTracks[i].language || `Track ${i + 1}`}</option>
+                                            ))}
+                                        </select>
+                                    )}
+                                    {(element.showMiniPlayer || element.pictureInPicture) && (
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={requestPiP}
+                                            disabled={!pipSupported}
+                                            title="Mini Player"
+                                            className="text-white hover:bg-white/20 rounded-full w-10 h-10"
+                                        >
+                                            <PictureInPicture2Icon className="size-6" />
+                                        </Button>
+                                    )}
+                                    {element.showFullscreen && (
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={requestFs}
+                                            title="Fullscreen"
+                                            className="text-white hover:bg-white/20 rounded-full w-10 h-10"
+                                        >
+                                            <MaximizeIcon className="size-6" />
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            {element.qualitySelector && levels.length > 0 && (
-                                <select
-                                    className="bg-black/80 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-600"
-                                    value={levelIndex}
-                                    onChange={(e) => switchLevel(parseInt(e.target.value, 10))}
-                                    title="Quality"
-                                >
-                                    <option value={-1}>Auto</option>
-                                    {levels.map((lv, i) => (
-                                        <option key={i} value={i}>{`${lv.height || lv.width || ""}${lv.bitrate ? ` (${Math.round(lv.bitrate / 1000)}kbps)` : ""}`}</option>
-                                    ))}
-                                </select>
-                            )}
-                            {element.showPlaybackRate && (
-                                <select
-                                    className="bg-black/80 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-600"
-                                    value={playbackRate}
-                                    onChange={(e) => changeRate(parseFloat(e.target.value))}
-                                    title="Playback speed"
-                                >
-                                    {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((r) => (
-                                        <option key={r} value={r}>{r}x</option>
-                                    ))}
-                                </select>
-                            )}
-                            {element.showCaptions && textTracks && (
-                                <select
-                                    className="bg-black/80 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-600"
-                                    value={activeCaption ?? -1}
-                                    onChange={(e) => setCaptionIndex(parseInt(e.target.value, 10) === -1 ? null : parseInt(e.target.value, 10))}
-                                    title="Subtitles"
-                                >
-                                    <option value={-1}>Captions off</option>
-                                    {Array.from({ length: textTracks.length }).map((_, i) => (
-                                        <option key={i} value={i}>{textTracks[i].label || textTracks[i].language || `Track ${i + 1}`}</option>
-                                    ))}
-                                </select>
-                            )}
-                            {(element.showMiniPlayer || element.pictureInPicture) && (
-                                <Button size="icon" variant="ghost" onClick={requestPiP} disabled={!pipSupported} title="Mini Player" className="text-white hover:bg-white/20 rounded-full w-10 h-10">
-                                    <PictureInPicture2Icon className="size-6" />
-                                </Button>
-                            )}
-                            {element.showFullscreen && (
-                                <Button size="icon" variant="ghost" onClick={requestFs} title="Fullscreen" className="text-white hover:bg-white/20 rounded-full w-10 h-10">
-                                    <MaximizeIcon className="size-6" />
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-                </div>
+                    )}
+                </>
             )}
         </div>
     );

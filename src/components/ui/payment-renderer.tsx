@@ -14,7 +14,7 @@ export const PaymentFormRenderer = React.memo(function PaymentFormRenderer({
 }: {
     element: PaymentElement
     state: AnyObj
-    runEventHandler: (
+    runEventHandler?: (
         handler?: EventHandler | undefined,
         dataOverride?: AnyObj
     ) => Promise<void>
@@ -40,13 +40,13 @@ export const PaymentFormRenderer = React.memo(function PaymentFormRenderer({
         const cancelParam = element.cancelParam || "canceled"
 
         if (params.get(successParam) !== null && element.onSuccess) {
-            runEventHandler(element.onSuccess, { query: Object.fromEntries(params) })
+            runEventHandler?.(element.onSuccess, { query: Object.fromEntries(params) })
         } else if (params.get(cancelParam) !== null && element.onCancel) {
-            runEventHandler(element.onCancel, { query: Object.fromEntries(params) })
+            runEventHandler?.(element.onCancel, { query: Object.fromEntries(params) })
         }
 
         if (element.onReturn) {
-            runEventHandler(element.onReturn, { query: Object.fromEntries(params) })
+            runEventHandler?.(element.onReturn, { query: Object.fromEntries(params) })
         }
     }, [element, runEventHandler])
 
@@ -63,7 +63,7 @@ export const PaymentFormRenderer = React.memo(function PaymentFormRenderer({
                 if (!stripe) throw new Error("Stripe failed to initialize")
                 const { error } = await stripe.redirectToCheckout({ sessionId })
                 if (error && element.onError) {
-                    await runEventHandler(element.onError, { error })
+                    await runEventHandler?.(element.onError, { error })
                 }
                 return
             }
@@ -71,7 +71,7 @@ export const PaymentFormRenderer = React.memo(function PaymentFormRenderer({
             throw new Error("No checkoutUrl or sessionId provided")
         } catch (err: any) {
             if (element.onError) {
-                await runEventHandler(element.onError, { error: err })
+                await runEventHandler?.(element.onError, { error: err })
             }
         }
     }

@@ -14,7 +14,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { cn } from "../../lib/utils";
 import { EventHandler } from "../../types";
-import { useActionHandler } from "../../schema/Actions";
+import { useActionHandler } from "../../schema/useActionHandler";
 
 export type CreateSelectOption = { value: string; label: string };
 

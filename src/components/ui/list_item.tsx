@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import type { AnyObj, EventHandler, IconElement, ListItemElement } from "../../types"
+import type { ActionRuntime, AnyObj, EventHandler, IconElement, ListItemElement } from "../../types"
 import { cn, resolveBinding } from "../../lib/utils"
 import { useAppState } from "../../schema/StateContext"
 import { DynamicIcon } from "../../components/ui/dynamic-icon"
@@ -28,7 +28,7 @@ function useStateAndT(
 
 export interface ListItemRendererProps {
     element: ListItemElement
-    runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+    runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
     /** Optional – falls back to AppState if not provided */
     state?: AnyObj
     t?: (key: string) => string
@@ -51,44 +51,86 @@ export function ListItemRenderer(props: ListItemRendererProps) {
         density = "comfortable",
         onFocusNext,
         onFocusPrev,
-    } = props
+    } = props;
 
-    const { state, t } = useStateAndT(props.state, props.t)
+    const { state, t } = useStateAndT(props.state, props.t);
 
-    // Resolve bindings
-    const primary = resolveBinding(element.text, state, t) ?? ""
-    const secondary =
-        element.description ? resolveBinding(element.description, state, t) : undefined
+    // --- 🧠 Resolve main text binding ---
+    const primary = resolveBinding(element.text, state, t) ?? "";
 
-    // icon: either IconElement schema or render children prefix
-    const iconEl = element.icon as IconElement | undefined
+    // --- 🧠 Resolve description: supports string, object, or array ---
+    let secondary: React.ReactNode = null;
 
-    const handleActivate = () =>
-        runEventHandler(element.onClick, {
-            id: element.id,
-            index,
-            text: primary,
-            description: secondary,
-        })
+    const renderDescObj = (descObj: any, idx: number) => {
+        const tag = descObj.tag || "p";
+        const Tag = tag;
+        const resolvedText = resolveBinding(descObj.content ?? "", state, t);
+        if (!resolvedText) return null;
+        return (
+            <Tag
+                key={descObj.id || idx}
+                className={cn(
+                    "mt-0.5 text-muted-foreground",
+                    descObj.styles?.className
+                )}
+            >
+                {resolvedText}
+            </Tag>
+        );
+    };
 
-    const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-        if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault()
-            handleActivate()
-        } else if (e.key === "ArrowDown") {
-            e.preventDefault()
-            onFocusNext?.()
-        } else if (e.key === "ArrowUp") {
-            e.preventDefault()
-            onFocusPrev?.()
+    if (element.description) {
+        if (typeof element.description === "string") {
+            // Case 1: plain binding string
+            const text = resolveBinding(element.description, state, t);
+            if (text) {
+                secondary = (
+                    <p className="mt-0.5 text-muted-foreground truncate">{text}</p>
+                );
+            }
+        } else if (Array.isArray(element.description)) {
+            // Case 2: array of rich text blocks
+            secondary = (
+                <div data-desc className="space-y-1">
+                    {element.description.map((d, i) => renderDescObj(d, i))}
+                </div>
+            );
+        } else if (typeof element.description === "object") {
+            // Case 3: single object form
+            secondary = (
+                <div data-desc>{renderDescObj(element.description, 0)}</div>
+            );
         }
     }
 
-    const basePad = density === "compact" ? "py-2 px-2" : "py-3 px-3"
+    // icon and events
+    const iconEl = element.icon as IconElement | undefined;
+
+    const handleActivate = () =>
+        runEventHandler?.(element.onClick, {
+            id: element.id,
+            index,
+            text: primary,
+        });
+
+    const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleActivate();
+        } else if (e.key === "ArrowDown") {
+            e.preventDefault();
+            onFocusNext?.();
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            onFocusPrev?.();
+        }
+    };
+
+    const basePad = density === "compact" ? "py-2 px-2" : "py-3 px-3";
     const textSizes =
         density === "compact"
             ? "text-sm [&_[data-desc]]:text-xs"
-            : "text-base [&_[data-desc]]:text-sm"
+            : "text-base [&_[data-desc]]:text-sm";
 
     return (
         <div
@@ -111,27 +153,22 @@ export function ListItemRenderer(props: ListItemRendererProps) {
                 {iconEl ? (
                     <DynamicIcon
                         name={(iconEl as any).name}
-                        className={cn("mt-0.5 h-5 w-5 shrink-0 text-muted-foreground")}
+                        className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground"
                     />
                 ) : element.children?.length ? (
                     <div className="shrink-0 mt-0.5">
-                        <RenderChildren children={element.children} />
+                        <RenderChildren children={element.children} runEventHandler={runEventHandler} />
                     </div>
                 ) : null}
 
                 {/* Texts */}
                 <div className="min-w-0 flex-1">
                     <div className="truncate font-medium">{primary}</div>
-                    {secondary ? (
-                        <div data-desc className="mt-0.5 truncate text-muted-foreground">
-                            {secondary}
-                        </div>
-                    ) : null}
+                    {secondary}
                 </div>
 
-                {/* Trailing affordance (optional chevron) */}
+                {/* Trailing affordance */}
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground">
-                    {/* minimalist disclosure affordance; replace with icon if you prefer */}
                     ·
                 </div>
             </div>
@@ -140,8 +177,9 @@ export function ListItemRenderer(props: ListItemRendererProps) {
                 <div className="pointer-events-none absolute bottom-0 left-3 right-3 border-b border-border" />
             )}
         </div>
-    )
+    );
 }
+
 
 /**
  * A small utility used by ListRenderer to estimate row height for variable content.

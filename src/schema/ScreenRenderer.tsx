@@ -1,8 +1,5 @@
-"use client";
-
-import React, { useEffect, useMemo } from "react";
-import { motion } from "framer-motion";
-
+'use client';
+import { useEffect, useMemo } from "react";
 import {
     UIProject,
     UIScreenDef,
@@ -12,21 +9,17 @@ import {
     ActionRuntime,
     UIElement,
 } from "../types";
-
 import { useAppState } from "./StateContext";
-import { useActionHandler } from "./Actions";
-
+import { useActionHandler } from "./useActionHandler";
 import {
     deepResolveBindings,
     resolveBinding,
     classesFromStyleProps,
     isVisible,
     cn,
-    resolveAnimation,
 } from "../lib/utils";
-
 import { ElementResolver } from "./ElementResolver";
-import { useDataSources } from "./Datasource";
+import { useDataSources } from "./useDataSources";
 
 export interface ScreenRendererProps {
     project: UIProject;
@@ -38,16 +31,14 @@ export interface ScreenRendererProps {
     CustomElementResolver?: (
         element: UIElement,
         ctx: {
-            runtime: ActionRuntime;
             state: AnyObj;
             t: (k: string) => string;
-            runEventHandler: (ev: any, payload?: AnyObj) => void;
+            runEventHandler?: (ev: any, payload?: AnyObj) => void;
         }
     ) => React.ReactNode;
 }
 
 /** ---------- Guard helpers ---------- */
-
 function evalCondition(expr: ConditionExpr, state: AnyObj, t: (k: string) => string): boolean {
     const key = resolveBinding(expr.key, state, t);
     const val = resolveBinding(expr.value, state, t);
@@ -89,42 +80,30 @@ function layoutClasses(layout: UIScreenDef["layoutType"]) {
         case "cover":
         case "custom":
             return "";
-
         case "data_dashboard":
         case "data_table_with_chart":
         case "datagrid":
             return "grid grid-cols-1 lg:grid-cols-12 gap-6";
-
         case "faq":
             return "";
-
         case "feature_carousel":
             return "mx-auto max-w-6xl px-4";
-
         case "four_columns":
             return "grid grid-cols-1 md:grid-cols-4 gap-6";
-
         case "gallery":
             return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4";
-
         case "map":
             return "w-full h-full";
-
         case "single_column":
             return "mx-auto max-w-4xl px-4";
-
         case "step_wizard":
             return "";
-
         case "three_columns":
             return "grid grid-cols-1 md:grid-cols-3 gap-6";
-
         case "timeline":
             return "mx-auto max-w-5xl px-4";
-
         case "two_columns":
             return "grid grid-cols-1 md:grid-cols-2 gap-6";
-
         default:
             return "";
     }
@@ -140,38 +119,30 @@ export function ScreenRenderer({
     CustomElementResolver
 }: ScreenRendererProps) {
     const { state, setState, t } = useAppState();
-
-    // Resolve DS (fetch, poll, ws/subs) + data mappings
-    const dataMap = useDataSources({
-        dataSources: currentScreenDef.dataSources || [],
+    // Filter out POST methods from dataSources, as they should be action-triggered
+    const dataSourcesToFetch = currentScreenDef.dataSources?.filter(ds => ds.method !== "POST") || [];
+    const dataMap: Record<string, any> = useDataSources({
+        dataSources: dataSourcesToFetch,
         globalConfig: project.globalConfig,
         screen: currentScreenDef,
     });
     const action = {
         globalConfig: project.globalConfig,
-        dataSources: currentScreenDef?.dataSources,
+        dataSources: currentScreenDef.dataSources, // Include all dataSources for actions
         runtime: {
             ...(runtime || {}),
             patchState: (path: string, val: any) => setState(path, val)
         }
-    }
-    // Build actions with full runtime
+    };
     const { runEventHandler } = useActionHandler({ ...action });
 
-
-    /** Keep each dataSource result mirrored into state under its id.
-     * This matches your "we use dataSourceId to resolve" convention.
-     * Mappings still run (and may write to other state keys).
-     */
     useEffect(() => {
         if (!dataMap) return;
         for (const [id, val] of Object.entries(dataMap)) {
             setState(id, val);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [JSON.stringify(dataMap)]);
+    }, [dataMap, setState]);
 
-    /** Lifecycle: onEnter / onLeave */
     useEffect(() => {
         const enter = currentScreenDef.lifecycle?.onEnter;
         if (enter && enter.action !== 'navigation') runEventHandler(enter);
@@ -179,46 +150,27 @@ export function ScreenRenderer({
             const leave = currentScreenDef.lifecycle?.onLeave;
             if (leave) runEventHandler(leave);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentScreenDef.id]);
+    }, [currentScreenDef.id, runEventHandler]);
 
-    /** Evaluate guard after DS + state are ready */
     const guardResult = useMemo(() => evalGuard(currentScreenDef.guard, state, t), [currentScreenDef.guard, state, t]);
-
     useEffect(() => {
         if (!guardResult.ok) gotoRedirect(runtime, guardResult.onFail);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [guardResult.ok]);
+    }, [guardResult.ok, runtime]);
 
-    /** Loading / Errors */
     const dsList = currentScreenDef.dataSources || [];
-    const isLoading =
-        dsList.length > 0 &&
-        dsList.some((ds) => typeof dataMap[ds.id] === "undefined");
+    const isLoading = dsList.length > 0 && dsList.some((ds) => typeof dataMap[ds.id] === "undefined");
     const errors: Array<{ id: string; error: any }> = dsList
         .map((ds) => ({ id: ds.id, data: dataMap[ds.id] }))
         .filter((x) => x.data && x.data.ok === false)
         .map((x) => ({ id: x.id, error: x.data }));
 
-    /** Screen container classes + animation */
     const screenClasses = cn(layoutClasses(currentScreenDef.layoutType), classesFromStyleProps(currentScreenDef.styles));
-
-    if (!guardResult.ok) {
-        // While redirecting, optionally render nothing or a tiny placeholder.
-        return null;
-    }
-
-    if (isLoading && loadingFallback) {
-        return <>{loadingFallback}</>;
-    }
-
-    if (errors.length && errorFallback) {
-        return <>{errorFallback(errors)}</>;
-    }
+    if (!guardResult.ok) return null;
+    if (isLoading && loadingFallback) return <>{loadingFallback}</>;
+    if (errors.length && errorFallback) return <>{errorFallback(errors)}</>;
 
     return (
         <div className={screenClasses} data-screen-id={currentScreenDef.id}>
-            {/* Optional debug strip */}
             {showDebug && (
                 <div className="mb-4 text-xs text-muted-foreground">
                     <span className="inline-block rounded bg-muted px-2 py-1 mr-2">
@@ -231,27 +183,21 @@ export function ScreenRenderer({
                     )}
                 </div>
             )}
-
-            {/* Render all elements with ElementResolver so each gets proper runtime + actions */}
             {currentScreenDef.elements?.map((el) => {
-                // Global per-element visibility is already checked inside ElementResolver,
-                // but we can short-circuit here if you need faster skip:
                 const visible = isVisible(el.visibility, state, t);
                 if (!visible) return null;
-
-                // If element has dataSourceId, ensure it can read from state[dsId]
-                // (the mirroring effect above already synced dataMap into state).
-                const resolved = el.dataSourceId ? deepResolveBindings(el, state, t) : el;
-
-                // Give a stable key; prefer element.id
+                const resolved = deepResolveBindings(el, state, t);
                 const key = resolved.id;
-
-                return <ElementResolver key={key}
-                    element={resolved}
-                    runtime={runtime}
-                    globalConfig={project?.globalConfig}
-                    dataSources={currentScreenDef?.dataSources}
-                    CustomElementResolver={CustomElementResolver} />;
+                return (
+                    <ElementResolver
+                        key={key}
+                        element={resolved}
+                        runEventHandler={runEventHandler}
+                        globalConfig={project.globalConfig}
+                        dataSources={currentScreenDef.dataSources}
+                        CustomElementResolver={CustomElementResolver}
+                    />
+                );
             })}
         </div>
     );

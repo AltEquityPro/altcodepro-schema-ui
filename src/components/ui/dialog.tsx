@@ -134,31 +134,62 @@ function DialogDescription({
 }
 interface ModalRendererProps {
   element: ModalElement
-  runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
-  runtime: AnyObj
+  runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }
 
-function ModalRenderer({ element, runEventHandler, runtime }: ModalRendererProps) {
+function ModalRenderer({ element, runEventHandler }: ModalRendererProps) {
   const { state, t } = useAppState()
   const modal = element
 
-  // resolve bindings
-  const open = resolveBinding(modal.isOpen, state, t) ?? false
+  // Resolve title/description but ignore external isOpen binding
   const title = resolveBinding(modal.title, state, t)
   const description = resolveBinding(modal.description, state, t)
+
+  // Local open state, defaults to false unless the modal specifies otherwise
+  const [open, setOpen] = React.useState(
+    typeof modal.isOpen === "boolean"
+      ? modal.isOpen
+      : resolveBinding(modal.isOpen, state, t) ?? false
+  )
+
+  // Close modal helper
+  const handleClose = React.useCallback(async () => {
+    setOpen(false)
+    if (modal.onClose) {
+      await runEventHandler?.(modal.onClose)
+    }
+  }, [modal.onClose, runEventHandler])
+
+  // Optional: expose a way for any inner button action to close modal after completion
+  const handleActionWrapper = React.useCallback(
+    async (handler?: EventHandler, dataOverride?: AnyObj) => {
+      await runEventHandler?.(handler, dataOverride)
+      // Auto-close modal if handler is close_modal or API call succeeded
+      if (
+        handler?.action === "close_modal" ||
+        handler?.action === "api_call" ||
+        handler?.action === "crud_create" ||
+        handler?.action === "crud_update"
+      ) {
+        setOpen(false)
+      }
+    },
+    [runEventHandler]
+  )
 
   return wrapWithMotion(
     element,
     <Dialog
       open={open}
       onOpenChange={(isOpen) => {
-        if (!isOpen) runEventHandler(modal.onClose)
+        if (!isOpen) handleClose()
+        else setOpen(true)
       }}
     >
       <DialogContent
         className={cn(modal.styles?.className)}
         style={{ zIndex: modal.zIndex }}
-        showCloseButton={!modal.closeButton}
+        showCloseButton={!!modal.closeButton}
       >
         {/* Header */}
         {(title || description) && (
@@ -169,18 +200,27 @@ function ModalRenderer({ element, runEventHandler, runtime }: ModalRendererProps
         )}
 
         {/* Body */}
-        <RenderChildren children={modal.content} runtime={runtime} />
+        <RenderChildren
+          children={modal.content}
+          runEventHandler={handleActionWrapper}
+        />
 
-        {/* Footer */}
+        {/* Footer (custom close button if provided) */}
         {modal.closeButton && (
           <DialogFooter>
-            <ElementResolver element={modal.closeButton} runtime={runtime} />
+            <ElementResolver
+              element={modal.closeButton}
+              runEventHandler={handleActionWrapper}
+            />
           </DialogFooter>
         )}
 
-        {/* Built-in Close Button (if schema doesn't override) */}
+        {/* Built-in Close Button */}
         {!modal.closeButton && (
-          <DialogClose className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+          <DialogClose
+            onClick={handleClose}
+            className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+          >
             <XIcon className="size-4" />
           </DialogClose>
         )}
@@ -188,6 +228,7 @@ function ModalRenderer({ element, runEventHandler, runtime }: ModalRendererProps
     </Dialog>
   )
 }
+
 export {
   ModalRenderer,
   Dialog,

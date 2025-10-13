@@ -6,12 +6,11 @@ import {
   resolveAnimation,
   resolveBinding,
 } from "@/lib/utils";
-import { Binding, ButtonElement } from "@/types";
+import { AnyObj, Binding, ButtonElement, EventHandler } from "@/types";
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import React, { useMemo } from "react";
 import { DynamicIcon } from "./dynamic-icon";
-import { useActionHandler } from "@/schema/Actions";
 import { useAppState } from "@/schema/StateContext";
 
 /* ----------------------------
@@ -55,7 +54,7 @@ export function Button({
   size = "default",
   ...props
 }: ButtonProps) {
-  const variantClass = buttonVariants[variant] ?? "";
+  const variantClass = className?.includes('bg-') && className?.includes('text-') ? "" : buttonVariants[variant] ?? "";
   const sizeClass = sizeClasses[size] ?? "";
 
   return (
@@ -78,19 +77,18 @@ export function Button({
  * ---------------------------- */
 export function ButtonRenderer({
   element,
-  runtime,
+  runEventHandler,
+
 }: {
   element: ButtonElement;
-  runtime: Record<string, any>;
+  runEventHandler?: ((handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>) | undefined
 }) {
   const { state, t } = useAppState();
-  const { runEventHandler } = useActionHandler({ runtime });
-
-  const variantClass = buttonVariants[element.variant ?? "primary"] ?? "";
   const sizeClass = sizeClasses[element.size ?? "default"] ?? "";
   const styles = classesFromStyleProps(element.styles);
   const accessibilityProps = getAccessibilityProps(element.accessibility);
   const animationProps: any = resolveAnimation(element.animations);
+  const variantClass = styles?.includes('bg-') && styles?.includes('text-') ? "" : buttonVariants[(element.variant || 'primary')] ?? "";
 
   const resolvedBinding = useMemo(
     () => (binding: Binding) => resolveBinding(binding, state, t),
@@ -121,7 +119,7 @@ export function ButtonRenderer({
         element.styles?.className
       )}
       disabled={disabled}
-      onClick={() => element.onClick && runEventHandler(element.onClick)}
+      onClick={() => element.onClick && runEventHandler?.(element.onClick)}
       style={{ zIndex: element.zIndex, ...(animationProps?.style || {}) }}
       {...accessibilityProps}
     >

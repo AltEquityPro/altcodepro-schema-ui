@@ -42,7 +42,7 @@ interface CommentsRendererProps {
     element: CommentsElement
     state: AnyObj
     t: (key: string) => string
-    runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+    runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }
 
 /* =====================================================================================
@@ -97,7 +97,7 @@ export function CommentsRenderer({
         if (!newComment.trim()) return
         setPosting(true)
         try {
-            await runEventHandler(element.onPost, {
+            await runEventHandler?.(element.onPost, {
                 threadId: threadKey,
                 content: newComment,
             })
@@ -189,7 +189,7 @@ function CommentNode({
     depth: number
     element: CommentsElement
     threadKey: string
-    runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+    runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
     t: (key: string) => string
 }) {
     const [isReplying, setIsReplying] = React.useState(false)
@@ -209,7 +209,7 @@ function CommentNode({
         if (!replyContent.trim()) return
         setBusy("reply")
         try {
-            await runEventHandler(element.onReply, {
+            await runEventHandler?.(element.onReply, {
                 threadId: threadKey,
                 parentId: comment.id,
                 content: replyContent,
@@ -228,7 +228,7 @@ function CommentNode({
         }
         setBusy("edit")
         try {
-            await runEventHandler(element.onEdit, {
+            await runEventHandler?.(element.onEdit, {
                 threadId: threadKey,
                 commentId: comment.id,
                 content: editContent,
@@ -242,7 +242,7 @@ function CommentNode({
     const handleDelete = async () => {
         setBusy("delete")
         try {
-            await runEventHandler(element.onDelete, {
+            await runEventHandler?.(element.onDelete, {
                 threadId: threadKey,
                 commentId: comment.id,
             })
@@ -255,7 +255,7 @@ function CommentNode({
         if (!canVote) return
         setBusy(dir)
         try {
-            await runEventHandler(element.onVote, {
+            await runEventHandler?.(element.onVote, {
                 threadId: threadKey,
                 commentId: comment.id,
                 direction: dir,
@@ -269,7 +269,7 @@ function CommentNode({
         if (!canFlag) return
         setBusy("flag")
         try {
-            await runEventHandler(element.onFlag, {
+            await runEventHandler?.(element.onFlag, {
                 threadId: threadKey,
                 commentId: comment.id,
             })
@@ -282,7 +282,7 @@ function CommentNode({
     const handleApprove = async () => {
         setBusy("approve")
         try {
-            await runEventHandler(element.onApprove, {
+            await runEventHandler?.(element.onApprove, {
                 threadId: threadKey,
                 commentId: comment.id,
             })
@@ -294,7 +294,7 @@ function CommentNode({
     const handleHide = async () => {
         setBusy("hide")
         try {
-            await runEventHandler(element.onHide, {
+            await runEventHandler?.(element.onHide, {
                 threadId: threadKey,
                 commentId: comment.id,
             })
@@ -306,7 +306,7 @@ function CommentNode({
     const handleBanUser = async () => {
         setBusy("ban")
         try {
-            await runEventHandler(element.onBanUser, {
+            await runEventHandler?.(element.onBanUser, {
                 userId: comment.author.id,
                 source: "comments",
                 reason: "abuse",

@@ -11,10 +11,9 @@ import {
   resolveBinding,
   resolveAnimation,
 } from "../../lib/utils";
-import { useActionHandler } from "../../schema/Actions";
 import { ElementResolver } from "../../schema/ElementResolver";
 import { useAppState } from "../../schema/StateContext";
-import { AccordionElement, UIElement } from "../../types";
+import { AccordionElement, AnyObj, EventHandler, UIElement } from "../../types";
 
 /** Wrapper that applies animations around its children (root-level only) */
 function AnimatedWrapper({
@@ -74,14 +73,12 @@ function AnimatedWrapper({
 
 function AccordionRenderer({
   element,
-  runtime,
+  runEventHandler,
 }: {
   element: AccordionElement;
-  runtime: any;
+  runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>;
 }) {
   const { state, t } = useAppState();
-  const { runEventHandler } = useActionHandler({ runtime });
-
   const multiple = !!element.multiple;
   const collapsible = !!element.collapsible;
   const expanded = resolveBinding(element.expandedItem, state, t); // string | string[]
@@ -96,11 +93,11 @@ function AccordionRenderer({
         type={type as any}
         collapsible={!multiple && collapsible}
         value={expanded as any}
-        onValueChange={(v: any) => runEventHandler(element.onChange, { value: v })}
+        onValueChange={(v: any) => runEventHandler?.(element.onChange, { value: v })}
         className={cn("w-full", rootClass)}
         {...accessibilityProps}
       >
-        {element.items.map((item) => (
+        {element.items?.map((item) => (
           <AccordionPrimitive.Item
             key={item.id}
             value={item.id}
@@ -125,7 +122,7 @@ function AccordionRenderer({
             <AccordionPrimitive.Content className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden text-sm">
               <div className="pt-0 pb-4">
                 {item.content.map((child: UIElement) => (
-                  <ElementResolver key={child.id} element={child} runtime={runtime} />
+                  <ElementResolver key={child.id} element={child} runEventHandler={runEventHandler} />
                 ))}
               </div>
             </AccordionPrimitive.Content>

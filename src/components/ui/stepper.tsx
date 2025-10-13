@@ -12,13 +12,11 @@ function StepWizardRenderer({
     runEventHandler,
     state,
     t,
-    runtime
 }: {
     element: StepWizardElement
-    runEventHandler: (h?: EventHandler, d?: AnyObj) => Promise<void>
+    runEventHandler?: (h?: EventHandler, d?: AnyObj) => Promise<void>
     state: AnyObj
     t: (key: string) => string,
-    runtime: ActionRuntime
 }) {
     const [currentStep, setCurrentStep] = React.useState(element.current || 0)
 
@@ -48,18 +46,18 @@ function StepWizardRenderer({
     })
 
     const handlePrev = () => {
-        if (step.onPrev) runEventHandler(step.onPrev)
+        if (step.onPrev) runEventHandler?.(step.onPrev)
         setCurrentStep((prev) => Math.max(0, prev - 1))
     }
 
     const handleNext = async () => {
         if (step.validate && step.validateAction) {
-            await runEventHandler(step.validateAction)
+            await runEventHandler?.(step.validateAction)
         }
         if (currentStep === totalSteps - 1) {
-            if (step.onComplete) runEventHandler(step.onComplete)
+            if (step.onComplete) runEventHandler?.(step.onComplete)
         } else {
-            if (step.onNext) runEventHandler(step.onNext)
+            if (step.onNext) runEventHandler?.(step.onNext)
             setCurrentStep((prev) => prev + 1)
         }
     }
@@ -94,7 +92,7 @@ function StepWizardRenderer({
                 <h3 className="text-lg font-semibold mb-2">
                     Step {currentStep + 1}: {resolveBinding(step.title, state, t)}
                 </h3>
-                {step.content && <RenderChildren children={step.content} runtime={runtime} />}
+                {step.content && <RenderChildren children={step.content} runEventHandler={runEventHandler} />}
             </div>
 
             {/* Navigation */}

@@ -11,7 +11,7 @@ interface SearchRendererProps {
     element: SearchElement;
     state: AnyObj;
     t: (key: string) => string;
-    runEventHandler: (
+    runEventHandler?: (
         handler?: EventHandler,
         dataOverride?: AnyObj
     ) => Promise<void>;
@@ -114,7 +114,7 @@ export function SearchRenderer({
     React.useEffect(() => {
         const handle = setTimeout(() => {
             if (query.length >= minLength) {
-                runEventHandler(element.onSearch, { query });
+                runEventHandler?.(element.onSearch, { query });
                 fetchAISuggestions(query);
 
                 if (allowHistory && query.trim()) {
@@ -138,17 +138,17 @@ export function SearchRenderer({
 
         recognition.onstart = () => {
             setIsListening(true);
-            runEventHandler(element.onVoiceStart, { id: element.id });
+            runEventHandler?.(element.onVoiceStart, { id: element.id });
         };
         recognition.onend = () => {
             setIsListening(false);
-            runEventHandler(element.onVoiceEnd, { id: element.id });
+            runEventHandler?.(element.onVoiceEnd, { id: element.id });
         };
         recognition.onerror = () => setIsListening(false);
         recognition.onresult = (event: any) => {
             const transcript = event.results[0][0].transcript;
             setQuery(transcript);
-            runEventHandler(element.onSearch, { query: transcript });
+            runEventHandler?.(element.onSearch, { query: transcript });
         };
 
         recognition.start();
@@ -158,15 +158,15 @@ export function SearchRenderer({
     const clearQuery = () => {
         setQuery("");
         setSuggestions([]);
-        runEventHandler(element.onClear, { id: element.id });
-        runEventHandler(element.onSearch, { query: "" });
+        runEventHandler?.(element.onClear, { id: element.id });
+        runEventHandler?.(element.onSearch, { query: "" });
     };
 
     // Select suggestion
     const handleSuggestion = (s: string) => {
         setQuery(s);
-        runEventHandler(element.onSelectSuggestion, { query: s });
-        runEventHandler(element.onSearch, { query: s });
+        runEventHandler?.(element.onSelectSuggestion, { query: s });
+        runEventHandler?.(element.onSearch, { query: s });
     };
 
     return (
@@ -196,7 +196,7 @@ export function SearchRenderer({
                     className="flex-1 border-0 shadow-none focus-visible:ring-0"
                     onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                            runEventHandler(element.onSearch, { query });
+                            runEventHandler?.(element.onSearch, { query });
                         }
                     }}
                 />

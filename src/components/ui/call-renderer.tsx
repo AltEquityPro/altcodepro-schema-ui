@@ -283,7 +283,7 @@ export function CallRenderer({
     element: CallElement;
     state: Record<string, any>;
     t: (k: string) => string;
-    runEventHandler: (h?: any, d?: any) => Promise<void>;
+    runEventHandler?: (h?: any, d?: any) => Promise<void>;
 }) {
     const roomId = String(resolveBinding(element.peerId, state, t));
     const baseWsUrl = String(resolveBinding(element.signalingServer, state, t));
@@ -322,7 +322,7 @@ export function CallRenderer({
                     video: localStream.getVideoTracks().length > 0,
                 });
             }
-            if (element.onStats) runEventHandler(element.onStats, { roomId, statsPerRemote });
+            if (element.onStats) runEventHandler?.(element.onStats, { roomId, statsPerRemote });
         }, element.tracking.heartbeatInterval * 1000);
         return () => clearInterval(id);
     }, [element.tracking?.heartbeatInterval, localStream, runEventHandler, element.onStats, roomId]);
@@ -331,14 +331,14 @@ export function CallRenderer({
         if (!element.tracking) return;
         const payload = { event, roomId, me, ...extra };
         if (element.tracking.dataSourceId) {
-            runEventHandler({
+            runEventHandler?.({
                 action: "api_call",
                 dataSourceId: element.tracking.dataSourceId,
                 responseType: "none",
                 params: { method: "POST", body: payload }
             }, payload);
         } else {
-            runEventHandler(undefined, payload);
+            runEventHandler?.(undefined, payload);
         }
     }, [element.tracking, roomId, me, runEventHandler]);
 
@@ -385,7 +385,7 @@ export function CallRenderer({
         adapterRef.current.start().then(() => {
             setJoined(true);
             emit("join");
-            if (element.onConnect) runEventHandler(element.onConnect, { roomId });
+            if (element.onConnect) runEventHandler?.(element.onConnect, { roomId });
         });
 
         return () => {
@@ -398,7 +398,7 @@ export function CallRenderer({
             sfuWsRef.current = null;
             setJoined(false);
             emit("leave");
-            if (element.onDisconnect) runEventHandler(element.onDisconnect, { roomId });
+            if (element.onDisconnect) runEventHandler?.(element.onDisconnect, { roomId });
         };
     }, [baseWsUrl, sfuWsUrl, element.mode, iceServers, me, roomId, runEventHandler, element.onConnect, element.onDisconnect, emit]);
 
@@ -435,7 +435,7 @@ export function CallRenderer({
             await adapterRef.current?.publishLocal(stream);
         } catch (e) {
             emit("error", { message: String((e as Error).message || e) });
-            if (element.onError) runEventHandler(element.onError, { message: String(e) });
+            if (element.onError) runEventHandler?.(element.onError, { message: String(e) });
         }
     }, [element.callType, element.audioConstraints, element.videoConstraints, emit, runEventHandler, element.onError]);
 

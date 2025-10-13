@@ -1,7 +1,7 @@
 // src/lib/utils.ts
 import stripJsonComments from 'strip-json-comments';
 import { BrowserProvider } from 'ethers';
-import { AnyObj, VisibilityControl, AccessibilityProps, StyleProps, AnimationSpec, IRoute, UIDefinition, ImageElement, UIProject, Brand } from '../types';
+import { AnyObj, VisibilityControl, AccessibilityProps, StyleProps, AnimationSpec, IRoute, UIDefinition, ImageElement, UIProject, Brand, DataSource } from '../types';
 import { clsx, type ClassValue } from "clsx"
 // import { twMerge } from "tailwind-merge"
 import { cva } from 'class-variance-authority';
@@ -249,15 +249,32 @@ function readEnv(key: string): string | undefined {
 export function expandEnvTemplates(str: string): string {
     return str.replace(/\$\{([A-Z0-9_]+)\}/g, (_, k) => readEnv(k) || "");
 }
+export function sanitizeValue(value: any): any {
+    if (value == null) return "";
+    if (Array.isArray(value)) return value; // arrays render fine with map
+    if (typeof value === "object") {
+        // Avoid React crash on raw objects
+        try {
+            return JSON.stringify(value);
+        } catch {
+            return String(value);
+        }
+    }
+    return String(value);
+}
+
 export function resolveBinding(
     val: any,
     state: AnyObj,
     t: (k: string) => string
 ): any {
-    if (val == null) return val;
+    if (val == null) return "";
 
-    // 🔹 Normalize: if object has { binding }, unwrap to raw key
-    const key = typeof val === "object" && "binding" in val ? String(val.binding) : String(val);
+    // 🔹 Normalize to a simple key string
+    const key =
+        typeof val === "object" && "binding" in val
+            ? String(val.binding)
+            : String(val);
 
     // --- i18n.key ---
     if (key.startsWith("i18n.")) {
@@ -270,14 +287,10 @@ export function resolveBinding(
     if (key.startsWith("translations.")) {
         const parts = key.split(".");
         if (parts.length >= 3) {
-            const locale = parts[1];                // "en"
-            const path = parts.slice(2).join(".");  // "nav.faq.hero.title"
-
-            // Try with locale
+            const locale = parts[1];
+            const path = parts.slice(2).join(".");
             let out = t(`${locale}.${path}`);
             if (out !== `${locale}.${path}`) return out;
-
-            // Fallback: try without locale
             out = t(path);
             return out === path ? "" : out;
         }
@@ -286,17 +299,53 @@ export function resolveBinding(
     // --- state.<path> ---
     if (key.startsWith("state.")) {
         const valFromState = getPath(state, key.slice(6));
-        return Array.isArray(valFromState) ? valFromState : (valFromState ?? null);
+        return sanitizeValue(valFromState);
+    }
+    // Handle strings (support state.* and form.*)
+    if (key.startsWith("form.")) {
+        const valFromState = getPath(state, key.slice(5));
+        return sanitizeValue(valFromState);
+    }
+    if (key.startsWith("{form.")) {
+        const valFromState = getPath(state, key.slice(6));
+        return sanitizeValue(valFromState);
     }
 
-    // --- env or ALL_CAPS ---
-    if (key.startsWith("env.")) return readEnv(key.slice(4));
-    if (/^[A-Z0-9_]+$/.test(key)) return readEnv(key);
-    if (key.includes("API_ENDPOINT")) return readEnv("API_ENDPOINT");
+    // --- env / config lookups ---
+    if (key.startsWith("env.")) return sanitizeValue(readEnv(key.slice(4)));
+    if (/^[A-Z0-9_]+$/.test(key)) return sanitizeValue(readEnv(key));
+    if (key.includes("API_ENDPOINT")) return sanitizeValue(readEnv("API_ENDPOINT"));
+
+    // --- auto-detect translation-like keys (fallback heuristic) ---
+    // e.g. "hero.title", "footer.contact", "features.cards.0.text"
+    if (
+        key.includes(".") &&                             // has dot notation
+        !key.startsWith("state.") &&
+        !key.startsWith("env.") &&
+        !key.startsWith("data.") &&
+        !key.startsWith("config.") &&
+        !key.startsWith("props.") &&
+        !key.match(/^[A-Z0-9_]+$/)                       // not constant/ENV
+    ) {
+        const out = t(key);
+        if (out && out !== key) return out;
+
+        // Try resolving without prefix if t() has language namespace internally
+        const parts = key.split(".");
+        if (parts.length > 1) {
+            const sub = parts.slice(1).join(".");
+            const subOut = t(sub);
+            if (subOut && subOut !== sub) return subOut;
+        }
+    }
 
     // --- fallback: try state lookup or return literal ---
     const maybe = getPath(state, key);
-    return typeof maybe === "string" ? expandEnvTemplates(maybe) : maybe ?? key;
+    if (maybe !== undefined && maybe !== null)
+        return sanitizeValue(typeof maybe === "string" ? expandEnvTemplates(maybe) : maybe);
+
+    // --- final fallback: return as literal ---
+    return sanitizeValue(key);
 }
 
 const isPlainObj = (v: any) =>
@@ -359,6 +408,7 @@ export function setPath<T extends AnyObj>(obj: T, path: string, value: any): T {
     cur[parts[parts.length - 1]] = value;
     return clone;
 }
+
 
 /**
  * Resolve animation props/styles/classes from AnimationSpec.
@@ -687,7 +737,6 @@ export async function getMetaData(route: IRoute, project: UIProject, base_url: s
             itunes: project?.globalConfig?.metadata?.itunes ?? undefined,
             bookmarks: project?.globalConfig?.metadata?.bookmarks ?? undefined,
             abstract: slogan,
-            pagination: meta.pagination,
             category: project?.globalConfig?.metadata?.category || undefined,
             classification: project?.globalConfig?.metadata?.classification || undefined,
         };
@@ -865,3 +914,137 @@ export const variants = cva(
         },
     }
 )
+
+export function resolveDataSource(
+    dsOrRef: DataSource | string,
+    globalConfig: UIProject['globalConfig'] | undefined,
+    state: AnyObj,
+    extra?: AnyObj
+): DataSource {
+    let ds: DataSource;
+
+    // Handle string input (assumed to be a refId)
+    if (typeof dsOrRef === 'string') {
+        const globalEndpoints = globalConfig?.endpoints?.registry || [];
+        const globalRef = globalEndpoints.find(ref => ref.id === dsOrRef);
+        if (!globalRef) {
+            throw new Error(`DataSource with refId ${dsOrRef} not found in global endpoints`);
+        }
+        ds = { ...globalRef };
+    } else {
+        ds = { ...dsOrRef };
+    }
+
+    // Handle refId lookup for DataSource objects
+    if (ds.refId) {
+        const globalEndpoints = globalConfig?.endpoints?.registry || [];
+        const globalRef = globalEndpoints.find(ref => ref.id === ds.refId);
+        if (globalRef) {
+            ds = { ...globalRef, ...ds };
+        }
+    }
+
+    // Apply environment-specific configuration
+    const env = globalConfig?.endpoints?.environments?.default || 'default';
+    const envConfig = globalConfig?.endpoints?.environments?.values?.[env] || {};
+    if (envConfig.baseUrl && !ds.baseUrl) {
+        ds.baseUrl = envConfig.baseUrl;
+    }
+
+    // Merge headers
+    ds.headers = {
+        ...(globalConfig?.endpoints?.defaultHeaders || {}),
+        ...(envConfig.headers || {}),
+        ...(ds.headers || {})
+    };
+
+    // Apply global auth if no auth is specified
+    if (!ds.auth && globalConfig?.endpoints?.auth) {
+        ds.auth = { ...globalConfig.endpoints.auth };
+    }
+
+    // Resolve DataSource properties
+    const resolvedDs: DataSource = {
+        ...ds,
+        baseUrl: ds.baseUrl ? resolveDataSourceValue(ds.baseUrl, state, extra) : undefined,
+        path: ds.path ? resolveDataSourceValue(ds.path, state, extra) : undefined,
+        query: ds.query ? resolveDataSourceValue(ds.query, state, extra) : undefined,
+        headers: ds.headers
+            ? Object.fromEntries(
+                Object.entries(ds.headers).map(([k, v]) => [k, resolveDataSourceValue(v, state, extra)])
+            )
+            : undefined,
+        queryParams: ds.queryParams
+            ? Object.fromEntries(
+                Object.entries(ds.queryParams).map(([k, v]) => [k, resolveDataSourceValue(v, state, extra)])
+            )
+            : undefined,
+        body: ds.body && Object.values(ds.body).some(v => typeof v === 'string' && v.includes('{form.')) ? ds.body : deepResolveDataSource(ds.body, state, extra),
+        auth: ds.auth
+            ? {
+                ...ds.auth,
+                value: resolveDataSourceValue(ds.auth.value, state, extra)
+            }
+            : undefined,
+        heartbeat: ds.heartbeat
+            ? {
+                ...ds.heartbeat,
+                message: resolveDataSourceValue(ds.heartbeat.message, state, extra)
+            }
+            : undefined
+    };
+
+    return resolvedDs;
+}
+
+export function deepResolveDataSource(input: any, state: AnyObj, extra?: AnyObj): any {
+    if (input == null) return input;
+
+    // Handle arrays
+    if (Array.isArray(input)) {
+        return input.map(v => deepResolveDataSource(v, state, extra));
+    }
+
+    // Handle plain objects
+    if (isPlainObj(input)) {
+        const out: AnyObj = {};
+        for (const [k, v] of Object.entries(input)) {
+            out[k] = deepResolveDataSource(v, state, extra);
+        }
+        return out;
+    }
+
+    // Handle strings (support state.* and form.*)
+    if (typeof input === 'string') {
+        return resolveDataSourceValue(input, state, extra);
+    }
+
+    // Return literal value for non-strings
+    return input;
+}
+
+export function resolveDataSourceValue(val: any, state: AnyObj, extra?: AnyObj): any {
+    if (val == null) return "";
+
+    // Normalize to a string
+    const key = String(val);
+
+    // Handle state.* (support nested paths like user.state.state.state)
+    if (key.startsWith("state.")) {
+        const path = key.slice(6);
+        const value = getPath(state, path);
+        return value !== undefined ? sanitizeValue(value) : key;
+    }
+
+    // Handle form.* (for form data in extra)
+    if (key.startsWith("form.") && extra) {
+        const field = key.slice(5);
+        return extra[field] !== undefined ? sanitizeValue(extra[field]) : key;
+    }
+    if (key.startsWith("{form.") && extra) {
+        const field = key.slice(6);
+        return extra[field] !== undefined ? sanitizeValue(extra[field]) : key;
+    }
+    // Return literal value
+    return sanitizeValue(key);
+}

@@ -5,7 +5,7 @@ import { useMemo, useRef, useEffect, useState } from "react"
 import { cn, resolveBinding } from "../../lib/utils"
 import type { AnyObj, EventHandler, TimelineElement } from "../../types"
 import { useAppState } from "../../schema/StateContext"
-import { useActionHandler } from "../../schema/Actions"
+import { useActionHandler } from "../../schema/useActionHandler"
 import {
     CalendarClock,
     CheckCircle2,
@@ -93,7 +93,7 @@ export function TimelineRenderer(props: TimelineRendererProps) {
 
     const actionCtx = (() => {
         try {
-            return useActionHandler({ runtime: {}, globalConfig: undefined, screen: undefined })
+            return useActionHandler({ runtime: {}, globalConfig: undefined })
         } catch {
             return null
         }
@@ -134,7 +134,7 @@ export function TimelineRenderer(props: TimelineRendererProps) {
 
     // Resolve bindings per item
     const items = useMemo(() => {
-        const mapped = rawItems.map((it: AnyObj, idx: number) => {
+        const mapped = rawItems?.map((it: AnyObj, idx: number) => {
             const title = resolveBinding(it.title, state, t)
             const description = resolveBinding(it.description, state, t)
             const tsRaw = resolveBinding(it.timestamp, state, t)
@@ -271,7 +271,7 @@ export function TimelineRenderer(props: TimelineRendererProps) {
                             baseGap
                         )}
                     >
-                        {group.items.map((it, idxInGroup) => {
+                        {group.items?.map((it, idxInGroup) => {
                             const globalIndex = grouped.slice(0, gi).reduce((acc, g) => acc + g.items.length, 0) + idxInGroup
                             const Icon = resolveIcon(it.icon)
                             const side =

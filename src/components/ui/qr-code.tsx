@@ -15,7 +15,7 @@ export function QRCodeRenderer({
     element: QRReaderElement;
     state: Record<string, any>;
     t: (k: string) => string;
-    runEventHandler: (h?: any, d?: any) => Promise<void>;
+    runEventHandler?: (h?: any, d?: any) => Promise<void>;
 }) {
     const value = resolveBinding(element.value, state, t);
     const [scanned, setScanned] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export function QRCodeRenderer({
             if (stop) return;
             if (result) {
                 setScanned(result.getText());
-                if (element.onScan) runEventHandler(element.onScan, { value: result.getText() });
+                if (element.onScan) runEventHandler?.(element.onScan, { value: result.getText() });
                 stop = true;
             }
         });

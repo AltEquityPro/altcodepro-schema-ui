@@ -243,9 +243,9 @@ function DropdownMenuSubContent({
 
 function renderDropdownItems(
   items: DropdownItem[],
-  runEventHandler: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>,
   state: AnyObj,
-  t: (key: string) => string
+  t: (key: string) => string,
+  runEventHandler?: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>,
 ): React.ReactNode {
   const groups = items.reduce<Record<string, DropdownItem[]>>((acc, item) => {
     if (item.type === "radio" && item.group) {
@@ -255,7 +255,7 @@ function renderDropdownItems(
     return acc
   }, {})
 
-  return items.map((item) => {
+  return items?.map((item) => {
     const label = item.label ? resolveBinding(item.label, state, t) : null
     const heading = item.heading ? resolveBinding(item.heading, state, t) : null
 
@@ -277,7 +277,7 @@ function renderDropdownItems(
               <DropdownMenuLabel inset>{heading}</DropdownMenuLabel>
             )}
             {item.children &&
-              renderDropdownItems(item.children, runEventHandler, state, t)}
+              renderDropdownItems(item.children, state, t, runEventHandler)}
           </DropdownMenuGroup>
         )
 
@@ -289,7 +289,7 @@ function renderDropdownItems(
             checked={checked}
             disabled={item.disabled}
             onCheckedChange={(val) =>
-              runEventHandler(item.onSelect, { checked: val })
+              runEventHandler?.(item.onSelect, { checked: val })
             }
           >
             {item.icon && <DynamicIcon name={item.icon} className="size-4" />}
@@ -313,7 +313,7 @@ function renderDropdownItems(
             }
             onValueChange={(val) => {
               const selected = item.group ? groups[item.group].find((r) => r.value === val) : null
-              if (selected?.onSelect) runEventHandler(selected.onSelect)
+              if (selected?.onSelect) runEventHandler?.(selected.onSelect)
             }}
           >
             {groups[item.group].map((radio) => (
@@ -344,7 +344,7 @@ function renderDropdownItems(
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
               {item.children &&
-                renderDropdownItems(item.children, runEventHandler, state, t)}
+                renderDropdownItems(item.children, state, t, runEventHandler)}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         )
@@ -356,7 +356,7 @@ function renderDropdownItems(
             key={item.id}
             disabled={item.disabled}
             onSelect={() =>
-              item.onSelect ? runEventHandler(item.onSelect) : undefined
+              item.onSelect ? runEventHandler?.(item.onSelect) : undefined
             }
             className={item.variant === "destructive" ? "text-red-600" : ""}
           >
@@ -381,7 +381,7 @@ function DropdownRenderer({
   dropdown: DropdownElement
   state: AnyObj
   t: (key: string) => string
-  runEventHandler: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+  runEventHandler?: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }) {
   return wrapWithMotion(dropdown,
     <DropdownMenu>
@@ -389,7 +389,7 @@ function DropdownRenderer({
         <RenderChildren children={[dropdown.trigger]} />
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        {renderDropdownItems(dropdown.items, runEventHandler, state, t)}
+        {renderDropdownItems(dropdown.items, state, t, runEventHandler)}
       </DropdownMenuContent>
     </DropdownMenu>
   )

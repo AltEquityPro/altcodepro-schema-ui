@@ -125,7 +125,7 @@ function DrawerDescription({
 }
 interface DrawerRendererProps {
   element: DrawerElement
-  runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
+  runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }
 
 function DrawerRenderer({ element, runEventHandler }: DrawerRendererProps) {
@@ -138,7 +138,7 @@ function DrawerRenderer({ element, runEventHandler }: DrawerRendererProps) {
   const description = resolveBinding(drawer.description, state, t)
 
   const handleOpenChange = (next: boolean) => {
-    runEventHandler(drawer.onOpenChange, { open: next })
+    runEventHandler?.(drawer.onOpenChange, { open: next })
   }
 
   // map size → Tailwind classes

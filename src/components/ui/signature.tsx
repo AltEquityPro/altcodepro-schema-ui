@@ -10,7 +10,7 @@ import { useAppState } from "../../schema/StateContext";
 
 interface SignaturePadRendererProps {
     element: SignaturePadElement;
-    runEventHandler: (
+    runEventHandler?: (
         handler?: EventHandler,
         dataOverride?: AnyObj
     ) => Promise<void>;
@@ -104,7 +104,7 @@ export function SignaturePadRenderer({
         }
 
         const handler = trigger === "save" ? element.onSave : element.onChange;
-        await runEventHandler(handler, {
+        await runEventHandler?.(handler, {
             id: element.id,
             participantId: activeParticipant,
             signature: dataUrl,
@@ -123,7 +123,7 @@ export function SignaturePadRenderer({
             state[element.signatureDataSourceId] = multiSignatures ? updated : "";
         }
 
-        await runEventHandler(element.onClear, { id: element.id });
+        await runEventHandler?.(element.onClear, { id: element.id });
     };
 
     const undoSignature = async () => {
@@ -131,7 +131,7 @@ export function SignaturePadRenderer({
         if (!data?.length) return;
         data.pop();
         sigRef.current?.fromData(data);
-        await runEventHandler(element.onUndo, { id: element.id });
+        await runEventHandler?.(element.onUndo, { id: element.id });
     };
 
     /* ====== Auto-save ====== */
@@ -157,7 +157,7 @@ export function SignaturePadRenderer({
         if (!multiSignatures) {
             const sig = signatures.default;
             if (!sig) return;
-            await runEventHandler(element.onExport, {
+            await runEventHandler?.(element.onExport, {
                 id: element.id,
                 signatures,
                 format: "json",
@@ -181,7 +181,7 @@ export function SignaturePadRenderer({
         });
         pdf.save("signatures.pdf");
 
-        await runEventHandler(element.onExport, {
+        await runEventHandler?.(element.onExport, {
             id: element.id,
             signatures,
             format: "pdf",
@@ -206,7 +206,7 @@ export function SignaturePadRenderer({
                             variant={p.id === activeParticipant ? "default" : "outline"}
                             onClick={() => {
                                 setActiveParticipant(p.id);
-                                runEventHandler(element.onParticipantChange, {
+                                runEventHandler?.(element.onParticipantChange, {
                                     id: element.id,
                                     participantId: p.id,
                                 });

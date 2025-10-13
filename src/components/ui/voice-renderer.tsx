@@ -22,7 +22,7 @@ export function VoiceRenderer({
     element: VoiceElement;
     state: Record<string, any>;
     t: (k: string) => string;
-    runEventHandler: (h?: any, d?: any) => Promise<void>;
+    runEventHandler?: (h?: any, d?: any) => Promise<void>;
 }) {
     const [listening, setListening] = useState(false);
     const [speaking, setSpeaking] = useState(false);
@@ -48,13 +48,13 @@ export function VoiceRenderer({
             const transcript = e.results[0][0].transcript;
             setRecognizedText(transcript);
 
-            if (element.onRecognize) await runEventHandler(element.onRecognize, { transcript });
+            if (element.onRecognize) await runEventHandler?.(element.onRecognize, { transcript });
 
             let textForAI = transcript;
 
             if (element.targetLanguage && element.targetLanguage !== element.language) {
                 if (element.onTranslate) {
-                    await runEventHandler(element.onTranslate, {
+                    await runEventHandler?.(element.onTranslate, {
                         from: element.language,
                         to: element.targetLanguage,
                         text: transcript,
@@ -65,7 +65,7 @@ export function VoiceRenderer({
             }
 
             if (element.onAIResponse) {
-                const ai: any = await runEventHandler(element.onAIResponse, { text: textForAI });
+                const ai: any = await runEventHandler?.(element.onAIResponse, { text: textForAI });
                 setAIResponse(ai?.text ?? textForAI);
             } else {
                 setAIResponse(textForAI);
@@ -87,7 +87,7 @@ export function VoiceRenderer({
         utter.lang = element.targetLanguage || element.language || "en-US";
         utter.onend = async () => {
             setSpeaking(false);
-            if (element.onSpeak) await runEventHandler(element.onSpeak, { text });
+            if (element.onSpeak) await runEventHandler?.(element.onSpeak, { text });
         };
         setSpeaking(true);
         window.speechSynthesis.speak(utter);

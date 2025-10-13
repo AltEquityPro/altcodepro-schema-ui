@@ -121,7 +121,7 @@ function PaginationEllipsis({
 
 interface PageRendererProps {
   element: PaginationElement;
-  runEventHandler: (
+  runEventHandler?: (
     handler?: EventHandler,
     dataOverride?: AnyObj
   ) => Promise<void>;
@@ -180,7 +180,7 @@ function PageRenderer({
           <PaginationPrevious
             role="link"
             tabIndex={0}
-            onClick={() => runEventHandler(pagination.onPrevious)}
+            onClick={() => runEventHandler?.(pagination.onPrevious)}
           />
         </PaginationItem>
 
@@ -193,7 +193,7 @@ function PageRenderer({
               isActive={page.active}
               aria-current={page.active ? "page" : undefined}
               onClick={() =>
-                runEventHandler(pagination.onPageChange, { page: page.number })
+                runEventHandler?.(pagination.onPageChange, { page: page.number })
               }
             >
               {page.number}
@@ -213,7 +213,7 @@ function PageRenderer({
           <PaginationNext
             role="link"
             tabIndex={0}
-            onClick={() => runEventHandler(pagination.onNext)}
+            onClick={() => runEventHandler?.(pagination.onNext)}
           />
         </PaginationItem>
       </PaginationContent>

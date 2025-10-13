@@ -8,7 +8,7 @@ import { useAppState } from "../../schema/StateContext"
 
 /** ─────────────── Types ─────────────── */
 export interface LottieRendererProps {
-    element: LottieElement
+    element?: LottieElement | null
     state?: AnyObj
     t?: (key: string) => string
     runEventHandler?: (
@@ -24,9 +24,19 @@ export function LottieRenderer({
     t,
     runEventHandler,
 }: LottieRendererProps) {
+    /** Prevent crashes if element is missing */
+    if (!element || typeof element !== "object") {
+        console.warn("⚠️ Missing or invalid element passed to LottieRenderer")
+        return (
+            <div className="text-xs text-muted-foreground p-2">
+                Invalid Lottie element
+            </div>
+        )
+    }
+
     const ctx = tryUseAppState()
-    const _state = state ?? ctx.state
-    const _t = t ?? ctx.t
+    const _state = state ?? ctx.state ?? {}
+    const _t = t ?? ctx.t ?? ((k: string) => k)
 
     /** Playback props */
     const autoplay = element.autoplay ?? true
@@ -56,6 +66,7 @@ export function LottieRenderer({
     React.useEffect(() => {
         let abort = new AbortController()
         setDataError(null)
+
         if (!src) {
             setAnimationData(null)
             return
@@ -72,7 +83,10 @@ export function LottieRenderer({
             } catch (err: any) {
                 setAnimationData(null)
                 setDataError("Invalid inline Lottie JSON.")
-                runEventHandler?.(element.onError, { error: "Invalid JSON", detail: String(err?.message || err) })
+                runEventHandler?.(element.onError, {
+                    error: "Invalid JSON",
+                    detail: String(err?.message || err),
+                })
             }
             return
         }
@@ -88,7 +102,10 @@ export function LottieRenderer({
                     if (abort.signal.aborted) return
                     setAnimationData(null)
                     setDataError("Failed to load animation.")
-                    runEventHandler?.(element.onError, { error: "Fetch failed", detail: String(err?.message || err) })
+                    runEventHandler?.(element.onError, {
+                        error: "Fetch failed",
+                        detail: String(err?.message || err),
+                    })
                 })
         }
 
@@ -101,14 +118,18 @@ export function LottieRenderer({
     const [isVisible, setIsVisible] = React.useState(true)
     const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(false)
 
+    /** Safe observer setup */
     React.useEffect(() => {
-        if (!rootRef.current) return
         const el = rootRef.current
+        if (!el || typeof IntersectionObserver === "undefined") return
         const obs = new IntersectionObserver(
             (entries) => {
                 const vis = entries.some((e) => e.isIntersecting)
                 setIsVisible(vis)
-                runEventHandler?.(vis ? element.onEnterViewport : element.onLeaveViewport, { id: element.id })
+                runEventHandler?.(
+                    vis ? element.onEnterViewport : element.onLeaveViewport,
+                    { id: element.id }
+                )
             },
             { threshold: 0.25 }
         )
@@ -116,6 +137,7 @@ export function LottieRenderer({
         return () => obs.disconnect()
     }, [rootRef.current])
 
+    /** Reduced motion preference */
     React.useEffect(() => {
         if (typeof window === "undefined" || !window.matchMedia) return
         const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -125,9 +147,10 @@ export function LottieRenderer({
         return () => mq.removeEventListener?.("change", handler)
     }, [])
 
-    /** ─────────────── Loop Handling ─────────────── */
     const loopCounterRef = React.useRef(0)
-    React.useEffect(() => { loopCounterRef.current = 0 }, [animationData])
+    React.useEffect(() => {
+        loopCounterRef.current = 0
+    }, [animationData])
 
     const loopProp: boolean | number =
         typeof loopCount === "number" ? loopCount : loopFlag
@@ -137,7 +160,6 @@ export function LottieRenderer({
         return autoplay
     }, [autoplay, prefersReducedMotion, forceAutoplayEvenIfReducedMotion])
 
-    /** ─────────────── Apply speed/direction ─────────────── */
     React.useEffect(() => {
         const api = lottieRef.current
         if (!api) return
@@ -145,7 +167,6 @@ export function LottieRenderer({
         if (direction === 1 || direction === -1) api.setDirection(direction)
     }, [speed, direction])
 
-    /** ─────────────── Play/Pause external binding ─────────────── */
     React.useEffect(() => {
         const api = lottieRef.current
         if (!api) return
@@ -163,7 +184,6 @@ export function LottieRenderer({
         }
     }, [progressBinding])
 
-    /** ─────────────── Visibility-driven playback ─────────────── */
     React.useEffect(() => {
         const api = lottieRef.current
         if (!api || !animationData) return
@@ -171,7 +191,6 @@ export function LottieRenderer({
         if (pauseWhenHidden && !isVisible) api.pause()
     }, [isVisible, playOnVisible, pauseWhenHidden, animationData])
 
-    /** ─────────────── Hover-driven playback ─────────────── */
     const [hovered, setHovered] = React.useState(false)
     React.useEffect(() => {
         const api = lottieRef.current
@@ -180,10 +199,12 @@ export function LottieRenderer({
         if (!hovered && pauseOnHover) api.pause()
     }, [hovered, playOnHover, pauseOnHover, animationData])
 
-    /** ─────────────── Loop callback ─────────────── */
     const handleLoopComplete = React.useCallback(async () => {
         loopCounterRef.current += 1
-        await runEventHandler?.(element.onLoop, { id: element.id, count: loopCounterRef.current })
+        await runEventHandler?.(element.onLoop, {
+            id: element.id,
+            count: loopCounterRef.current,
+        })
         if (typeof loopCount === "number" && loopCount >= 0) {
             if (loopCounterRef.current >= loopCount) lottieRef.current?.stop()
         }
@@ -193,16 +214,25 @@ export function LottieRenderer({
     return (
         <div
             ref={rootRef}
-            className={cn("relative w-full h-full flex items-center justify-center", element.styles?.className)}
+            className={cn(
+                "relative w-full h-full flex items-center justify-center",
+                element.styles?.className
+            )}
             data-slot="lottie"
             role="img"
             aria-label={ariaLabel || "animation"}
             title={title || undefined}
-            onMouseEnter={() => { setHovered(true); runEventHandler?.(element.onHoverStart, { id: element.id }) }}
-            onMouseLeave={() => { setHovered(false); runEventHandler?.(element.onHoverEnd, { id: element.id }) }}
+            onMouseEnter={() => {
+                setHovered(true)
+                runEventHandler?.(element.onHoverStart, { id: element.id })
+            }}
+            onMouseLeave={() => {
+                setHovered(false)
+                runEventHandler?.(element.onHoverEnd, { id: element.id })
+            }}
             onClick={() => runEventHandler?.(element.onClick, { id: element.id })}
         >
-            {(!animationData && !dataError) && (
+            {!animationData && !dataError && (
                 <div className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">
                     Loading animation…
                 </div>
@@ -222,7 +252,6 @@ export function LottieRenderer({
                     renderer={renderer as any}
                     rendererSettings={rendererSettings}
                     onDOMLoaded={() => {
-                        // ensure playback starts if autoplay requested
                         if (shouldAutoplay && lottieRef.current) {
                             lottieRef.current.play()
                         }
@@ -234,17 +263,20 @@ export function LottieRenderer({
                     onLoopComplete={handleLoopComplete}
                 />
             )}
-
         </div>
     )
 }
 
 /** ─────────────── Helpers ─────────────── */
 function tryUseAppState() {
-    try { return useAppState() } catch { return { state: {} as AnyObj, t: (k: string) => k } }
+    try {
+        return useAppState()
+    } catch {
+        return { state: {} as AnyObj, t: (k: string) => k }
+    }
 }
 function numberOrNull(v: any): number | null {
-    const n = typeof v === "number" ? v : (v != null ? Number(v) : NaN)
+    const n = typeof v === "number" ? v : v != null ? Number(v) : NaN
     return isNaN(n) ? null : n
 }
 function booleanOrNull(v: any): boolean | null {

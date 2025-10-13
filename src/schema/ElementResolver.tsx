@@ -86,7 +86,6 @@ const FormResolver = lazy(() => import("../components/ui/form-resolver").then(mo
 const DataGrid = lazy(() => import("../components/ui/datagrid").then(module => ({ default: module.DataGrid })));
 const CodeInput = lazy(() => import("../components/ui/code-input").then(module => ({ default: module.CodeInput })));
 
-import { useActionHandler } from "./Actions";
 import { useAppState } from "./StateContext";
 import { RenderChildren } from "./RenderChildren";
 import {
@@ -128,7 +127,6 @@ import {
     CommandElement,
     TooltipElement,
     ToggleGroupElement,
-    SidebarElement,
     BaseElement,
     MenuElement,
     ToggleElement,
@@ -148,35 +146,28 @@ import {
     UIProject,
     DataSource,
     FooterElement,
-    HeaderElement
+    HeaderElement,
+    EventHandler
 } from "../types";
 
 interface ElementResolverProps {
     element: UIElement;
     globalConfig?: UIProject['globalConfig'];
     dataSources?: DataSource[];
-    runtime: ActionRuntime;
+    runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>;
     CustomElementResolver?: (
         element: UIElement,
         ctx: {
-            runtime: ActionRuntime;
             state: AnyObj;
             t: (k: string) => string;
-            runEventHandler: (ev: any, payload?: AnyObj) => void;
+            runEventHandler?: (ev: any, payload?: AnyObj) => void;
         }
     ) => React.ReactNode;
 }
 
-export function ElementResolver({ element, globalConfig, dataSources, runtime = {}, CustomElementResolver }: ElementResolverProps) {
+export function ElementResolver({ element, runEventHandler, CustomElementResolver }: ElementResolverProps) {
     const { state, t } = useAppState();
-    const { runEventHandler } = useActionHandler({
-        globalConfig: globalConfig,
-        dataSources: dataSources,
-        runtime,
-    });
-
     if (!isVisible(element.visibility, state, t)) return null;
-
     const resolvedElement = useMemo(() => deepResolveBindings(element, state, t), [element, state, t]);
 
     const LazyComponent = ({ children }: { children: React.ReactNode }) => (
@@ -191,7 +182,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
             return <LazyComponent>
                 <AccordionRenderer
                     element={resolvedElement as AccordionElement}
-                    runtime={runtime}
+                    runEventHandler={runEventHandler}
                 />
             </LazyComponent>
         case ElementType.alert:
@@ -203,7 +194,9 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
             </LazyComponent>
         case ElementType.alert_dialog:
             return <LazyComponent>
-                <AlertDialogRenderer element={resolvedElement as AlertDialogElement} className={className}{...accessibilityProps} runtime={runtime} />
+                <AlertDialogRenderer element={resolvedElement as AlertDialogElement}
+                    className={className}{...accessibilityProps}
+                    runEventHandler={runEventHandler} />
             </LazyComponent>
         case ElementType.audio:
             return (
@@ -218,14 +211,14 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
             </LazyComponent>
         case ElementType.badge:
             return <LazyComponent>
-                <BadgeRenderer element={resolvedElement as BadgeElement} runtime={runtime} />
+                <BadgeRenderer element={resolvedElement as BadgeElement} runEventHandler={runEventHandler} />
             </LazyComponent>
         case ElementType.breadcrumb:
             return <LazyComponent>
-                <BreadcrumbRenderer element={resolvedElement as BreadcrumbElement} runtime={runtime} />
+                <BreadcrumbRenderer element={resolvedElement as BreadcrumbElement} runEventHandler={runEventHandler} />
             </LazyComponent>
         case ElementType.button:
-            return <ButtonRenderer element={resolvedElement as ButtonElement} runtime={runtime} />
+            return <ButtonRenderer element={resolvedElement as ButtonElement} runEventHandler={runEventHandler} />
 
         case ElementType.calendar:
             return <LazyComponent>
@@ -246,12 +239,12 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
         }
         case ElementType.card:
             return <LazyComponent>
-                <CardRenderer element={resolvedElement as CardElement} runtime={runtime} />
+                <CardRenderer element={resolvedElement as CardElement} runEventHandler={runEventHandler} state={state} t={t} />
             </LazyComponent>
         case ElementType.carousel:
             const carousel = resolvedElement as CarouselElement;
             return <LazyComponent>
-                <CarouselRenderer element={carousel} runtime={runtime} state={state} t={t} />
+                <CarouselRenderer element={carousel} runEventHandler={runEventHandler} state={state} t={t} />
             </LazyComponent>
         case ElementType.chat:
             return (
@@ -275,7 +268,6 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
             return <LazyComponent>
                 <CollapsibleRenderer
                     element={resolvedElement as CollapsibleElement}
-                    runtime={runtime}
                     state={state}
                     t={t}
                     runEventHandler={runEventHandler}
@@ -294,7 +286,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
 
         case ElementType.container:
             const container = resolvedElement as ContainerElement;
-            return <ContainerRenderer element={container} runtime={runtime} />
+            return <ContainerRenderer element={container} runEventHandler={runEventHandler} />
         case ElementType.context_menu:
             const contextMenu = resolvedElement as ContextMenuElement;
             return (
@@ -306,7 +298,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
         case ElementType.custom: {
             return (
                 <LazyComponent>
-                    <CustomComponentRender element={resolvedElement as CustomElement} state={state} t={t} runtime={runtime} />
+                    <CustomComponentRender element={resolvedElement as CustomElement} state={state} t={t} runEventHandler={runEventHandler} />
                 </LazyComponent>
             )
         }
@@ -314,7 +306,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
         case ElementType.datagrid:
             return (
                 <LazyComponent>
-                    <DataGrid element={resolvedElement as DataGridElement} runEventHandler={runEventHandler} runtime={runtime} />
+                    <DataGrid element={resolvedElement as DataGridElement} runEventHandler={runEventHandler} />
                 </LazyComponent>
             );
 
@@ -339,7 +331,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
                     value={content}
                     placeholder={placeholder}
                     toolbar={editor.toolbar}
-                    onChange={(val) => runEventHandler(editor.onChange, { value: val })}
+                    onChange={(val) => runEventHandler?.(editor.onChange, { value: val })}
                     className={editor.styles?.className}
                 />
             </LazyComponent>
@@ -358,18 +350,18 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
         case ElementType.footer:
             const footer = resolvedElement as FooterElement;
             return <footer className={cn(`text-${footer.alignment || 'left'}`, className)}>
-                {footer.children && <RenderChildren children={footer.children} runtime={runtime} />}
+                {footer.children && <RenderChildren children={footer.children} runEventHandler={runEventHandler} />}
             </footer>
 
         case ElementType.form:
             return <LazyComponent>
-                <FormResolver element={resolvedElement as FormElement} runtime={runtime} />
+                <FormResolver element={resolvedElement as FormElement} runEventHandler={runEventHandler} />
             </LazyComponent>
         case ElementType.header:
             const header = resolvedElement as HeaderElement;
             return <LazyComponent>
                 <header className={cn(className, `text-${(resolvedElement as HeaderElement).alignment || "left"}`)} {...accessibilityProps}>
-                    {resolvedElement.children && <RenderChildren children={resolvedElement.children} runtime={runtime} />}
+                    {resolvedElement.children && <RenderChildren children={resolvedElement.children} runEventHandler={runEventHandler} />}
                 </header>
             </LazyComponent>
 
@@ -424,7 +416,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
             const menubar = resolvedElement as MenuElement;
             return (
                 <LazyComponent>
-                    <MenuRenderer element={menubar} runEventHandler={runEventHandler} state={state} t={t} runtime={runtime} />
+                    <MenuRenderer element={menubar} runEventHandler={runEventHandler} state={state} t={t} />
                 </LazyComponent>
             )
 
@@ -432,7 +424,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
             const modal = resolvedElement as ModalElement;
             return (
                 <LazyComponent>
-                    <ModalRenderer element={modal} runEventHandler={runEventHandler} runtime={runtime} />
+                    <ModalRenderer element={modal} runEventHandler={runEventHandler} />
                 </LazyComponent>
             )
 
@@ -453,7 +445,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
         case ElementType.popover:
             return (
                 <LazyComponent>
-                    <PopoverRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} runtime={runtime} />
+                    <PopoverRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
                 </LazyComponent>
             )
 
@@ -484,7 +476,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
                     <RatingInput
                         {...el}
                         value={value}
-                        onChange={(val) => runEventHandler(el.onChange, { value: val })}
+                        onChange={(val) => runEventHandler?.(el.onChange, { value: val })}
                     />
                 </LazyComponent>
             );
@@ -524,7 +516,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
         case ElementType.sidebar:
             return (
                 <LazyComponent>
-                    <SidebarRenderer element={resolvedElement} runtime={runtime} runEventHandler={runEventHandler} state={state} t={t} />
+                    <SidebarRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
                 </LazyComponent>
             )
         case ElementType.signature_pad:
@@ -542,7 +534,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
         case ElementType.step_wizard:
             return (
                 <LazyComponent>
-                    <StepWizardRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} runtime={runtime} />
+                    <StepWizardRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
                 </LazyComponent>
             )
 
@@ -551,7 +543,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
             return <LazyComponent>
                 <Switch
                     checked={resolveBinding(switchEl.value, state, t)}
-                    onCheckedChange={(checked) => runEventHandler(switchEl.onChange, { value: checked })}
+                    onCheckedChange={(checked) => runEventHandler?.(switchEl.onChange, { value: checked })}
                 />
             </LazyComponent>
 
@@ -585,7 +577,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
             return <LazyComponent>
                 <Tabs
                     value={tabs.activeTab}
-                    onValueChange={(v) => runEventHandler(tabs.onChange, { value: v })}
+                    onValueChange={(v) => runEventHandler?.(tabs.onChange, { value: v })}
                 >
                     <TabsList>
                         {tabs.tabs.map((tab) => (
@@ -596,7 +588,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
                     </TabsList>
                     {tabs.tabs.map((tab) => (
                         <TabsContent key={tab.id} value={tab.id}>
-                            <RenderChildren children={tab.content} runtime={runtime} />
+                            <RenderChildren children={tab.content} runEventHandler={runEventHandler} />
                         </TabsContent>
                     ))}
                 </Tabs>
@@ -643,7 +635,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
                     size={toggle.size}
                     pressed={resolveBinding(toggle.pressed, state, t)}
                     onPressedChange={(pressed) =>
-                        runEventHandler(toggle.onToggle, { pressed })
+                        runEventHandler?.(toggle.onToggle, { pressed })
                     }
                 >
                     {toggle.icon && <DynamicIcon name={toggle.icon} className="size-4" />}
@@ -659,7 +651,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
                     type={toggleGroup.multiple ? "multiple" : "single"}
                     value={resolveBinding(toggleGroup.value, state, t) || []}
                     onValueChange={(value: any) =>
-                        runEventHandler(toggleGroup.onChange, { value })
+                        runEventHandler?.(toggleGroup.onChange, { value })
                     }
                 >
                     {toggleGroup.options.map((opt) => (
@@ -683,7 +675,7 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
             return <LazyComponent>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        {tooltip.trigger && <RenderChildren children={[tooltip.trigger]} runtime={runtime} />}
+                        {tooltip.trigger && <RenderChildren children={[tooltip.trigger]} runEventHandler={runEventHandler} />}
                     </TooltipTrigger>
                     <TooltipContent
                         side={tooltip.side || "top"}
@@ -719,7 +711,6 @@ export function ElementResolver({ element, globalConfig, dataSources, runtime = 
         default:
             if (CustomElementResolver) {
                 const maybeNode = CustomElementResolver(resolvedElement, {
-                    runtime,
                     state,
                     t,
                     runEventHandler,

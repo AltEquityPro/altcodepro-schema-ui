@@ -612,7 +612,7 @@ function stripQuery(u: string) {
 
 interface FileUploadRendererProps {
     element: FileUploadElement
-    runEventHandler: (
+    runEventHandler?: (
         handler?: EventHandler,
         dataOverride?: AnyObj
     ) => Promise<void>
@@ -636,19 +636,19 @@ export function FileUploadRenderer({
     }
 
     const handleUploaded = (item: { file: File; url?: string; meta?: AnyObj }) => {
-        runEventHandler(element.onUploaded, { file: item.file, url: item.url, meta: item.meta })
+        runEventHandler?.(element.onUploaded, { file: item.file, url: item.url, meta: item.meta })
     }
     const handleError = (file: File, error: string) => {
-        runEventHandler(element.onError, { file, error })
+        runEventHandler?.(element.onError, { file, error })
     }
     const handleComplete = (summary: {
         successes: UploadedItem[]
         failures: { file: File; error: string }[]
     }) => {
-        runEventHandler(element.onComplete, summary)
+        runEventHandler?.(element.onComplete, summary)
     }
     const handleQueueChange = (queue: AnyObj) => {
-        runEventHandler(element.onQueueChange, { queue })
+        runEventHandler?.(element.onQueueChange, { queue })
     }
 
     return wrapWithMotion(element,

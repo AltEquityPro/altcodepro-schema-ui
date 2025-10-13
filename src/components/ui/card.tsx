@@ -7,7 +7,7 @@ import {
   resolveAnimation,
   resolveBinding,
 } from "../../lib/utils";
-import { CardElement, UIElement } from "../../types";
+import { AnyObj, CardElement, EventHandler, UIElement } from "../../types";
 import { ElementResolver } from "../../schema/ElementResolver";
 import { RenderChildren } from "../../schema/RenderChildren";
 
@@ -91,10 +91,12 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
 
 interface CardRendererProps {
   element: CardElement;
-  runtime?: Record<string, any>;
+  state: AnyObj,
+  t: (key: string) => string,
+  runEventHandler?: ((handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>) | undefined
 }
 
-function CardRenderer({ element, runtime = {} }: CardRendererProps) {
+function CardRenderer({ element, runEventHandler, state, t }: CardRendererProps) {
   const variantClass = cardVariants[element.variant ?? "default"];
   const schemaClass = classesFromStyleProps(element.styles);
   const acc = getAccessibilityProps(element.accessibility);
@@ -115,27 +117,27 @@ function CardRenderer({ element, runtime = {} }: CardRendererProps) {
         element.action ||
         element.header) && (
           <CardHeader className="mb-4">
-            {element.media && <ElementResolver element={element.media} runtime={runtime} />}
-            {element.badge && <ElementResolver element={element.badge} runtime={runtime} />}
-            {element.title && <CardTitle><ElementResolver element={element.title} runtime={runtime} /></CardTitle>}
+            {element.media && <ElementResolver element={element.media} runEventHandler={runEventHandler} />}
+            {element.badge && <ElementResolver element={element.badge} runEventHandler={runEventHandler} />}
+            {element.title && <CardTitle><ElementResolver element={element.title} runEventHandler={runEventHandler} /></CardTitle>}
             {element.description && (
-              <CardDescription><ElementResolver element={element.description} runtime={runtime} /></CardDescription>
+              <CardDescription><ElementResolver element={element.description} runEventHandler={runEventHandler} /></CardDescription>
             )}
-            {element.action && <CardAction><ElementResolver element={element.action} runtime={runtime} /></CardAction>}
-            {element.header && <ElementResolver element={element.header} runtime={runtime} />}
+            {element.action && <CardAction><ElementResolver element={element.action} runEventHandler={runEventHandler} /></CardAction>}
+            {element.header && <ElementResolver element={element.header} runEventHandler={runEventHandler} />}
           </CardHeader>
         )}
 
       {/* Content */}
       <CardContent>
-        {element.content && <RenderChildren children={element.content} runtime={runtime} />}
-        {element.children && <RenderChildren children={element.children} runtime={runtime} />}
+        {element.content && <RenderChildren children={element.content} runEventHandler={runEventHandler} />}
+        {element.children && <RenderChildren children={element.children} runEventHandler={runEventHandler} />}
       </CardContent>
 
       {/* Footer */}
       {element.footer && (
         <CardFooter>
-          <RenderChildren children={element.footer} runtime={runtime} />
+          <RenderChildren children={element.footer} runEventHandler={runEventHandler} />
         </CardFooter>
       )}
     </Card>
@@ -145,7 +147,7 @@ function CardRenderer({ element, runtime = {} }: CardRendererProps) {
   if (element.clickable && element.href) {
     return (
       <a
-        href={String(resolveBinding(element.href, runtime, {} as any))}
+        href={String(resolveBinding(element.href, state, t))}
         className="block transition-colors duration-200 hover:opacity-80"
       >
         {cardBody}
@@ -158,4 +160,11 @@ function CardRenderer({ element, runtime = {} }: CardRendererProps) {
 
 export {
   CardRenderer,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter
 };
