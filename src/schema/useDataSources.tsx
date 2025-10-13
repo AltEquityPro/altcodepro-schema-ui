@@ -1,8 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DataSource, AnyObj, UIProject, DataMapping, UIScreenDef } from "../types";
-import { useAppState } from "./StateContext";
-import { resolveDataSource, deepResolveDataSource, joinUrl, anySignal } from "../lib/utils";
+import { resolveDataSource, joinUrl } from "../lib/utils";
 
 type Fetcher = (
     ds: DataSource,
@@ -236,14 +235,17 @@ export function useDataSources({
     dataSources = [],
     globalConfig,
     screen,
+    state,
+    setState,
     fetcher = defaultFetcher,
 }: {
     dataSources?: DataSource[];
     globalConfig?: UIProject['globalConfig'];
     screen?: UIScreenDef;
+    state: AnyObj;
+    setState: (path: string, value: any) => void;
     fetcher?: Fetcher;
 }) {
-    const { state, setState } = useAppState();
     const [data, setData] = useState<Record<string, any>>({});
     const timers = useRef<Record<string, NodeJS.Timeout>>({});
     const wsCleanups = useRef<Record<string, () => void>>({});

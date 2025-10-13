@@ -71,13 +71,16 @@ function AnimatedWrapper({
 }
 
 function AccordionRenderer({
-  state, t,
+  state,
+  setState,
+  t,
   element,
   runEventHandler,
 }: {
   state: AnyObj,
   t: (key: string) => string
   element: AccordionElement;
+  setState: (path: string, value: any) => void;
   runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>;
 }) {
   const multiple = !!element.multiple;
@@ -123,7 +126,7 @@ function AccordionRenderer({
             <AccordionPrimitive.Content className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden text-sm">
               <div className="pt-0 pb-4">
                 {item.content.map((child: UIElement) => (
-                  <ElementResolver state={state} t={t} key={child.id} element={child} runEventHandler={runEventHandler} />
+                  <ElementResolver state={state} setState={setState} t={t} key={child.id} element={child} runEventHandler={runEventHandler} />
                 ))}
               </div>
             </AccordionPrimitive.Content>

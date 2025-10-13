@@ -93,10 +93,11 @@ interface CardRendererProps {
   element: CardElement;
   state: AnyObj,
   t: (key: string) => string,
+  setState: (path: string, value: any) => void;
   runEventHandler?: ((handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>) | undefined
 }
 
-function CardRenderer({ element, runEventHandler, state, t }: CardRendererProps) {
+function CardRenderer({ element, setState, runEventHandler, state, t }: CardRendererProps) {
   const variantClass = cardVariants[element.variant ?? "default"];
   const schemaClass = classesFromStyleProps(element.styles);
   const acc = getAccessibilityProps(element.accessibility);
@@ -117,14 +118,14 @@ function CardRenderer({ element, runEventHandler, state, t }: CardRendererProps)
         element.action ||
         element.header) && (
           <CardHeader className="mb-4">
-            {element.media && <ElementResolver state={state} t={t} element={element.media} runEventHandler={runEventHandler} />}
-            {element.badge && <ElementResolver state={state} t={t} element={element.badge} runEventHandler={runEventHandler} />}
-            {element.title && <CardTitle><ElementResolver state={state} t={t} element={element.title} runEventHandler={runEventHandler} /></CardTitle>}
+            {element.media && <ElementResolver state={state} setState={setState} t={t} element={element.media} runEventHandler={runEventHandler} />}
+            {element.badge && <ElementResolver state={state} setState={setState} t={t} element={element.badge} runEventHandler={runEventHandler} />}
+            {element.title && <CardTitle><ElementResolver state={state} setState={setState} t={t} element={element.title} runEventHandler={runEventHandler} /></CardTitle>}
             {element.description && (
-              <CardDescription><ElementResolver state={state} t={t} element={element.description} runEventHandler={runEventHandler} /></CardDescription>
+              <CardDescription><ElementResolver state={state} setState={setState} t={t} element={element.description} runEventHandler={runEventHandler} /></CardDescription>
             )}
-            {element.action && <CardAction><ElementResolver state={state} t={t} element={element.action} runEventHandler={runEventHandler} /></CardAction>}
-            {element.header && <ElementResolver state={state} t={t} element={element.header} runEventHandler={runEventHandler} />}
+            {element.action && <CardAction><ElementResolver state={state} setState={setState} t={t} element={element.action} runEventHandler={runEventHandler} /></CardAction>}
+            {element.header && <ElementResolver state={state} setState={setState} t={t} element={element.header} runEventHandler={runEventHandler} />}
           </CardHeader>
         )}
 

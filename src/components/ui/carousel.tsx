@@ -11,10 +11,11 @@ interface CarouselProps {
   element: CarouselElement;
   runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>;
   state: AnyObj;
-  t: (key: string) => string
+  t: (key: string) => string;
+  setState: (path: string, value: any) => void;
 }
 
-export function Carousel({ element, state, t, runEventHandler }: CarouselProps) {
+export function Carousel({ element, state, setState, t, runEventHandler }: CarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -111,7 +112,7 @@ export function Carousel({ element, state, t, runEventHandler }: CarouselProps) 
                 className="max-h-[80vh] w-auto object-contain rounded-lg"
               />
             ) : (
-              <ElementResolver state={state} t={t} element={item} runEventHandler={runEventHandler} />
+              <ElementResolver state={state} setState={setState} t={t} element={item} runEventHandler={runEventHandler} />
             )}
           </div>
         ))}

@@ -129,6 +129,8 @@ export function ScreenRenderer({
         dataSources: dataSourcesToFetch,
         globalConfig: project.globalConfig,
         screen: currentScreenDef,
+        state,
+        setState
     });
     const action = {
         globalConfig: project.globalConfig,
@@ -196,6 +198,7 @@ export function ScreenRenderer({
                     <ElementResolver
                         key={key}
                         state={state}
+                        setState={setState}
                         t={t}
                         element={resolved}
                         runEventHandler={runEventHandler}

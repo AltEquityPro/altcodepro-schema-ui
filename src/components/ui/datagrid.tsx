@@ -35,6 +35,7 @@ interface DataGridProps {
     dataSources?: DataSource[];
     state: AnyObj;
     t: (key: string) => string;
+    setState: (path: string, value: any) => void;
     runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj) => Promise<void>
 }
 
@@ -54,7 +55,7 @@ const getFilterFn = (type?: string) => {
     }
 }
 
-export function DataGrid({ element, dataSources, state, t, runEventHandler }: DataGridProps) {
+export function DataGrid({ element, dataSources, setState, state, t, runEventHandler }: DataGridProps) {
 
     const [sorting, setSorting] = useState<SortingState>(resolveBinding(element.sorting, state, t) || [])
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(resolveBinding(element.filters, state, t) || [])
@@ -71,7 +72,7 @@ export function DataGrid({ element, dataSources, state, t, runEventHandler }: Da
     const [modalOpen, setModalOpen] = useState(false)
     const [currentEditData, setCurrentEditData] = useState<any>(null)
 
-    const resolvedDataSources = useDataSources({ dataSources })
+    const resolvedDataSources = useDataSources({ dataSources, state, setState })
 
     const data = useMemo(() => {
         let raw = [];

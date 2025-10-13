@@ -104,9 +104,11 @@ function SheetRenderer({
   element,
   runEventHandler,
   state,
+  setState,
   t,
 }: {
   element: SheetElement
+  setState: (path: string, value: any) => void;
   runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
   state: AnyObj
   t: (key: string) => string
@@ -128,7 +130,7 @@ function SheetRenderer({
     <Sheet open={open} onOpenChange={handleOpenChange}>
       {element.trigger && (
         <SheetTrigger asChild>
-          <ElementResolver state={state} t={t} element={element.trigger} runEventHandler={runEventHandler} />
+          <ElementResolver state={state} setState={setState} t={t} element={element.trigger} runEventHandler={runEventHandler} />
         </SheetTrigger>
       )}
       <SheetContent

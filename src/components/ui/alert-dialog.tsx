@@ -140,6 +140,7 @@ function AlertDialogRenderer({
   element,
   className,
   state,
+  setState,
   t,
   runEventHandler,
   ...rest
@@ -147,6 +148,7 @@ function AlertDialogRenderer({
   element: AlertDialogElement;
   className?: string;
   state: AnyObj;
+  setState: (path: string, value: any) => void;
   t: (key: string) => string
   runEventHandler: ((handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>) | undefined
 }) {
@@ -170,7 +172,7 @@ function AlertDialogRenderer({
     >
       {element.trigger && (
         <AlertDialogPrimitive.Trigger asChild>
-          <ElementResolver state={state} t={t} element={element.trigger} runEventHandler={runEventHandler} />
+          <ElementResolver state={state} setState={setState} t={t} element={element.trigger} runEventHandler={runEventHandler} />
         </AlertDialogPrimitive.Trigger>
       )}
 
@@ -213,20 +215,20 @@ function AlertDialogRenderer({
 
             {/* Custom content */}
             {element.content?.map((child: UIElement) => (
-              <ElementResolver state={state} t={t} key={child.id} element={child} runEventHandler={runEventHandler} />
+              <ElementResolver state={state} setState={setState} t={t} key={child.id} element={child} runEventHandler={runEventHandler} />
             ))}
 
             {/* Footer actions */}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               {element.cancelButton && (
                 <AlertDialogPrimitive.Cancel className={cn(variants({ variant: "outline" }))} asChild>
-                  <ElementResolver state={state} t={t} element={element.cancelButton} runEventHandler={runEventHandler} />
+                  <ElementResolver state={state} setState={setState} t={t} element={element.cancelButton} runEventHandler={runEventHandler} />
                 </AlertDialogPrimitive.Cancel>
               )}
 
               {element.actionButton && (
                 <AlertDialogPrimitive.Action className={cn(variants())} asChild>
-                  <ElementResolver state={state} t={t} element={element.actionButton} runEventHandler={runEventHandler} />
+                  <ElementResolver state={state} setState={setState} t={t} element={element.actionButton} runEventHandler={runEventHandler} />
                 </AlertDialogPrimitive.Action>
               )}
 
@@ -238,7 +240,7 @@ function AlertDialogRenderer({
                       className={cn(variants({ variant: "outline" }))}
                       asChild
                     >
-                      <ElementResolver state={state} t={t} element={btn} runEventHandler={runEventHandler} />
+                      <ElementResolver state={state} setState={setState} t={t} element={btn} runEventHandler={runEventHandler} />
                     </AlertDialogPrimitive.Cancel>
                   );
                 }
@@ -252,7 +254,7 @@ function AlertDialogRenderer({
                     )}
                     asChild
                   >
-                    <ElementResolver state={state} t={t} element={btn} runEventHandler={runEventHandler} />
+                    <ElementResolver state={state} setState={setState} t={t} element={btn} runEventHandler={runEventHandler} />
                   </AlertDialogPrimitive.Action>
                 );
               })}

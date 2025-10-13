@@ -701,10 +701,12 @@ function SidebarMenuSubButton({
 function SidebarRenderer({
   element,
   runEventHandler,
+  setState,
   state,
   t,
 }: {
-  element: SidebarElement
+  element: SidebarElement;
+  setState: (path: string, value: any) => void;
   runEventHandler?: (h?: EventHandler, d?: AnyObj) => Promise<void>
   state: AnyObj
   t: (key: string) => string
@@ -714,7 +716,7 @@ function SidebarRenderer({
       {/* Header */}
       {element.header && (
         <SidebarHeader>
-          <ElementResolver state={state} t={t} element={element.header} runEventHandler={runEventHandler} />
+          <ElementResolver setState={setState} state={state} t={t} element={element.header} runEventHandler={runEventHandler} />
         </SidebarHeader>
       )}
 
@@ -730,7 +732,7 @@ function SidebarRenderer({
                 {group.items?.map((item) => (
                   <SidebarMenuItem key={item.id}>
                     <SidebarMenuButton asChild>
-                      <ElementResolver state={state} t={t} element={item} runEventHandler={runEventHandler} />
+                      <ElementResolver setState={setState} state={state} t={t} element={item} runEventHandler={runEventHandler} />
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -743,7 +745,7 @@ function SidebarRenderer({
       {/* Footer */}
       {element.footer && (
         <SidebarFooter>
-          <ElementResolver state={state} t={t} element={element.footer} runEventHandler={runEventHandler} />
+          <ElementResolver setState={setState} state={state} t={t} element={element.footer} runEventHandler={runEventHandler} />
         </SidebarFooter>
       )}
 

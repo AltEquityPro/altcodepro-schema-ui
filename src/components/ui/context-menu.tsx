@@ -329,18 +329,20 @@ function renderContextMenuItems(
 function ContextMenuRenderer({
   element,
   state,
+  setState,
   t,
   runEventHandler,
 }: {
   element: ContextMenuElement
   state: AnyObj
   t: (s: string) => string
+  setState: (path: string, value: any) => void;
   runEventHandler?: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }) {
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <ElementResolver element={element.trigger} state={state} t={t} runEventHandler={runEventHandler} />
+        <ElementResolver setState={setState} element={element.trigger} state={state} t={t} runEventHandler={runEventHandler} />
       </ContextMenuTrigger>
       <ContextMenuContent>
         {renderContextMenuItems(element.items, state, t, runEventHandler)}

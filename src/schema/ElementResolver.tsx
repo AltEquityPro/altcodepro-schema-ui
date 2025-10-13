@@ -154,6 +154,7 @@ interface ElementResolverProps {
     globalConfig?: UIProject['globalConfig'];
     dataSources?: DataSource[];
     state: AnyObj
+    setState: (path: string, value: any) => void;
     t: (key: string) => string
     runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>;
     CustomElementResolver?: (
@@ -166,7 +167,7 @@ interface ElementResolverProps {
     ) => React.ReactNode;
 }
 
-export function ElementResolver({ element, state, t, runEventHandler, CustomElementResolver }: ElementResolverProps) {
+export function ElementResolver({ element, state, setState, t, runEventHandler, CustomElementResolver }: ElementResolverProps) {
     if (!isVisible(element.visibility, state, t)) return null;
     const resolvedElement = useMemo(() => deepResolveBindings(element, state, t), [element, state, t]);
 
@@ -183,6 +184,7 @@ export function ElementResolver({ element, state, t, runEventHandler, CustomElem
                 <AccordionRenderer
                     state={state}
                     t={t}
+                    setState={setState}
                     element={resolvedElement as AccordionElement}
                     runEventHandler={runEventHandler}
                 />
@@ -199,6 +201,7 @@ export function ElementResolver({ element, state, t, runEventHandler, CustomElem
                 <AlertDialogRenderer
                     state={state}
                     t={t}
+                    setState={setState}
                     element={resolvedElement as AlertDialogElement}
                     className={className}{...accessibilityProps}
                     runEventHandler={runEventHandler} />
@@ -229,6 +232,7 @@ export function ElementResolver({ element, state, t, runEventHandler, CustomElem
                 <BreadcrumbRenderer
                     state={state}
                     t={t}
+                    setState={setState}
                     element={resolvedElement as BreadcrumbElement} runEventHandler={runEventHandler} />
             </LazyComponent>
         case ElementType.button:
@@ -256,12 +260,12 @@ export function ElementResolver({ element, state, t, runEventHandler, CustomElem
         }
         case ElementType.card:
             return <LazyComponent>
-                <CardRenderer element={resolvedElement as CardElement} runEventHandler={runEventHandler} state={state} t={t} />
+                <CardRenderer setState={setState} element={resolvedElement as CardElement} runEventHandler={runEventHandler} state={state} t={t} />
             </LazyComponent>
         case ElementType.carousel:
             const carousel = resolvedElement as CarouselElement;
             return <LazyComponent>
-                <CarouselRenderer element={carousel} runEventHandler={runEventHandler} state={state} t={t} />
+                <CarouselRenderer setState={setState} element={carousel} runEventHandler={runEventHandler} state={state} t={t} />
             </LazyComponent>
         case ElementType.chat:
             return (
@@ -284,6 +288,7 @@ export function ElementResolver({ element, state, t, runEventHandler, CustomElem
         case ElementType.collapsible:
             return <LazyComponent>
                 <CollapsibleRenderer
+                    setState={setState}
                     element={resolvedElement as CollapsibleElement}
                     state={state}
                     t={t}
@@ -308,7 +313,7 @@ export function ElementResolver({ element, state, t, runEventHandler, CustomElem
             const contextMenu = resolvedElement as ContextMenuElement;
             return (
                 <LazyComponent>
-                    <ContextMenuRenderer element={contextMenu} state={state} t={t} runEventHandler={runEventHandler} />
+                    <ContextMenuRenderer setState={setState} element={contextMenu} state={state} t={t} runEventHandler={runEventHandler} />
                 </LazyComponent>
             )
 
@@ -323,7 +328,7 @@ export function ElementResolver({ element, state, t, runEventHandler, CustomElem
         case ElementType.datagrid:
             return (
                 <LazyComponent>
-                    <DataGrid element={resolvedElement as DataGridElement} state={state} t={t} runEventHandler={runEventHandler} />
+                    <DataGrid element={resolvedElement as DataGridElement} state={state} setState={setState} t={t} runEventHandler={runEventHandler} />
                 </LazyComponent>
             );
 
@@ -456,6 +461,7 @@ export function ElementResolver({ element, state, t, runEventHandler, CustomElem
                 <LazyComponent>
                     <ModalRenderer
                         state={state}
+                        setState={setState}
                         t={t}
                         element={modal} runEventHandler={runEventHandler} />
                 </LazyComponent>
@@ -542,14 +548,14 @@ export function ElementResolver({ element, state, t, runEventHandler, CustomElem
         case ElementType.sheet:
             return (
                 <LazyComponent>
-                    <SheetRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
+                    <SheetRenderer setState={setState} element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
                 </LazyComponent>
             )
 
         case ElementType.sidebar:
             return (
                 <LazyComponent>
-                    <SidebarRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
+                    <SidebarRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} setState={setState} t={t} />
                 </LazyComponent>
             )
         case ElementType.signature_pad:

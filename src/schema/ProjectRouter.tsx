@@ -74,10 +74,12 @@ export function ProjectRouter({
                 {/* 5. Footer */}
                 {project.footer && <ElementResolver
                     state={state}
-                    t={t} element={project.footer} />}
+                    setState={setState}
+                    t={t}
+                    element={project.footer} />}
 
                 {/* 6. Cookie banner */}
-                <CookieBannerRenderer project={project} state={state} t={t} />
+                <CookieBannerRenderer setState={setState} project={project} state={state} t={t} />
             </div>
         </GlobalThemeProvider>
     );

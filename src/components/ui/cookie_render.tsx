@@ -11,10 +11,12 @@ import { Button } from "./button";
 export function CookieBannerRenderer({
     project,
     state,
+    setState,
     t,
 }: {
     project: UIProject;
     state: AnyObj;
+    setState: (path: string, value: any) => void;
     t: (key: string) => string;
 }) {
     const c = project.cookie_banner;
@@ -95,7 +97,9 @@ export function CookieBannerRenderer({
                     <div className="flex items-center justify-end gap-3">
                         {c.manageButton && (
                             <ElementResolver
-                                state={state} t={t}
+                                state={state}
+                                t={t}
+                                setState={setState}
                                 element={{
                                     ...c.manageButton,
                                     onClick: {
@@ -118,7 +122,9 @@ export function CookieBannerRenderer({
             {/* Preferences Modal */}
             {c.preferencesModal && (
                 <ModalRenderer
-                    state={state} t={t}
+                    state={state}
+                    t={t}
+                    setState={setState}
                     element={{
                         ...c.preferencesModal,
                         isOpen: showModal,

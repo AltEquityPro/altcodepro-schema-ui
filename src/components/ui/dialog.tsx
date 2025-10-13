@@ -134,11 +134,12 @@ function DialogDescription({
 interface ModalRendererProps {
   element: ModalElement
   state: AnyObj;
+  setState: (path: string, value: any) => void;
   t: (key: string) => string,
   runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }
 
-function ModalRenderer({ element, state, t, runEventHandler }: ModalRendererProps) {
+function ModalRenderer({ element, setState, state, t, runEventHandler }: ModalRendererProps) {
 
   const modal = element
 
@@ -210,6 +211,7 @@ function ModalRenderer({ element, state, t, runEventHandler }: ModalRendererProp
         {modal.closeButton && (
           <DialogFooter>
             <ElementResolver
+              setState={setState}
               state={state} t={t}
               element={modal.closeButton}
               runEventHandler={handleActionWrapper}
