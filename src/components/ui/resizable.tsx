@@ -57,10 +57,12 @@ function ResizableHandle({
 function ResizableRenderer({
   element,
   state,
+  setState,
   t,
 }: {
   element: ResizableElement
-  state: AnyObj
+  state: AnyObj;
+  setState: (path: string, value: any) => void;
   t: (key: string) => string
 }) {
   const direction = element.direction || "horizontal"
@@ -81,7 +83,7 @@ function ResizableRenderer({
               maxSize={maxSize}
               collapsible={panel.collapsible}
             >
-              <RenderChildren children={panel.content} />
+              <RenderChildren children={panel.content} state={state} t={t} setState={setState} />
             </ResizablePanel>
 
             {/* Insert handle between panels */}

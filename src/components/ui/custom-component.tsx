@@ -4,10 +4,11 @@ import { RenderChildren } from '../../schema/RenderChildren';
 import { AnyObj, CustomElement, EventHandler } from '../../types';
 import wrapWithMotion from './wrapWithMotion';
 
-export default function CustomComponentRender({ element, runEventHandler, state, t }: {
+export default function CustomComponentRender({ element, runEventHandler, state, setState, t }: {
     element: CustomElement,
     runEventHandler?: ((handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>),
     state: AnyObj,
+    setState: (path: string, value: any) => void;
     t: (key: string) => string
 }) {
 
@@ -45,7 +46,7 @@ export default function CustomComponentRender({ element, runEventHandler, state,
                 aria-label={resolveBinding(element.accessibility?.ariaLabel, state, t)}
                 aria-hidden={!element.visibility?.show}
             >
-                {element.children && <RenderChildren children={element.children} runEventHandler={runEventHandler} />}
+                {element.children && <RenderChildren state={state} setState={setState} t={t} children={element.children} runEventHandler={runEventHandler} />}
             </Comp>
         );
     });

@@ -203,6 +203,7 @@ function ModalRenderer({ element, setState, state, t, runEventHandler }: ModalRe
 
         {/* Body */}
         <RenderChildren
+          state={state} setState={setState} t={t}
           children={modal.content}
           runEventHandler={handleActionWrapper}
         />

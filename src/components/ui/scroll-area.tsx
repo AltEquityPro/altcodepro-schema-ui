@@ -60,13 +60,19 @@ function ScrollBar({
 }
 function ScrollAreaRenderer({
   element,
+  state,
+  setState,
+  t
 }: {
-  element: UIElement
+  element: UIElement;
+  state: AnyObj;
+  setState: (path: string, value: any) => void;
+  t: (key: string) => string
 }) {
   return wrapWithMotion(
     element,
     <ScrollArea>
-      {element.children && <RenderChildren children={element.children} />}
+      {element.children && <RenderChildren children={element.children} state={state} t={t} setState={setState} />}
     </ScrollArea>
   )
 }

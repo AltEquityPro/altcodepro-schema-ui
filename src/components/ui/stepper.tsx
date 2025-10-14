@@ -16,9 +16,11 @@ export default function StepWizardRenderer({
     element,
     runEventHandler,
     state,
+    setState,
     t,
 }: {
     element: StepWizardElement;
+    setState: (path: string, value: any) => void;
     runEventHandler?: (h?: EventHandler, d?: AnyObj) => Promise<void>;
     state: AnyObj;
     t: (key: string) => string;
@@ -124,6 +126,7 @@ export default function StepWizardRenderer({
                 </h3>
                 {step?.content ? (
                     <RenderChildren
+                        state={state} t={t} setState={setState}
                         children={Array.isArray(step.content) ? step.content : [step.content]}
                         runEventHandler={runEventHandler}
                     />

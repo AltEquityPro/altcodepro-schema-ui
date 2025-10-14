@@ -19,6 +19,7 @@ export interface ListItemRendererProps {
     index?: number;
     showDivider?: boolean;
     density?: "comfortable" | "compact";
+    setState: (path: string, value: any) => void;
     onFocusNext?: () => void;
     onFocusPrev?: () => void;
 }
@@ -28,6 +29,7 @@ export function ListItemRenderer({
     runEventHandler,
     selected = false,
     index,
+    setState,
     state,
     t,
     showDivider,
@@ -132,7 +134,7 @@ export function ListItemRenderer({
                     />
                 ) : element.children?.length ? (
                     <div className="shrink-0 mt-0.5">
-                        <RenderChildren children={element.children} runEventHandler={runEventHandler} />
+                        <RenderChildren children={element.children} runEventHandler={runEventHandler} state={state} t={t} setState={setState} />
                     </div>
                 ) : null}
 

@@ -52,9 +52,11 @@ function PopoverRenderer({
   element,
   runEventHandler,
   state,
+  setState,
   t,
 }: {
-  element: PopoverElement
+  element: PopoverElement;
+  setState: (path: string, value: any) => void;
   runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
   state: AnyObj
   t: (key: string) => string
@@ -69,10 +71,10 @@ function PopoverRenderer({
     element,
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        {element.trigger && <RenderChildren children={[element.trigger]} />}
+        {element.trigger && <RenderChildren children={[element.trigger]} state={state} t={t} setState={setState} />}
       </PopoverTrigger>
       <PopoverContent side={element.side} align={element.align}>
-        <RenderChildren children={element.content} />
+        <RenderChildren children={element.content} state={state} t={t} setState={setState} />
       </PopoverContent>
     </Popover>
   )

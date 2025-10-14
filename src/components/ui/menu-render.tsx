@@ -438,10 +438,12 @@ function MobileMenu({
 export function MenuRenderer({
   element,
   runEventHandler,
+  setState,
   state,
   t,
 }: {
-  element: MenuElement
+  element: MenuElement;
+  setState: (path: string, value: any) => void;
   runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
   state: AnyObj
   t: (key: string) => string
@@ -475,7 +477,7 @@ export function MenuRenderer({
         element,
         <Dropdown.Root>
           <Dropdown.Trigger asChild>
-            {element.trigger && <RenderChildren children={[element.trigger]} runEventHandler={runEventHandler} />}
+            {element.trigger && <RenderChildren children={[element.trigger]} runEventHandler={runEventHandler} state={state} t={t} setState={setState} />}
           </Dropdown.Trigger>
           <Dropdown.Content className="z-50 rounded-md border bg-popover p-1 shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out">
             {renderItems(element.items, state, t, Dropdown, "dropdown", runEventHandler)}
@@ -488,7 +490,7 @@ export function MenuRenderer({
         element,
         <Context.Root>
           <Context.Trigger asChild>
-            {element.trigger && <RenderChildren children={[element.trigger]} runEventHandler={runEventHandler} />}
+            {element.trigger && <RenderChildren children={[element.trigger]} runEventHandler={runEventHandler} state={state} t={t} setState={setState} />}
           </Context.Trigger>
           <Context.Content className="z-50 rounded-md border bg-popover p-1 shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out">
             {renderItems(element.items, state, t, Context, "context", runEventHandler)}

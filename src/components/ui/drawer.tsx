@@ -125,11 +125,12 @@ function DrawerDescription({
 interface DrawerRendererProps {
   element: DrawerElement
   state: AnyObj;
+  setState: (path: string, value: any) => void;
   t: (key: string) => string,
   runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }
 
-function DrawerRenderer({ element, state, t, runEventHandler }: DrawerRendererProps) {
+function DrawerRenderer({ element, state, setState, t, runEventHandler }: DrawerRendererProps) {
 
   const drawer = element
 
@@ -159,7 +160,7 @@ function DrawerRenderer({ element, state, t, runEventHandler }: DrawerRendererPr
       {/* Trigger */}
       {drawer.trigger && (
         <DrawerTrigger asChild>
-          <RenderChildren children={[drawer.trigger]} />
+          <RenderChildren children={[drawer.trigger]} state={state} setState={setState} t={t} />
         </DrawerTrigger>
       )}
 
@@ -181,12 +182,12 @@ function DrawerRenderer({ element, state, t, runEventHandler }: DrawerRendererPr
           )}
 
           {/* Body */}
-          <RenderChildren children={drawer.content} />
+          <RenderChildren children={drawer.content} state={state} t={t} setState={setState} />
 
           {/* Footer */}
           {drawer.footer && drawer.footer.length > 0 && (
             <DrawerFooter>
-              <RenderChildren children={drawer.footer} />
+              <RenderChildren children={drawer.footer} state={state} t={t} setState={setState} />
             </DrawerFooter>
           )}
 

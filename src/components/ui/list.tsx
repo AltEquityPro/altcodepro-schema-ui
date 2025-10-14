@@ -12,6 +12,7 @@ interface ListRendererProps {
     element: ListElement;
     runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>;
     state: AnyObj;
+    setState: (path: string, value: any) => void;
     t: (key: string) => string;
     density?: Density;
     showDividers?: boolean;
@@ -21,6 +22,7 @@ interface ListRendererProps {
 export function ListRenderer({
     element,
     state,
+    setState,
     t,
     runEventHandler,
     density = "comfortable",
@@ -79,6 +81,7 @@ export function ListRenderer({
                                     }}
                                     state={state}
                                     t={t}
+                                    setState={setState}
                                     selected={selectedIndex === i}
                                     index={i}
                                     density={density}
@@ -124,6 +127,7 @@ export function ListRenderer({
                             await runEventHandler?.(h, data);
                         }}
                         state={state}
+                        setState={setState}
                         t={t}
                         selected={selectedIndex === index}
                         index={index}

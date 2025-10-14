@@ -131,14 +131,14 @@ function CardRenderer({ element, setState, runEventHandler, state, t }: CardRend
 
       {/* Content */}
       <CardContent>
-        {element.content && <RenderChildren children={element.content} runEventHandler={runEventHandler} />}
-        {element.children && <RenderChildren children={element.children} runEventHandler={runEventHandler} />}
+        {element.content && <RenderChildren state={state} setState={setState} t={t} children={element.content} runEventHandler={runEventHandler} />}
+        {element.children && <RenderChildren state={state} setState={setState} t={t} children={element.children} runEventHandler={runEventHandler} />}
       </CardContent>
 
       {/* Footer */}
       {element.footer && (
         <CardFooter>
-          <RenderChildren children={element.footer} runEventHandler={runEventHandler} />
+          <RenderChildren state={state} setState={setState} t={t} children={element.footer} runEventHandler={runEventHandler} />
         </CardFooter>
       )}
     </Card>

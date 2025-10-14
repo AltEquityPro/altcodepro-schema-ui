@@ -374,19 +374,21 @@ function renderDropdownItems(
 
 function DropdownRenderer({
   dropdown,
+  setState,
   runEventHandler,
   state,
   t,
 }: {
   dropdown: DropdownElement
-  state: AnyObj
+  state: AnyObj;
+  setState: (path: string, value: any) => void;
   t: (key: string) => string
   runEventHandler?: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }) {
   return wrapWithMotion(dropdown,
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <RenderChildren children={[dropdown.trigger]} />
+        <RenderChildren children={[dropdown.trigger]} state={state} t={t} setState={setState} />
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         {renderDropdownItems(dropdown.items, state, t, runEventHandler)}

@@ -15,11 +15,13 @@ import clsx from "clsx";
 export function ContainerRenderer({
     element,
     state = {},
+    setState,
     t = (s) => s,
     runEventHandler
 }: {
     element: ContainerElement;
     state?: AnyObj;
+    setState: (path: string, value: any) => void;
     runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>;
     t?: (s: string) => string;
 }) {
@@ -44,7 +46,7 @@ export function ContainerRenderer({
             {...accessibilityProps}
         >
             {container.children && (
-                <RenderChildren children={container.children} runEventHandler={runEventHandler} />
+                <RenderChildren state={state} setState={setState} t={t} children={container.children} runEventHandler={runEventHandler} />
             )}
         </div>
     );

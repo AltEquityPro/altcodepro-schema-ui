@@ -10,9 +10,15 @@ import { ElementResolver } from "./ElementResolver";
  */
 export function RenderChildren({
     children,
+    t,
+    state,
+    setState,
     runEventHandler,
 }: {
     children: UIElement[] | undefined;
+    t: (key: string) => string;
+    state: AnyObj;
+    setState: (path: string, value: any) => void;
     runEventHandler?: (
         handler?: EventHandler,
         dataOverride?: AnyObj
@@ -26,6 +32,9 @@ export function RenderChildren({
                 <ElementResolver
                     key={child.id || `child-${idx}`}
                     element={child}
+                    t={t}
+                    state={state}
+                    setState={setState}
                     runEventHandler={runEventHandler}
                 />
             ))}

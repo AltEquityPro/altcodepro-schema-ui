@@ -288,8 +288,8 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         case ElementType.collapsible:
             return <LazyComponent>
                 <CollapsibleRenderer
-                    setState={setState}
                     element={resolvedElement as CollapsibleElement}
+                    setState={setState}
                     state={state}
                     t={t}
                     runEventHandler={runEventHandler}
@@ -297,7 +297,11 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             </LazyComponent>
         case ElementType.command:
             return <LazyComponent>
-                <CommandRenderer element={resolvedElement as CommandElement} runEventHandler={runEventHandler} />
+                <CommandRenderer
+                    setState={setState}
+                    state={state}
+                    t={t}
+                    element={resolvedElement as CommandElement} runEventHandler={runEventHandler} />
             </LazyComponent>
         case ElementType.comments:
             return (
@@ -308,7 +312,10 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
 
         case ElementType.container:
             const container = resolvedElement as ContainerElement;
-            return <ContainerRenderer element={container} runEventHandler={runEventHandler} />
+            return <ContainerRenderer
+                setState={setState}
+                state={state}
+                t={t} element={container} runEventHandler={runEventHandler} />
         case ElementType.context_menu:
             const contextMenu = resolvedElement as ContextMenuElement;
             return (
@@ -320,7 +327,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         case ElementType.custom: {
             return (
                 <LazyComponent>
-                    <CustomComponentRender element={resolvedElement as CustomElement} state={state} t={t} runEventHandler={runEventHandler} />
+                    <CustomComponentRender element={resolvedElement as CustomElement} setState={setState} state={state} t={t} runEventHandler={runEventHandler} />
                 </LazyComponent>
             )
         }
@@ -336,6 +343,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             return <LazyComponent>
                 <DrawerRenderer
                     state={state}
+                    setState={setState}
                     t={t}
                     element={resolvedElement as DrawerElement} runEventHandler={runEventHandler} />
             </LazyComponent>
@@ -343,7 +351,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         case ElementType.dropdown:
             const dropdown = resolvedElement as DropdownElement;
             return <LazyComponent>
-                <DropdownRenderer dropdown={dropdown} runEventHandler={runEventHandler} state={state} t={t} />
+                <DropdownRenderer setState={setState} dropdown={dropdown} runEventHandler={runEventHandler} state={state} t={t} />
             </LazyComponent>
 
         case ElementType.editor: {
@@ -377,7 +385,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         case ElementType.footer:
             const footer = resolvedElement as FooterElement;
             return <footer className={cn(`text-${footer.alignment || 'left'}`, className)}>
-                {footer.children && <RenderChildren children={footer.children} runEventHandler={runEventHandler} />}
+                {footer.children && <RenderChildren children={footer.children} state={state} setState={setState} t={t} runEventHandler={runEventHandler} />}
             </footer>
 
         case ElementType.form:
@@ -388,7 +396,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             const header = resolvedElement as HeaderElement;
             return <LazyComponent>
                 <header className={cn(className, `text-${(resolvedElement as HeaderElement).alignment || "left"}`)} {...accessibilityProps}>
-                    {resolvedElement.children && <RenderChildren children={resolvedElement.children} runEventHandler={runEventHandler} />}
+                    {resolvedElement.children && <RenderChildren state={state} setState={setState} t={t} children={resolvedElement.children} runEventHandler={runEventHandler} />}
                 </header>
             </LazyComponent>
 
@@ -420,7 +428,9 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                 <LazyComponent>
                     <ListRenderer
                         state={state}
-                        t={t} element={resolvedElement as ListElement} runEventHandler={runEventHandler} />
+                        setState={setState}
+                        t={t} element={resolvedElement as ListElement}
+                        runEventHandler={runEventHandler} />
                 </LazyComponent>
             );
         case ElementType.list_item:
@@ -429,7 +439,9 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     <ListItemRenderer
                         state={state}
                         t={t}
-                        element={resolvedElement as ListItemElement} runEventHandler={runEventHandler} />
+                        setState={setState}
+                        element={resolvedElement as ListItemElement}
+                        runEventHandler={runEventHandler} />
                 </LazyComponent>
             );
 
@@ -451,7 +463,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             const menubar = resolvedElement as MenuElement;
             return (
                 <LazyComponent>
-                    <MenuRenderer element={menubar} runEventHandler={runEventHandler} state={state} t={t} />
+                    <MenuRenderer element={menubar} runEventHandler={runEventHandler} state={state} t={t} setState={setState} />
                 </LazyComponent>
             )
 
@@ -484,7 +496,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         case ElementType.popover:
             return (
                 <LazyComponent>
-                    <PopoverRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
+                    <PopoverRenderer setState={setState} element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
                 </LazyComponent>
             )
 
@@ -523,14 +535,17 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         case ElementType.resizable:
             return (
                 <LazyComponent>
-                    <ResizableRenderer element={resolvedElement} state={state} t={t} />
+                    <ResizableRenderer setState={setState} element={resolvedElement} state={state} t={t} />
                 </LazyComponent>
             )
 
         case ElementType.scroll_area:
             return (
                 <LazyComponent>
-                    <ScrollAreaRenderer element={resolvedElement} />
+                    <ScrollAreaRenderer
+                        state={state}
+                        setState={setState}
+                        t={t} element={resolvedElement} />
                 </LazyComponent>
             )
         case ElementType.search:
@@ -576,7 +591,11 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         case ElementType.step_wizard:
             return (
                 <LazyComponent>
-                    <StepWizardRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
+                    <StepWizardRenderer
+                        state={state}
+                        setState={setState}
+                        t={t}
+                        element={resolvedElement} runEventHandler={runEventHandler} />
                 </LazyComponent>
             )
 
@@ -630,7 +649,10 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     </TabsList>
                     {tabs.tabs.map((tab) => (
                         <TabsContent key={tab.id} value={tab.id}>
-                            <RenderChildren children={tab.content} runEventHandler={runEventHandler} />
+                            <RenderChildren
+                                state={state}
+                                setState={setState}
+                                t={t} children={tab.content} runEventHandler={runEventHandler} />
                         </TabsContent>
                     ))}
                 </Tabs>
@@ -723,7 +745,10 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             return <LazyComponent>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        {tooltip.trigger && <RenderChildren children={[tooltip.trigger]} runEventHandler={runEventHandler} />}
+                        {tooltip.trigger && <RenderChildren
+                            state={state}
+                            setState={setState}
+                            t={t} children={[tooltip.trigger]} runEventHandler={runEventHandler} />}
                     </TooltipTrigger>
                     <TooltipContent
                         side={tooltip.side || "top"}

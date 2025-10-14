@@ -192,7 +192,13 @@ function CommandShortcut(props: React.ComponentProps<"span">) {
 function CommandRenderer({
   element,
   runEventHandler,
+  state,
+  setState,
+  t
 }: {
+  state: AnyObj,
+  t: (key: string) => string,
+  setState: (path: string, value: any) => void;
   element: CommandElement
   runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }) {
@@ -294,7 +300,7 @@ function CommandRenderer({
                 </CommandPrimitive.Group>
               ))}
 
-              {children && <RenderChildren children={children} />}
+              {children && <RenderChildren children={children} state={state} setState={setState} t={t} />}
             </CommandPrimitive.List>
           </CommandPrimitive>
         </DialogContent>

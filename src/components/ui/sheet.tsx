@@ -141,10 +141,10 @@ function SheetRenderer({
           {element.title && <SheetTitle>{resolveBinding(element.title, state, t)}</SheetTitle>}
           {element.description && <SheetDescription>{resolveBinding(element.description, state, t)}</SheetDescription>}
         </SheetHeader>
-        <RenderChildren children={element.content} />
+        <RenderChildren children={element.content} state={state} t={t} setState={setState} />
         {element.footer && (
           <SheetFooter>
-            <RenderChildren children={element.footer} />
+            <RenderChildren children={element.footer} state={state} t={t} setState={setState} />
           </SheetFooter>
         )}
       </SheetContent>
