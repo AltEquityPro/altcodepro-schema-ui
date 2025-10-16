@@ -27,7 +27,7 @@ const buttonVariants: Record<string, string> = {
   warning:
     "bg-yellow-500 text-black hover:bg-yellow-600 focus:ring-2 focus:ring-yellow-400",
   outline:
-    "border border-gray-300 bg-transparent text-gray-900 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400",
+    "border border-border text-foreground bg-transparent hover:bg-foreground/10 focus:ring-2 focus:ring-primary focus:border-primary",
 };
 
 const sizeClasses: Record<string, string> = {
@@ -112,6 +112,9 @@ export function ButtonRenderer({
         styles,
         element.styles?.className
       )}
+      id={element?.id}
+      data-i118key={element.text}
+      data-variant={element.variant}
       disabled={disabled}
       onClick={() => element.onClick && runEventHandler?.(element.onClick)}
       style={{ zIndex: element.zIndex }}

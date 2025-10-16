@@ -121,11 +121,20 @@ export function ListItemRenderer({
                 basePad,
                 "hover:bg-accent/60 focus-visible:ring-[1px] focus-visible:ring-ring/50",
                 selected && "bg-accent",
-                element.styles?.className
             )}
             data-slot="list-item"
         >
-            <div className={cn("flex items-start gap-3", textSizes)}>
+            <div
+                className={cn(
+                    // only add flex if user didn't specify layout in styles
+                    !element.styles?.className?.includes("flex") &&
+                    !element.styles?.className?.includes("grid") &&
+                    "flex items-start gap-3",
+                    textSizes,
+                    element.styles?.className // schema layout always wins
+                )}
+            >
+
                 {/* -------------------------- Leading Icon/Child -------------------------- */}
                 {iconEl ? (
                     <DynamicIcon

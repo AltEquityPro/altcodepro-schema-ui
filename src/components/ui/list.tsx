@@ -52,11 +52,15 @@ export function ListRenderer({
     /*                          Non-Virtualized (small list)                      */
     /* -------------------------------------------------------------------------- */
     if (!useVirtual) {
+        const Tag = element.ordered ? ("ol" as const) : ("ul" as const);
+        const isGridLayout =
+            element.styles?.className?.includes("grid") ||
+            element.styles?.className?.includes("flex");
         return (
             <Tag
                 role="list"
                 className={cn(
-                    "list-inside space-y-1",
+                    isGridLayout ? "" : "list-inside space-y-1",
                     element.ordered ? "list-decimal" : "list-none",
                     element.styles?.className
                 )}
@@ -67,28 +71,29 @@ export function ListRenderer({
                 ) : (
                     items.map((item, i) => {
                         const resolved = resolveItem(item, state, t);
+                        const litsItemRender = <ListItemRenderer
+                            element={resolved}
+                            runEventHandler={async (h, data) => {
+                                setSelectedIndex(i);
+                                await runEventHandler?.(h, data);
+                            }}
+                            state={state}
+                            setState={setState}
+                            t={t}
+                            selected={selectedIndex === i}
+                            index={i}
+                            density={density}
+                            showDivider={showDividers && !isGridLayout && i < items.length - 1}
+                            onFocusNext={onFocusNext(i)}
+                            onFocusPrev={onFocusPrev(i)}
+                        />
                         return (
-                            <div
+                            isGridLayout ? litsItemRender : <div
                                 key={resolved.id || i}
                                 ref={(el: any) => (itemRefs.current[i] = el)}
                                 onFocus={() => setSelectedIndex(i)}
                             >
-                                <ListItemRenderer
-                                    element={resolved}
-                                    runEventHandler={async (h, data) => {
-                                        setSelectedIndex(i);
-                                        await runEventHandler?.(h, data);
-                                    }}
-                                    state={state}
-                                    t={t}
-                                    setState={setState}
-                                    selected={selectedIndex === i}
-                                    index={i}
-                                    density={density}
-                                    showDivider={showDividers && i < items.length - 1}
-                                    onFocusNext={onFocusNext(i)}
-                                    onFocusPrev={onFocusPrev(i)}
-                                />
+                                {litsItemRender}
                             </div>
                         );
                     })

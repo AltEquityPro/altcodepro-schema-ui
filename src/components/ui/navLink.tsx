@@ -15,7 +15,11 @@ export function NavLink({
 
     const handleClick = (e: React.MouseEvent) => {
         e.preventDefault();
-        nav?.push?.(route.href);
+        if (nav && nav.push) {
+            nav.push(route.href);
+        } else {
+            window.location.href = route.href;
+        }
     };
 
     return (

@@ -2196,13 +2196,27 @@ export interface UIProject {
     globalStyles?: {
         projectStyle?: string;  // Custom Sytles to add at project style
         theme?: {
-            colorScheme?: 'normal' | 'light' | 'dark' | 'light dark' | 'dark light' | 'only light';
+            colorScheme?: "normal" | "light" | "dark" | "light dark" | "dark light" | "only light";
+
+            /** Font family & base sizing */
             fontFamily?: string;
             fontSizeBase?: string;
-            primaryColorDark?: string;
+
+            /** Brand colors */
             primaryColorLight?: string;
-            secondaryColorDark?: string;
+            primaryColorDark?: string;
             secondaryColorLight?: string;
+            secondaryColorDark?: string;
+
+            /** Extended tokens (new, safe defaults) */
+            backgroundLight?: string;
+            backgroundDark?: string;
+            foregroundLight?: string;
+            foregroundDark?: string;
+            borderLight?: string;
+            borderDark?: string;
+            accentLight?: string;
+            accentDark?: string;
         };
         headerStyle?: {
             className?: string;
