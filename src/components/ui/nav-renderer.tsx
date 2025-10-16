@@ -135,7 +135,9 @@ function DesktopNavItem({
 }) {
     const active = isRouteActive(route, pathname);
     const hasChildren = route.nested && route.nested.length > 0;
-
+    const [open, setOpen] = useState(false);
+    const itemRef: any = useRef<HTMLDivElement>(null);
+    useClickOutside(itemRef, () => setOpen(false));
     // Base link styles shared by all items
     const baseClasses = clsx(
         "inline-flex items-center px-4 py-2 rounded-md font-medium transition-all duration-200",
@@ -159,7 +161,8 @@ function DesktopNavItem({
             : "block w-full px-4 py-2 text-foreground/70 hover:text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary-bg-hover)]";
 
     return (
-        <div className="relative group">
+        <div ref={itemRef} className="relative group" onMouseEnter={() => hasChildren && setOpen(true)}
+            onMouseLeave={() => hasChildren && setOpen(false)}>
             <NavLink
                 route={route}
                 pathname={pathname}
@@ -170,11 +173,11 @@ function DesktopNavItem({
                 inactiveClassName={clsx(baseClasses, itemInactiveClass)}
             />
 
-            {hasChildren && (
+            {hasChildren && open && (
                 <div
                     className={clsx(
                         "absolute left-0 top-full mt-2 w-52 rounded-lg border border-border/50 bg-background shadow-lg",
-                        "opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out z-50",
+                        "opacity-100 visible transition-all duration-200 ease-in-out z-50",
                         "animate__animated animate__fadeInDown"
                     )}
                 >
