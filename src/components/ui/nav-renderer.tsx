@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { UIProject, IRoute, AnyObj } from "../../types";
 import { resolveBinding } from "../../lib/utils";
 import { useClickOutside } from "../../hooks/useClickOutside";
-
+import { NavLink } from "./navLink";
 function isRouteActive(route: IRoute, pathname: string): boolean {
     if (route.href === pathname) {
         return true;
@@ -15,49 +15,6 @@ function isRouteActive(route: IRoute, pathname: string): boolean {
         return route.nested.some((child) => isRouteActive(child, pathname));
     }
     return false;
-}
-
-/* -----------------------------
- * Shared Link Component
- * ----------------------------- */
-function NavLink({
-    route,
-    pathname,
-    state,
-    t,
-    className = "",
-    activeClassName = "",
-    inactiveClassName = "",
-    onClick,
-    active = false
-}: {
-    route: IRoute;
-    pathname: string;
-    state: AnyObj;
-    t: (key: string) => string;
-    className?: string;
-    activeClassName?: string;
-    inactiveClassName?: string;
-    onClick?: () => void;
-    active?: boolean;
-}) {
-    const label = resolveBinding(route.label, state, t) || route.label;
-
-    return (
-        <a
-            href={route.href}
-            className={clsx(
-                "inline-flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/50",
-                active ? activeClassName : inactiveClassName,
-                className,
-                active && "ring-1 ring-primary/20" // Subtle ring instead of pulse for active
-            )}
-            onClick={onClick}
-            aria-current={active ? "page" : undefined}
-        >
-            {label}
-        </a>
-    );
 }
 
 /* -----------------------------
@@ -96,9 +53,10 @@ function CollapsibleNavItem({
     const baseClass = clsx(
         `flex items-center w-full ${px} ${py} ${pl} rounded-md font-medium transition-all duration-200 ${textSize}`,
         active
-            ? "bg-primary/10 text-primary font-semibold border-l-2 border-primary"  // Bolder active: higher opacity bg, full border color, bold font
-            : "text-foreground/70 hover:bg-muted/20 hover:text-foreground"  // Adjusted to foreground for better contrast, lighter hover
+            ? "bg-[color:var(--acp-primary-bg-soft)] text-[color:var(--acp-primary)] font-semibold border-l-2 border-[color:var(--acp-primary-border)]"
+            : "text-foreground/70 hover:text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary-bg-hover)]"
     );
+
 
     return (
         <div>
@@ -167,7 +125,7 @@ function DesktopNavItem({
     pathname,
     state,
     t,
-    level = 0
+    level = 0,
 }: {
     route: IRoute;
     pathname: string;
@@ -178,12 +136,27 @@ function DesktopNavItem({
     const active = isRouteActive(route, pathname);
     const hasChildren = route.nested && route.nested.length > 0;
 
-    const itemActiveClass = level === 0
-        ? "text-primary underline underline-offset-4 decoration-2 decoration-primary bg-primary/10 font-semibold"
-        : "block w-full bg-primary/10 text-primary border-l-2 border-primary font-semibold";
-    const itemInactiveClass = level === 0
-        ? "text-foreground/70 hover:text-primary hover:bg-muted/20"
-        : "block w-full px-4 py-2 text-foreground/70 hover:bg-muted/20 hover:text-foreground";
+    // Base link styles shared by all items
+    const baseClasses = clsx(
+        "inline-flex items-center px-4 py-2 rounded-md font-medium transition-all duration-200",
+        "focus:outline-none focus:ring-2 focus:ring-[color:var(--acp-primary)]/40 focus:ring-offset-1"
+    );
+
+    const itemActiveClass =
+        level === 0
+            ? clsx(
+                "text-[color:var(--acp-primary)] bg-[color:var(--acp-primary-bg-soft)]",
+                "underline underline-offset-4 decoration-[color:var(--acp-primary)] font-semibold"
+            )
+            : clsx(
+                "block w-full pl-5 pr-4 py-2 font-semibold border-l-2",
+                "text-[color:var(--acp-primary)] border-[color:var(--acp-primary-border)] bg-[color:var(--acp-primary-bg-soft)]"
+            );
+
+    const itemInactiveClass =
+        level === 0
+            ? "text-foreground/80 hover:text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary-bg-hover)]"
+            : "block w-full px-4 py-2 text-foreground/70 hover:text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary-bg-hover)]";
 
     return (
         <div className="relative group">
@@ -193,13 +166,15 @@ function DesktopNavItem({
                 state={state}
                 t={t}
                 active={active}
-                activeClassName={itemActiveClass}
-                inactiveClassName={itemInactiveClass}
+                activeClassName={clsx(baseClasses, itemActiveClass)}
+                inactiveClassName={clsx(baseClasses, itemInactiveClass)}
             />
+
             {hasChildren && (
                 <div
                     className={clsx(
-                        "absolute left-0 top-full mt-2 w-48 bg-background text-foreground border border-border/50 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50",
+                        "absolute left-0 top-full mt-2 w-52 rounded-lg border border-border/50 bg-background shadow-lg",
+                        "opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out z-50",
                         "animate__animated animate__fadeInDown"
                     )}
                 >
@@ -221,6 +196,7 @@ function DesktopNavItem({
     );
 }
 
+
 /* -----------------------------
  * Desktop Nav
  * ----------------------------- */
@@ -240,7 +216,14 @@ function DesktopNav({
     containerStyle?: string;
 }) {
     return (
-        <nav className={clsx("hidden lg:flex items-center gap-2", containerStyle)} role="navigation" aria-label="Main navigation">
+        <nav
+            className={clsx(
+                "hidden lg:flex items-center gap-2 overflow-x-auto overflow-y-hidden max-w-full whitespace-nowrap no-scrollbar",
+                containerStyle
+            )}
+            role="navigation"
+            aria-label="Main navigation"
+        >
             {routes.filter(r => r.showInNavigation).map(route => (
                 <DesktopNavItem
                     key={route.href}
@@ -256,7 +239,7 @@ function DesktopNav({
                 <div className="ml-6">
                     <input
                         type="text"
-                        placeholder={t("search.placeholder") || "Search..."}
+                        placeholder={"Search..."}
                         className="px-3 py-2 rounded-lg border border-input bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                         aria-label="Search"
                     />
@@ -326,7 +309,7 @@ function MobileBurger({
             >
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
-                    <span className="font-semibold text-lg">{t("nav.menu") || "Menu"}</span>
+                    <span className="font-semibold text-lg">Menu</span>
                     <button
                         onClick={onClose}
                         className="p-1 rounded-full hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
@@ -428,13 +411,14 @@ function BottomNav({ routes, pathname, state, t }: {
                         key={route.href}
                         href={route.href}
                         className={clsx(
-                            "flex flex-col items-center gap-1 p-2 rounded-lg text-xs transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary",
+                            "flex flex-col items-center gap-1 p-2 rounded-lg text-xs transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[color:var(--acp-primary)]",
                             active
-                                ? "text-primary bg-primary/10 shadow-sm"
-                                : "text-muted-foreground hover:text-primary hover:bg-muted/30"
+                                ? "text-[color:var(--acp-primary)] bg-[color:var(--acp-primary-bg-soft)] shadow-sm"
+                                : "text-muted-foreground hover:text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary-bg-hover)]"
                         )}
                         aria-current={active ? "page" : undefined}
                     >
+
                         {route.icon && <span className="text-base">{route.icon}</span>}
                         <span className="text-center">{resolveBinding(route.label, state, t) || route.label}</span>
                     </a>
@@ -462,7 +446,10 @@ export function NavRenderer({ project, state, t }: { project: UIProject, state: 
         };
     }, []);
 
-    const routes = project.routeList.routes;
+    const routes = project.routeList.routes.filter(
+        f => f.screenConfigUrl || project.screens?.some(s => s.id === f.screenId)
+    );
+
     const navType = project.routeList.desktopNavType; // "top" | "side"
     const mobileNavType = project.routeList.responsiveNavType; // "bottom" | "burger"
     const searchEnabled = project.search?.enabled;

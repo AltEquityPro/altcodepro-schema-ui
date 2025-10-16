@@ -1,7 +1,6 @@
 "use client";
 import * as React from "react";
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
-import { motion } from "framer-motion";
 
 import {
   cn,
@@ -13,88 +12,6 @@ import {
 } from "../../lib/utils";
 import { ElementResolver } from "../../schema/ElementResolver";
 import { AlertDialogElement, AnyObj, EventHandler, UIElement } from "../../types";
-
-/** -----------------------------------
- * AnimatedBox — works with Radix `asChild`
- * ----------------------------------- */
-type AnimatedBoxProps = React.ComponentProps<"div"> & {
-  animations?: AlertDialogElement["animations"];
-};
-
-const AnimatedBox = React.forwardRef<HTMLDivElement, AnimatedBoxProps>(
-  ({ animations, className, style, children, ...rest }, ref) => {
-    if (!animations) {
-      return (
-        <div ref={ref} className={className} style={style} {...rest}>
-          {children}
-        </div>
-      );
-    }
-
-    const anim = resolveAnimation(animations);
-
-    // animate.css / css → merge className + style on a regular div
-    if (animations.framework === "animate.css" || animations.framework === "css") {
-      const aClass = (anim as any)?.className || "";
-      const aStyle = (anim as any)?.style || {};
-      return (
-        <div
-          ref={ref}
-          className={cn(className, aClass)}
-          style={{ ...aStyle, ...style }}
-          {...rest}
-        >
-          {children}
-        </div>
-      );
-    }
-
-    // framer-motion → motion.div with normalized props
-    if (animations.framework === "framer-motion") {
-      const motionProps = anim as any; // already normalized
-      return (
-        <motion.div ref={ref as any} className={className} style={style} {...motionProps} {...rest}>
-          {children}
-        </motion.div>
-      );
-    }
-
-    // gsap → div with ref; run gsap on mount
-    if (animations.framework === "gsap") {
-      const localRef = React.useRef<HTMLDivElement>(null);
-      React.useImperativeHandle(ref, () => localRef.current as HTMLDivElement);
-      React.useEffect(() => {
-        const cfg = (anim as any)?.gsap;
-        if (!localRef.current || !cfg) return;
-        import("gsap")
-          .then(({ default: gsap }) => {
-            if (cfg.from && cfg.to) gsap.fromTo(localRef.current, cfg.from, cfg);
-            else gsap.to(localRef.current, cfg);
-          })
-          .catch(() => { });
-      }, [anim]);
-      const aClass = (anim as any)?.className || "";
-      const aStyle = (anim as any)?.style || {};
-      return (
-        <div
-          ref={localRef}
-          className={cn(className, aClass)}
-          style={{ ...aStyle, ...style }}
-          {...rest}
-        >
-          {children}
-        </div>
-      );
-    }
-
-    return (
-      <div ref={ref} className={className} style={style} {...rest}>
-        {children}
-      </div>
-    );
-  }
-);
-AnimatedBox.displayName = "AnimatedBox";
 
 /** -----------------------------------
  * Helpers for size/position/variant
@@ -189,8 +106,7 @@ function AlertDialogRenderer({
 
         {/* Content with animations/styles/accessibility using asChild */}
         <AlertDialogPrimitive.Content asChild>
-          <AnimatedBox
-            animations={element.animations}
+          <div
             className={cn(
               "bg-background text-foreground fixed z-50 grid w-full max-w-[calc(100%-2rem)]",
               posClass,
@@ -259,7 +175,7 @@ function AlertDialogRenderer({
                 );
               })}
             </div>
-          </AnimatedBox>
+          </div>
         </AlertDialogPrimitive.Content>
       </AlertDialogPrimitive.Portal>
     </AlertDialogPrimitive.Root>

@@ -70,9 +70,8 @@ function evalGuard(guard: UIScreenDef["guard"] | undefined, state: AnyObj, t: (k
 }
 
 function gotoRedirect(runtime: ActionRuntime, redirect?: RedirectSpec) {
-    if (!redirect) return;
-    if (redirect.href && runtime.navigate) runtime.navigate(redirect.href, false);
-    // If you support screenId-based navigation, add your mapping here
+    if (!redirect?.href) return
+    return runtime?.nav ? runtime?.nav?.replace?.(redirect?.href) : (window.location.href = redirect?.href);
 }
 
 /** ---------- Layout helpers (lightweight) ---------- */

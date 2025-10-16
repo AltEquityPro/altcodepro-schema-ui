@@ -2,7 +2,6 @@
 import * as React from "react";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { ChevronDownIcon } from "lucide-react";
-import { motion } from "framer-motion";
 
 import {
   classesFromStyleProps,
@@ -14,61 +13,6 @@ import {
 import { ElementResolver } from "../../schema/ElementResolver";
 import { AccordionElement, AnyObj, EventHandler, UIElement } from "../../types";
 
-/** Wrapper that applies animations around its children (root-level only) */
-function AnimatedWrapper({
-  animations,
-  children,
-}: {
-  animations?: AccordionElement["animations"];
-  children: React.ReactNode;
-}) {
-  if (!animations) return <>{children}</>;
-
-  const anim = resolveAnimation(animations);
-
-  // animate.css or CSS inline → normal <div> with classes/styles
-  if (animations.framework === "animate.css" || animations.framework === "css") {
-    const className = (anim as any)?.className || "";
-    const style = (anim as any)?.style || {};
-    return (
-      <div className={className} style={style}>
-        {children}
-      </div>
-    );
-  }
-
-  // framer-motion → motion.div with normalized props
-  if (animations.framework === "framer-motion") {
-    const motionProps = anim as any; // normalized by resolveAnimation
-    return <motion.div {...motionProps}>{children}</motion.div>;
-  }
-
-  // gsap → div with ref; run gsap.fromTo on mount
-  if (animations.framework === "gsap") {
-    const ref = React.useRef<HTMLDivElement>(null);
-    React.useEffect(() => {
-      const cfg = (anim as any)?.gsap;
-      if (!ref.current || !cfg) return;
-      // dynamic import to avoid bundling if gsap not installed
-      import("gsap")
-        .then(({ default: gsap }) => {
-          if (cfg.from && cfg.to) gsap.fromTo(ref.current, cfg.from, cfg);
-          else gsap.to(ref.current, cfg);
-        })
-        .catch(() => { });
-    }, [anim]);
-    // allow class/style passthrough if resolveAnimation adds them
-    const className = (anim as any)?.className || "";
-    const style = (anim as any)?.style || {};
-    return (
-      <div ref={ref} className={className} style={style}>
-        {children}
-      </div>
-    );
-  }
-
-  return <>{children}</>;
-}
 
 function AccordionRenderer({
   state,
@@ -92,7 +36,7 @@ function AccordionRenderer({
   const rootClass = classesFromStyleProps(element.styles);
 
   return (
-    <AnimatedWrapper animations={element.animations}>
+    <div >
       <AccordionPrimitive.Root
         type={type as any}
         collapsible={!multiple && collapsible}
@@ -133,7 +77,7 @@ function AccordionRenderer({
           </AccordionPrimitive.Item>
         ))}
       </AccordionPrimitive.Root>
-    </AnimatedWrapper>
+    </div>
   );
 }
 

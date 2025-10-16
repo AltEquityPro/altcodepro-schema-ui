@@ -9,7 +9,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/too
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "../../components/ui/dropdown-menu";
 import { Badge } from "../../components/ui/badge";
 import { Separator } from "../../components/ui/separator";
-import { motion, AnimatePresence } from "framer-motion";
 import {
     CameraIcon, CameraOffIcon, MicIcon, MicOffIcon, MonitorUpIcon,
     PhoneOffIcon, Settings2Icon, UsersIcon, SignalHighIcon, MaximizeIcon, Volume2Icon
@@ -538,14 +537,11 @@ export function CallRenderer({
                     muted
                     showName={showNames}
                 />
-                {/* Remotes */}
-                <AnimatePresence>
-                    {remoteEntries.map(([id, stream]) => (
-                        <motion.div key={id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                            <RemoteTile element={element} name={id.slice(0, 6)} stream={stream} showName={showNames} />
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
+                {remoteEntries.map(([id, stream]) => (
+                    <div key={id}>
+                        <RemoteTile element={element} name={id.slice(0, 6)} stream={stream} showName={showNames} />
+                    </div>
+                ))}
             </div>
 
             {/* Controls – structural classes only; style via element.styles */}

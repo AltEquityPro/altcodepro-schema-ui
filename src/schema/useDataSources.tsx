@@ -263,72 +263,113 @@ export function useDataSources({
     }, [globalConfig, screen]);
 
     useEffect(() => {
+        // ✅ Prevent running if there are no data sources
+        if (!resolved.length) return;
+
+        // ✅ Guard against multiple mounts in React Strict Mode
+        let initialized = false;
+        if (initialized) return;
+        initialized = true;
+
         let mounted = true;
         const stops: Array<() => void> = [];
+
         (async () => {
             for (const ds of resolved) {
                 const controller = new AbortController();
                 abortControllers.current[ds.id] = controller;
+
                 const run = async () => {
                     try {
                         const out = ds.retry
-                            ? await withRetry(() => fetcher(ds, state, controller.signal), ds.retry.attempts, ds.retry.delay, ds.retry.strategy, controller.signal)
+                            ? await withRetry(
+                                () => fetcher(ds, state, controller.signal),
+                                ds.retry.attempts,
+                                ds.retry.delay,
+                                ds.retry.strategy,
+                                controller.signal
+                            )
                             : await fetcher(ds, state, controller.signal);
+
                         const mapped = applyDataMappings(out, ds, mappings, setState);
-                        if (mounted) setData(prev => ({ ...prev, [ds.id]: mapped }));
+                        if (mounted) setData((prev) => ({ ...prev, [ds.id]: mapped }));
                     } catch (e: any) {
-                        if (e.name === 'AbortError') return;
+                        if (e.name === "AbortError") return;
                         const errorObj = {
                             ok: false,
                             error: String(e.message || e),
-                            status: e.message?.includes('HTTP') ? parseInt(e.message.match(/HTTP (\d+)/)?.[1] || '0', 10) : undefined,
+                            status: e.message?.includes("HTTP")
+                                ? parseInt(e.message.match(/HTTP (\d+)/)?.[1] || "0", 10)
+                                : undefined,
                         };
-                        if (mounted) setData(prev => ({ ...prev, [ds.id]: errorObj }));
+                        if (mounted) setData((prev) => ({ ...prev, [ds.id]: errorObj }));
                         if (ds.errorKey) {
                             setState(ds.errorKey, errorObj);
                         }
                     }
                 };
 
-                if (ds.method !== "WEBSOCKET" && !(ds.method === "GRAPHQL" && ds.graphql_operation === 'subscription')) {
+                if (ds.method !== "WEBSOCKET" && !(ds.method === "GRAPHQL" && ds.graphql_operation === "subscription")) {
                     await run();
                 } else {
                     let out;
                     try {
                         out = await fetcher(ds, state, undefined);
                     } catch (e: any) {
-                        if (e.name === 'AbortError') continue;
+                        if (e.name === "AbortError") continue;
                         const errorObj = {
                             ok: false,
                             error: String(e.message || e),
-                            status: e.message?.includes('HTTP') ? parseInt(e.message.match(/HTTP (\d+)/)?.[1] || '0', 10) : undefined,
+                            status: e.message?.includes("HTTP")
+                                ? parseInt(e.message.match(/HTTP (\d+)/)?.[1] || "0", 10)
+                                : undefined,
                         };
-                        if (mounted) setData(prev => ({ ...prev, [ds.id]: errorObj }));
+                        if (mounted) setData((prev) => ({ ...prev, [ds.id]: errorObj }));
                         if (ds.errorKey) {
                             setState(ds.errorKey, errorObj);
                         }
                         continue;
                     }
+
                     if (out._ws || out._sub) {
                         const cleanup = out._sub
-                            ? setupGraphQLSubscription(out.url, out.query, out.variables, (newData) => {
-                                if (mounted) {
-                                    const mapped = applyDataMappings(newData, ds, mappings, setState);
-                                    setData(prev => ({ ...prev, [ds.id]: mapped }));
-                                }
-                            }, out.headers, out.protocol)
-                            : setupWebSocket(out.url, (msg) => {
-                                if (mounted) {
-                                    const mapped = applyDataMappings({ _ws: true, last: msg }, ds, mappings, setState);
-                                    setData(prev => ({ ...prev, [ds.id]: mapped }));
-                                }
-                            }, out.initialMessage, ds.heartbeat, out.headers, out.protocol);
+                            ? setupGraphQLSubscription(
+                                out.url,
+                                out.query,
+                                out.variables,
+                                (newData) => {
+                                    if (mounted) {
+                                        const mapped = applyDataMappings(newData, ds, mappings, setState);
+                                        setData((prev) => ({ ...prev, [ds.id]: mapped }));
+                                    }
+                                },
+                                out.headers,
+                                out.protocol
+                            )
+                            : setupWebSocket(
+                                out.url,
+                                (msg) => {
+                                    if (mounted) {
+                                        const mapped = applyDataMappings({ _ws: true, last: msg }, ds, mappings, setState);
+                                        setData((prev) => ({ ...prev, [ds.id]: mapped }));
+                                    }
+                                },
+                                out.initialMessage,
+                                ds.heartbeat,
+                                out.headers,
+                                out.protocol
+                            );
                         wsCleanups.current[ds.id] = cleanup;
                         stops.push(cleanup);
                     }
                 }
 
-                if (ds.pollingInterval && ds.method !== "WEBSOCKET" && !(ds.method === "GRAPHQL" && ds.graphql_operation === 'subscription')) {
+                // ✅ Optional polling (only if explicitly defined)
+                if (
+                    ds.pollingInterval &&
+                    ds.method !== "WEBSOCKET" &&
+                    !(ds.method === "GRAPHQL" && ds.graphql_operation === "subscription")
+                ) {
                     const id = setInterval(async () => {
                         const newController = new AbortController();
                         abortControllers.current[ds.id] = newController;
@@ -343,17 +384,19 @@ export function useDataSources({
                 }
             }
         })();
+
         return () => {
             mounted = false;
-            stops.forEach(s => s());
+            stops.forEach((s) => s());
             Object.values(timers.current).forEach(clearInterval);
-            Object.values(abortControllers.current).forEach(c => c.abort());
+            Object.values(abortControllers.current).forEach((c) => c.abort());
             timers.current = {};
             abortControllers.current = {};
-            Object.values(wsCleanups.current).forEach(c => c());
+            Object.values(wsCleanups.current).forEach((c) => c());
             wsCleanups.current = {};
         };
-    }, [resolved, fetcher, state, setState, mappings]);
+        // ✅ Empty dependency array: run once
+    }, []);
 
     useEffect(() => {
         if (!data) return;

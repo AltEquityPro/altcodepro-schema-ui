@@ -57,37 +57,44 @@ export function GlobalThemeProvider({ project, children }: { project: UIProject,
     // 2️⃣ CSS Injection (computed + custom)
     // ————————————————————————
     const computedCss = `
-        :root {
-            color-scheme: ${colorScheme};
-            --acp-font: ${fontFamily};
-            --acp-font-size-base: ${fontSizeBase};
-            --acp-primary: ${primaryColorLight};
-            --acp-primary-dark: ${primaryColorDark};
-            --acp-secondary: ${secondaryColorLight};
-            --acp-secondary-dark: ${secondaryColorDark};
-        }
+  :root {
+      color-scheme: ${colorScheme};
+      --acp-font: ${fontFamily};
+      --acp-font-size-base: ${fontSizeBase};
+      --acp-primary: ${primaryColorLight};
+      --acp-primary-dark: ${primaryColorDark};
+      --acp-secondary: ${secondaryColorLight};
+      --acp-secondary-dark: ${secondaryColorDark};
+      --acp-primary-bg-soft: color-mix(in srgb, var(--acp-primary) 10%, transparent);
+      --acp-primary-bg-hover: color-mix(in srgb, var(--acp-primary) 15%, transparent);
+      --acp-primary-border: color-mix(in srgb, var(--acp-primary) 50%, transparent);
+  }
 
-        html, body, #__next {
-            font-family: var(--acp-font);
-            font-size: var(--acp-font-size-base);
-        }
+  html, body, #__next {
+      font-family: var(--acp-font);
+      font-size: var(--acp-font-size-base);
+  }
 
-        .text-primary { color: var(--acp-primary) !important; }
-        .text-primary-dark { color: var(--acp-primary-dark) !important; }
-        .text-secondary { color: var(--acp-secondary) !important; }
-        .text-secondary-dark { color: var(--acp-secondary-dark) !important; }
+  /* Theming utility classes */
+  .text-primary { color: var(--acp-primary) !important; }
+  .bg-primary-soft { background-color: var(--acp-primary-bg-soft) !important; }
+  .bg-primary-hover { background-color: var(--acp-primary-bg-hover) !important; }
+  .border-primary { border-color: var(--acp-primary-border) !important; }
 
-        .bg-primary { background-color: var(--acp-primary) !important; }
-        .bg-primary-dark { background-color: var(--acp-primary-dark) !important; }
-        .bg-secondary { background-color: var(--acp-secondary) !important; }
-        .bg-secondary-dark { background-color: var(--acp-secondary-dark) !important; }
+  /* Adaptive hover background */
+  [data-theme="dark"] .hover\\:bg-primary-hover:hover {
+      background-color: color-mix(in srgb, var(--acp-primary) 25%, transparent);
+  }
+  [data-theme="light"] .hover\\:bg-primary-hover:hover {
+      background-color: color-mix(in srgb, var(--acp-primary) 12%, white);
+  }
+nav .group-hover\:scale-submenu {
+  transform: scale(1.02) translateY(-1px);
+  transition: transform 0.2s ease;
+}
+  ${customCss ?? ""}
+`;
 
-        .border-primary { border-color: var(--acp-primary) !important; }
-        .border-secondary { border-color: var(--acp-secondary) !important; }
-
-        .fill-primary { fill: var(--acp-primary) !important; }
-        .stroke-primary { stroke: var(--acp-primary) !important; }
-    `;
 
     const combinedCss = `${computedCss}\n${customCss ?? ""}`;
 

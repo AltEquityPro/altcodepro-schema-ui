@@ -89,8 +89,8 @@ export function useActionHandler({
         const executeTransition = async (transition?: TransitionSpec) => {
             if (!transition) return;
             const resolvedTransition = deepResolveBindings(transition, state, t) as TransitionSpec;
-            if (resolvedTransition.href && runtime.navigate) {
-                runtime.navigate(resolvedTransition.href, !!resolvedTransition.replace);
+            if (resolvedTransition.href) {
+                runtime?.nav ? runtime?.nav?.push?.(resolvedTransition.href) : (window.location.href = resolvedTransition.href)
             }
             if (resolvedTransition.modal?.openId) runtime.openModal?.(resolvedTransition.modal.openId);
             if (resolvedTransition.modal?.closeId) runtime.closeModal?.(resolvedTransition.modal.closeId);
@@ -356,18 +356,13 @@ export function useActionHandler({
             switch (h.action) {
                 case ActionType.navigation: {
                     const href = String(h.params?.href || h.successTransition?.href || "/");
-                    if (href) {
-                        const isExternal = /^https?:\/\//i.test(href);
-                        if (isExternal) {
-                            window.open(href, "_blank", "noopener,noreferrer");
-                        } else if (runtime.navigate) {
-                            runtime.navigate(href, !!h.successTransition?.replace);
-                        } else {
-                            const base =
-                                window.location.origin ||
-                                `${window.location.protocol}//${window.location.host}`;
-                            window.location.href = new URL(href, base).toString();
-                        }
+                    if (!href) return;
+                    const isReplace = !!h.successTransition?.replace;
+                    if (runtime.nav) {
+                        isReplace ? runtime.nav.replace?.(href) : runtime.nav.push?.(href);
+                    } else {
+                        // Fallback to browser if no nav adapter
+                        isReplace ? window.location.replace(href) : (window.location.href = href);
                     }
                     break;
                 }

@@ -3,7 +3,8 @@ import clsx from "clsx";
 import {
     UIProject,
     ActionRuntime,
-    UIDefinition
+    UIDefinition,
+    NavigationAPI
 } from "../types";
 import { ScreenRenderer } from "./ScreenRenderer";
 import { ElementResolver } from "./ElementResolver";
@@ -14,16 +15,18 @@ import { CookieBannerRenderer } from "@/components/ui/cookie_render";
 import { GlobalThemeProvider } from "@/components/ui/global-theme-provider";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-interface ProjectRouterProps {
+export interface ProjectRouterProps {
     project: UIProject;
     showDebug?: boolean;
     currentScreenDef: UIDefinition;
     loading: boolean;
     runtime?: ActionRuntime;
+    nav?: NavigationAPI;
 }
 
 export function ProjectRouter({
     project,
+    nav = {},
     showDebug,
     runtime = {},
     currentScreenDef,
@@ -44,6 +47,7 @@ export function ProjectRouter({
         ? project.routeList.responsiveNavType
         : project.routeList.desktopNavType;
     const layoutClass = navType === "side" ? "flex" : "flex flex-col";
+    const runtimeWithNav = { ...runtime, nav };
 
     return (
         <GlobalThemeProvider project={project}>
@@ -65,7 +69,7 @@ export function ProjectRouter({
                             key={sc.id}
                             project={project}
                             currentScreenDef={sc}
-                            runtime={runtime}
+                            runtime={runtimeWithNav}
                             showDebug={showDebug}
                         />
                     ))}

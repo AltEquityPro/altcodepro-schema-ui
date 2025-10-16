@@ -75,7 +75,6 @@ function BadgeRenderer({ element, state, t, runEventHandler }: BadgeRendererProp
   // Schema-driven props
   const schemaClass = classesFromStyleProps(element.styles);
   const acc = getAccessibilityProps(element.accessibility);
-  const anim = resolveAnimation(element.animations);
 
   const content = element.isDot ? (
     <span className="size-2 rounded-full bg-current" />
@@ -101,12 +100,9 @@ function BadgeRenderer({ element, state, t, runEventHandler }: BadgeRendererProp
         schemaClass,
         element.size === "sm" && "px-1.5 py-0 text-[10px]",
         element.size === "lg" && "px-3 py-1.5 text-sm",
-        (anim as any)?.className
       )}
-      style={(anim as any)?.style}
       onClick={element.onClick ? () => runEventHandler?.(element.onClick) : undefined}
       {...acc}
-      {...(element.animations?.framework === "framer-motion" ? (anim as any) : {})}
     >
       {content || "Badge"}
     </Badge>

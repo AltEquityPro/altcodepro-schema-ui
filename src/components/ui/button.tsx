@@ -8,7 +8,6 @@ import {
 } from "@/lib/utils";
 import { AnyObj, Binding, ButtonElement, EventHandler } from "@/types";
 import clsx from "clsx";
-import { motion } from "framer-motion";
 import React, { useMemo } from "react";
 import { DynamicIcon } from "./dynamic-icon";
 
@@ -91,7 +90,6 @@ export function ButtonRenderer({
   const sizeClass = sizeClasses[element.size ?? "default"] ?? "";
   const styles = classesFromStyleProps(element.styles);
   const accessibilityProps = getAccessibilityProps(element.accessibility);
-  const animationProps: any = resolveAnimation(element.animations);
   const variantClass = styles?.includes('bg-') && styles?.includes('text-') ? "" : buttonVariants[(element.variant || 'primary')] ?? "";
 
   const resolvedBinding = useMemo(
@@ -104,17 +102,9 @@ export function ButtonRenderer({
       ? element.disabled
       : String(resolvedBinding(element.disabled as any)) === "true";
 
-  // Choose motion.button only if animations are defined
-  const Comp: any =
-    element.animations?.framework === "framer-motion"
-      ? motion.button
-      : "button";
 
   return (
-    <Comp
-      {...(element.animations?.framework === "framer-motion"
-        ? animationProps
-        : {})}
+    <button
       className={clsx(
         "inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none",
         variantClass,
@@ -124,7 +114,7 @@ export function ButtonRenderer({
       )}
       disabled={disabled}
       onClick={() => element.onClick && runEventHandler?.(element.onClick)}
-      style={{ zIndex: element.zIndex, ...(animationProps?.style || {}) }}
+      style={{ zIndex: element.zIndex }}
       {...accessibilityProps}
     >
       {element.iconLeft?.name && (
@@ -134,7 +124,7 @@ export function ButtonRenderer({
       {element.iconRight?.name && (
         <DynamicIcon name={element.iconRight.name} className="ml-1" />
       )}
-    </Comp>
+    </button>
   );
 }
 

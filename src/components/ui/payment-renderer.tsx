@@ -1,6 +1,5 @@
 "use client"
 
-import { motion } from "framer-motion"
 import React, { useEffect, useMemo } from "react"
 import { loadStripe } from "@stripe/stripe-js"
 import { AnyObj, EventHandler, PaymentElement } from "../../types"
@@ -77,13 +76,13 @@ export const PaymentFormRenderer = React.memo(function PaymentFormRenderer({
     }
 
     return (
-        <motion.div style={{ zIndex: element.zIndex }}>
+        <div style={{ zIndex: element.zIndex }}>
             <button
                 className="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
                 onClick={handleCheckout}
             >
                 {resolveBinding(element.buttonLabel, state, t) || "Checkout"}
             </button>
-        </motion.div>
+        </div>
     )
 })

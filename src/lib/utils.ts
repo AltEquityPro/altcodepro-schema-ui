@@ -1,7 +1,7 @@
 // src/lib/utils.ts
 import stripJsonComments from 'strip-json-comments';
 import { BrowserProvider } from 'ethers';
-import { AnyObj, VisibilityControl, AccessibilityProps, StyleProps, AnimationSpec, IRoute, UIDefinition, ImageElement, UIProject, Brand, DataSource } from '../types';
+import { AnyObj, VisibilityControl, AccessibilityProps, StyleProps, IRoute, UIDefinition, ImageElement, UIProject, Brand, DataSource } from '../types';
 import { clsx, type ClassValue } from "clsx"
 // import { twMerge } from "tailwind-merge"
 import { cva } from 'class-variance-authority';
@@ -412,9 +412,9 @@ export function setPath<T extends AnyObj>(obj: T, path: string, value: any): T {
 
 /**
  * Resolve animation props/styles/classes from AnimationSpec.
- * Supports animate.css, CSS (inline), framer-motion, and GSAP.
+ * Supports animate.css.
  */
-export function resolveAnimation(animation?: AnimationSpec) {
+export function resolveAnimation(animation?: any) {
     if (!animation) return {};
 
     const {

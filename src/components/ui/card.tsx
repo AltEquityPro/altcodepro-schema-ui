@@ -4,10 +4,9 @@ import {
   cn,
   classesFromStyleProps,
   getAccessibilityProps,
-  resolveAnimation,
   resolveBinding,
 } from "../../lib/utils";
-import { AnyObj, CardElement, EventHandler, UIElement } from "../../types";
+import { AnyObj, CardElement, EventHandler } from "../../types";
 import { ElementResolver } from "../../schema/ElementResolver";
 import { RenderChildren } from "../../schema/RenderChildren";
 
@@ -101,14 +100,11 @@ function CardRenderer({ element, setState, runEventHandler, state, t }: CardRend
   const variantClass = cardVariants[element.variant ?? "default"];
   const schemaClass = classesFromStyleProps(element.styles);
   const acc = getAccessibilityProps(element.accessibility);
-  const anim = resolveAnimation(element.animations);
 
   const cardBody = (
     <Card
-      className={cn(variantClass, schemaClass, (anim as any)?.className)}
-      style={(anim as any)?.style}
+      className={cn(variantClass, schemaClass)}
       {...acc}
-      {...(element.animations?.framework === "framer-motion" ? (anim as any) : {})}
     >
       {/* Header */}
       {(element.media ||

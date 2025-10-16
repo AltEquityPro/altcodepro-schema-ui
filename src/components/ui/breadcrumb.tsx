@@ -125,7 +125,6 @@ function BreadcrumbRenderer({ state, setState, t, element, runEventHandler }: Br
   // Styles, accessibility, animations
   const schemaClass = classesFromStyleProps(element.styles);
   const acc = getAccessibilityProps(element.accessibility);
-  const anim = resolveAnimation(element.animations);
 
   // Handle ellipsis logic
   const items = React.useMemo(() => {
@@ -151,19 +150,12 @@ function BreadcrumbRenderer({ state, setState, t, element, runEventHandler }: Br
     }
   };
 
-  const Wrapper: React.ElementType =
-    element.animations?.framework === "framer-motion"
-      ? (require("framer-motion").motion.nav as any)
-      : "nav";
-
   return (
-    <Wrapper
+    <nav
       aria-label="breadcrumb"
       data-slot="breadcrumb"
-      className={cn(schemaClass, (anim as any)?.className)}
-      style={(anim as any)?.style}
+      className={cn(schemaClass)}
       {...acc}
-      {...(element.animations?.framework === "framer-motion" ? (anim as any) : {})}
     >
       <BreadcrumbList>
         {items?.map((item, i) => {
@@ -224,7 +216,7 @@ function BreadcrumbRenderer({ state, setState, t, element, runEventHandler }: Br
           );
         })}
       </BreadcrumbList>
-    </Wrapper>
+    </nav>
   );
 }
 

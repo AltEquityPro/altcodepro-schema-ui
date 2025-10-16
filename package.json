@@ -1,9 +1,7 @@
 {
   "name": "altcodepro-schema-ui",
-  "version": "1.0.17",
+  "version": "1.0.19",
   "description": "AltcodePro Schema driven UI",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "scripts": {
     "build": "rm -rf dist && tsup && cp dist/* /Users/sireeshpangaluri/Desktop/Projects/AltEquityPro/altcodepro-config-next-ui/node_modules/altcodepro-schema-ui/dist"
   },
@@ -11,11 +9,24 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "sideEffects": false,
   "files": [
     "dist",
     "README.md",
     "LICENSE"
   ],
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.4",
     "@codemirror/lang-json": "^6.0.2",
@@ -42,7 +53,6 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
     "ethers": "^6.15.0",
-    "framer-motion": "^12.23.22",
     "gsap": "^3.13.0",
     "hls.js": "^1.6.13",
     "input-otp": "^1.4.2",
@@ -57,9 +67,9 @@
     "next-themes": "^0.4.6",
     "qrcode.react": "^4.2.0",
     "radix-ui": "^1.4.3",
-    "react": "^19.1.1",
+    "react": "^19.0.0",
     "react-day-picker": "^9.11.0",
-    "react-dom": "^19.1.1",
+    "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.8",
     "react-hook-form": "^7.63.0",
     "react-resizable-panels": "^3.0.6",

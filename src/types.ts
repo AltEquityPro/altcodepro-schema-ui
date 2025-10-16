@@ -27,14 +27,13 @@ export enum ActionType {
 
 export interface ActionRuntime {
     /** Navigation & layout */
-    navigate?: (href: string, replace?: boolean) => void;
     openModal?: (id: string) => void;
     closeModal?: (id: string) => void;
     openDrawer?: (id: string) => void;
     closeDrawer?: (id: string) => void;
     openSidebar?: (id: string) => void;
     closeSidebar?: (id: string) => void;
-
+    nav?: NavigationAPI; //  internal
     /** Scripts, forms, exports */
     runScript?: (name: string, args: any[]) => Promise<any> | any;
     toast?: (msg: string, variant?: "success" | "error" | "info" | "warning") => void;
@@ -336,22 +335,6 @@ export type ButtonVariant =
 export type ConditionOp = '==' | '!=' | '>' | '<' | '>=' | '<=' | 'exists' | 'not_exists' | 'matches' | 'in' | 'not_in';
 
 // === Element Types ===
-export interface AnimationSpec {
-    animate?: Record<string, any>;
-    delay?: number;
-    duration?: number;
-    easing?: string;
-    entrance?: string;
-    exit?: string;
-    initial?: Record<string, any>;
-    layout?: boolean;
-    lottieUrl?: string;
-    framework?: 'animate.css' | 'css' | 'framer-motion' | 'gsap';
-    repeat?: number | 'infinite';
-    transition?: Record<string, any>;
-    whileHover?: Record<string, any>;
-    whileTap?: Record<string, any>;
-}
 
 export interface AccessibilityProps {
     ariaHidden?: boolean;
@@ -367,7 +350,6 @@ export interface BaseElement {
     id: string;
     name: string;
     accessibility?: AccessibilityProps;
-    animations?: AnimationSpec;
     children?: UIElement[];
     dataSourceId?: string;
     onEvent?: Record<string, EventHandler>;
@@ -2286,4 +2268,12 @@ export interface UIProject {
     }
     screens?: UIDefinition[];
     version: string;
+}
+
+export interface NavigationAPI {
+    back?: () => void;
+    push?: (href: string) => void;
+    replace?: (href: string) => void;
+    reload?: () => void;
+    currentPath?: () => string;
 }

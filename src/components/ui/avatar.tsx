@@ -123,19 +123,10 @@ function AvatarRenderer({ element, state, t }: {
   // Schema styles / accessibility / animations
   const schemaClass = classesFromStyleProps(element.styles);
   const acc = getAccessibilityProps(element.accessibility);
-  const anim = resolveAnimation(element.animations);
-
-  const Wrapper: React.ElementType =
-    element.animations?.framework === "framer-motion"
-      ? (require("framer-motion").motion.div as any)
-      : "div";
-
   return (
-    <Wrapper
-      className={cn("relative inline-flex", schemaClass, (anim as any)?.className)}
-      style={(anim as any)?.style}
+    <div
+      className={cn("relative inline-flex", schemaClass)}
       {...acc}
-      {...(element.animations?.framework === "framer-motion" ? (anim as any) : {})}
     >
       <Avatar
         className={cn(sizeClass, shapeClass, ringClass, "overflow-hidden")}
@@ -164,7 +155,7 @@ function AvatarRenderer({ element, state, t }: {
           )}
         />
       )}
-    </Wrapper>
+    </div>
   );
 }
 

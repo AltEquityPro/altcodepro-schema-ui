@@ -417,20 +417,23 @@ export function FormResolver({ element, state, t, defaultData, onFormSubmit, onF
         if (f.fieldType === FieldType.input) {
             return renderInputField(f.input);
         }
+        if (!f.element) {
+            return null;
+        }
 
         switch (f.fieldType) {
             case FieldType.heading:
-                return <Heading key={f.id} text={resolveBinding(f.element.name, state, t)} />;
+                return <Heading key={f.id} text={resolveBinding(f.element?.name, state, t)} />;
             case FieldType.subheading:
-                return <Subheading key={f.id} text={resolveBinding(f.element.name, state, t)} />;
+                return <Subheading key={f.id} text={resolveBinding(f.element?.name, state, t)} />;
             case FieldType.description:
-                return <Description key={f.id} text={resolveBinding(f.element.name, state, t)} />;
+                return <Description key={f.id} text={resolveBinding(f.element?.name, state, t)} />;
             case FieldType.help:
-                return <HelpMessage key={f.id} text={resolveBinding(f.element.name, state, t)} />;
+                return <HelpMessage key={f.id} text={resolveBinding(f.element?.name, state, t)} />;
             case FieldType.divider:
                 return <Divider key={f.id} />;
             case FieldType.card:
-                return <CardWrapper key={f.id}>{f.element.children?.map(renderField as any)}</CardWrapper>;
+                return <CardWrapper key={f.id}>{f.element?.children?.map(renderField as any)}</CardWrapper>;
             default:
                 return null;
         }
