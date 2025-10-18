@@ -3,23 +3,89 @@
 import { useEffect, useState, useRef } from "react";
 import { MenuIcon, XIcon, ChevronDown } from "lucide-react";
 import clsx from "clsx";
-import { UIProject, IRoute, AnyObj } from "../../types";
+import {
+    UIProject,
+    IRoute,
+    AnyObj,
+    VisibilityControl,
+    StyleProps,
+} from "../../types";
 import { resolveBinding } from "../../lib/utils";
 import { useClickOutside } from "../../hooks/useClickOutside";
 import { NavLink } from "./navLink";
+
+/* =======================================================
+🔧 Helpers
+======================================================= */
 function isRouteActive(route: IRoute, pathname: string): boolean {
-    if (route.href === pathname) {
-        return true;
-    }
-    if (route.nested) {
-        return route.nested.some((child) => isRouteActive(child, pathname));
-    }
+    if (route.href === pathname) return true;
+    if (route.nested) return route.nested.some((c) => isRouteActive(c, pathname));
     return false;
 }
 
-/* -----------------------------
- * Collapsible Nav Item (for Sidebar & Mobile)
- * ----------------------------- */
+function evalVisibility(
+    state: AnyObj,
+    t: (k: string) => string,
+    v?: VisibilityControl,
+) {
+    if (!v) return true;
+    const keyVal = resolveBinding(v.condition.key, state, t);
+    const val = resolveBinding(v.condition.value, state, t);
+    const show = !!v.show;
+
+    switch (v.condition.op) {
+        case "==":
+            return show ? keyVal === val : keyVal !== val;
+        case "!=":
+            return show ? keyVal !== val : keyVal === val;
+        case ">":
+            return show ? keyVal > val : !(keyVal > val);
+        case "<":
+            return show ? keyVal < val : !(keyVal < val);
+        case ">=":
+            return show ? keyVal >= val : !(keyVal >= val);
+        case "<=":
+            return show ? keyVal <= val : !(keyVal <= val);
+        case "exists":
+            return show ? keyVal !== null && keyVal !== undefined : keyVal === null || keyVal === undefined;
+        case "not_exists":
+            return show ? keyVal === null || keyVal === undefined : keyVal !== null && keyVal !== undefined;
+        case "matches":
+            try {
+                return show ? new RegExp(val).test(String(keyVal ?? "")) : !new RegExp(val).test(String(keyVal ?? ""));
+            } catch {
+                return false;
+            }
+        case "in":
+            return show ? Array.isArray(val) && val.includes(keyVal) : !(Array.isArray(val) && val.includes(keyVal));
+        case "not_in":
+            return show ? Array.isArray(val) && !val.includes(keyVal) : !(Array.isArray(val) && !val.includes(keyVal));
+        default:
+            return show;
+    }
+}
+
+/** Apply StyleProps.className and safely fall back to themeful elevation */
+function applyStyleProps(sp?: StyleProps, fallback?: string) {
+    return clsx(sp?.className || "", fallback || "");
+}
+
+/** Smart elevation so nav never melts into page bg */
+function elevatedSurface(base?: string) {
+    return clsx(
+        base || "",
+        "bg-[color:var(--acp-background)]/85 text-foreground",
+        "backdrop-blur-md border border-border/50",
+        "shadow-[0_2px_12px_rgba(0,0,0,0.08)]"
+    );
+}
+
+/** Primary-tinted hover surfaces */
+const hoverSoftPrimary = "hover:bg-[color:var(--acp-primary)]/10 hover:text-[color:var(--acp-primary)]";
+
+/* =======================================================
+📦 Collapsible (Sidebar/Mobile)
+======================================================= */
 function CollapsibleNavItem({
     route,
     pathname,
@@ -28,7 +94,7 @@ function CollapsibleNavItem({
     openRoutes,
     setOpenRoutes,
     level = 0,
-    variant = "sidebar" as "sidebar" | "mobile"
+    variant = "sidebar" as "sidebar" | "mobile",
 }: {
     route: IRoute;
     pathname: string;
@@ -45,41 +111,36 @@ function CollapsibleNavItem({
     const label = resolveBinding(route.label, state, t) || route.label;
 
     const isMobile = variant === "mobile";
-    const textSize = isMobile ? "text-base" : "text-sm";
-    const py = isMobile ? "py-3" : "py-2";
-    const px = isMobile ? "px-4" : "px-3";
-    const pl = level > 0 ? (isMobile ? "pl-6" : "pl-8") : (isMobile ? "pl-4" : "pl-2");
+    const pad = isMobile ? "px-4 py-3 text-base" : "px-3 py-2 text-sm";
+    const indent = level > 0 ? (isMobile ? "pl-6" : "pl-7") : "";
 
-    const baseClass = clsx(
-        `flex items-center w-full ${px} ${py} ${pl} rounded-md font-medium transition-all duration-200 ${textSize}`,
+    const base = clsx(
+        "flex w-full items-center justify-between rounded-md transition-all duration-200",
+        pad,
+        indent,
         active
-            ? "bg-[color:var(--acp-primary-bg-soft)] text-[color:var(--acp-primary)] font-semibold border-l-2 border-[color:var(--acp-primary-border)]"
-            : "text-foreground/70 hover:text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary-bg-hover)]"
+            ? "text-[color:var(--acp-primary)] bg-[color:var(--acp-primary)]/10 font-semibold border-l-2 border-[color:var(--acp-primary)]"
+            : "text-foreground/75 " + hoverSoftPrimary
     );
-
 
     return (
         <div>
             {hasChildren ? (
                 <button
-                    onClick={() => {
-                        setOpenRoutes((prev: any) => {
-                            const newSet = new Set(prev);
-                            if (newSet.has(route.href)) {
-                                newSet.delete(route.href);
-                            } else {
-                                newSet.add(route.href);
-                            }
-                            return newSet;
-                        });
-                    }}
-                    className={clsx(baseClass, "justify-between")}
+                    onClick={() =>
+                        setOpenRoutes((prev: Set<string>) => {
+                            const ns = new Set(prev);
+                            ns.has(route.href) ? ns.delete(route.href) : ns.add(route.href);
+                            return ns;
+                        })
+                    }
+                    className={base}
                     aria-expanded={isOpen}
                 >
                     <span>{label}</span>
                     <ChevronDown
                         className={clsx(
-                            "h-4 w-4 transition-transform duration-200 ml-2",
+                            "h-4 w-4 transition-transform duration-200",
                             isOpen && "rotate-180"
                         )}
                     />
@@ -91,13 +152,18 @@ function CollapsibleNavItem({
                     state={state}
                     t={t}
                     active={active}
-                    activeClassName="bg-primary/10 text-primary font-semibold border-l-2 border-primary"
-                    inactiveClassName="text-foreground/70 hover:bg-muted/20 hover:text-foreground"
-                    className={clsx("justify-start")}
+                    className={clsx(
+                        "flex w-full items-center rounded-md transition-all duration-200",
+                        pad,
+                        indent
+                    )}
+                    activeClassName="text-[color:var(--acp-primary)] bg-[color:var(--acp-primary)]/10 font-semibold border-l-2 border-[color:var(--acp-primary)]"
+                    inactiveClassName={"text-foreground/75 " + hoverSoftPrimary}
                 />
             )}
+
             {hasChildren && isOpen && (
-                <div className="space-y-1 ml-4 animate__animated animate__slideDown">
+                <div className="space-y-1 ml-2 animate__animated animate__fadeInDown animate__faster">
                     {route.nested!.map((child) => (
                         <CollapsibleNavItem
                             key={child.href}
@@ -117,80 +183,79 @@ function CollapsibleNavItem({
     );
 }
 
-/* -----------------------------
- * Desktop Nav Item (with Dropdown)
- * ----------------------------- */
+/* =======================================================
+🖥️ Desktop Topbar Items (Dropdown)
+======================================================= */
 function DesktopNavItem({
     route,
     pathname,
     state,
     t,
-    level = 0,
 }: {
     route: IRoute;
     pathname: string;
     state: AnyObj;
-    t: (key: string) => string;
-    level?: number;
+    t: (k: string) => string;
 }) {
     const active = isRouteActive(route, pathname);
     const hasChildren = route.nested && route.nested.length > 0;
     const [open, setOpen] = useState(false);
     const itemRef: any = useRef<HTMLDivElement>(null);
     useClickOutside(itemRef, () => setOpen(false));
-    // Base link styles shared by all items
-    const baseClasses = clsx(
-        "inline-flex items-center px-4 py-2 rounded-md font-medium transition-all duration-200",
-        "focus:outline-none focus:ring-2 focus:ring-[color:var(--acp-primary)]/40 focus:ring-offset-1"
-    );
 
-    const itemActiveClass =
-        level === 0
-            ? clsx(
-                "text-[color:var(--acp-primary)] bg-[color:var(--acp-primary-bg-soft)]",
-                "underline underline-offset-4 decoration-[color:var(--acp-primary)] font-semibold"
-            )
-            : clsx(
-                "block w-full pl-5 pr-4 py-2 font-semibold border-l-2",
-                "text-[color:var(--acp-primary)] border-[color:var(--acp-primary-border)] bg-[color:var(--acp-primary-bg-soft)]"
-            );
-
-    const itemInactiveClass =
-        level === 0
-            ? "text-foreground/80 hover:text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary-bg-hover)]"
-            : "block w-full px-4 py-2 text-foreground/70 hover:text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary-bg-hover)]";
+    const linkBase =
+        "inline-flex items-center px-4 py-2 rounded-md font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[color:var(--acp-primary)]/30";
 
     return (
-        <div ref={itemRef} className="relative group" onMouseEnter={() => hasChildren && setOpen(true)}
-            onMouseLeave={() => hasChildren && setOpen(false)}>
+        <div
+            ref={itemRef}
+            className="relative"
+            onMouseEnter={() => hasChildren && setOpen(true)}
+            onMouseLeave={() => hasChildren && setOpen(false)}
+            onClick={() => hasChildren && setOpen((o) => !o)}
+        >
             <NavLink
                 route={route}
                 pathname={pathname}
                 state={state}
                 t={t}
                 active={active}
-                activeClassName={clsx(baseClasses, itemActiveClass)}
-                inactiveClassName={clsx(baseClasses, itemInactiveClass)}
+                activeClassName={clsx(
+                    linkBase,
+                    "text-[color:var(--acp-primary)] underline underline-offset-4"
+                )}
             />
+            {!active && !hasChildren && (
+                <a
+                    href={route.href}
+                    className={clsx(linkBase, "text-foreground/80", hoverSoftPrimary)}
+                >
+                    {resolveBinding(route.label, state, t)}
+                </a>
+            )}
 
             {hasChildren && open && (
                 <div
                     className={clsx(
-                        "absolute left-0 top-full mt-2 w-52 rounded-lg border border-border/50 bg-background shadow-lg",
-                        "opacity-100 visible transition-all duration-200 ease-in-out z-50",
-                        "animate__animated animate__fadeInDown"
+                        "absolute left-0 top-full mt-2 w-56 rounded-lg z-50",
+                        elevatedSurface()
                     )}
+                    role="menu"
                 >
                     <div className="py-2">
                         {route.nested!.map((child) => (
-                            <DesktopNavItem
+                            <a
                                 key={child.href}
-                                route={child}
-                                pathname={pathname}
-                                state={state}
-                                t={t}
-                                level={level + 1}
-                            />
+                                href={child.href}
+                                className={clsx(
+                                    "block w-full text-left px-4 py-2 text-sm rounded-none",
+                                    "text-foreground/80",
+                                    hoverSoftPrimary
+                                )}
+                                role="menuitem"
+                            >
+                                {resolveBinding(child.label, state, t)}
+                            </a>
                         ))}
                     </div>
                 </div>
@@ -199,144 +264,121 @@ function DesktopNavItem({
     );
 }
 
-
-/* -----------------------------
- * Desktop Nav
- * ----------------------------- */
 function DesktopNav({
     routes,
     pathname,
-    searchEnabled,
     state,
     t,
-    containerStyle
+    containerStyle,
 }: {
     routes: IRoute[];
     pathname: string;
-    searchEnabled?: boolean;
     state: AnyObj;
-    t: (key: string) => string;
-    containerStyle?: string;
+    t: (k: string) => string;
+    containerStyle?: StyleProps;
 }) {
     return (
         <nav
             className={clsx(
-                "hidden lg:flex items-center gap-2 overflow-x-auto overflow-y-hidden max-w-full whitespace-nowrap no-scrollbar",
-                containerStyle
+                "hidden lg:flex items-center gap-3",
+                applyStyleProps(containerStyle)
             )}
             role="navigation"
             aria-label="Main navigation"
         >
-            {routes.filter(r => r.showInNavigation).map(route => (
+            {routes.filter((r) => r.showInNavigation).map((r) => (
                 <DesktopNavItem
-                    key={route.href}
-                    route={route}
+                    key={r.href}
+                    route={r}
                     pathname={pathname}
                     state={state}
                     t={t}
                 />
             ))}
-
-            {/* Search (if enabled) */}
-            {searchEnabled && (
-                <div className="ml-6">
-                    <input
-                        type="text"
-                        placeholder={"Search..."}
-                        className="px-3 py-2 rounded-lg border border-input bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                        aria-label="Search"
-                    />
-                </div>
-            )}
         </nav>
     );
 }
 
-/* -----------------------------
- * Mobile Burger Drawer
- * ----------------------------- */
+/* =======================================================
+📱 Mobile Burger Drawer
+======================================================= */
 function MobileBurger({
     routes,
     pathname,
     isOpen,
     onClose,
-    searchEnabled,
     state,
     t,
     overlayStyle,
-    sheetStyle = 'bg-primary'
+    sheetStyle,
 }: {
     routes: IRoute[];
     pathname: string;
     isOpen: boolean;
     onClose: () => void;
-    searchEnabled?: boolean;
     state: AnyObj;
-    t: (key: string) => string;
-    overlayStyle?: string;
-    sheetStyle?: string;
+    t: (k: string) => string;
+    overlayStyle?: StyleProps;
+    sheetStyle?: StyleProps;
 }) {
-    const drawerRef = useRef<HTMLElement>(undefined);
+    const drawerRef: any = useRef<HTMLElement>(null);
     const [openRoutes, setOpenRoutes] = useState<Set<string>>(new Set());
-
     useClickOutside(drawerRef, onClose);
 
     useEffect(() => {
-        const newOpenRoutes = new Set<string>();
-        const topRoutes = routes.filter(r => r.showInNavigation);
-        function collectParents(route: IRoute) {
-            if (route.nested && route.nested.length > 0) {
-                if (route.nested.some(child => isRouteActive(child, pathname))) {
-                    newOpenRoutes.add(route.href);
-                }
-                route.nested.forEach(collectParents);
-            }
-        }
-        topRoutes.forEach(collectParents);
-        setOpenRoutes(newOpenRoutes);
+        const onEsc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+        window.addEventListener("keydown", onEsc);
+        return () => window.removeEventListener("keydown", onEsc);
+    }, [onClose]);
+
+    useEffect(() => {
+        const init = new Set<string>();
+        const collect = (r: IRoute) => {
+            if (r.nested?.some((c) => isRouteActive(c, pathname))) init.add(r.href);
+            r.nested?.forEach(collect);
+        };
+        routes.filter((r) => r.showInNavigation).forEach(collect);
+        setOpenRoutes(init);
     }, [pathname, routes]);
 
     if (!isOpen) return null;
 
     return (
-        <div className={clsx("fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate__animated animate__fadeIn animate__faster", overlayStyle)}>
-            <div
+        <div
+            className={clsx(
+                "fixed inset-0 z-50 animate__animated animate__fadeIn animate__faster",
+                applyStyleProps(
+                    overlayStyle,
+                    "bg-black/40 backdrop-blur-sm"
+                )
+            )}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile navigation"
+        >
+            <aside
                 ref={drawerRef as any}
                 className={clsx(
-                    "absolute left-0 top-0 h-full w-80 shadow-2xl p-6 flex flex-col animate__animated animate__slideInLeft border-r border-border/50",
-                    sheetStyle
+                    "absolute left-0 top-0 h-full w-80 p-6 flex flex-col animate__animated animate__slideInLeft",
+                    elevatedSurface(applyStyleProps(sheetStyle))
                 )}
-                role="dialog"
-                aria-modal="true"
-                aria-label="Mobile navigation"
             >
-                {/* Header */}
-                <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
-                    <span className="font-semibold text-lg">Menu</span>
+                <div className="flex items-center justify-between mb-4 border-b border-border/40 pb-3">
+                    <span className="font-semibold">Menu</span>
                     <button
                         onClick={onClose}
-                        className="p-1 rounded-full hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
+                        className={clsx(
+                            "p-2 rounded-md text-foreground/70",
+                            hoverSoftPrimary
+                        )}
                         aria-label="Close menu"
                     >
-                        <XIcon className="h-6 w-6 text-muted-foreground" />
+                        <XIcon className="h-5 w-5" />
                     </button>
                 </div>
 
-                {/* Search */}
-                {searchEnabled && (
-                    <div className="mb-6">
-                        <input
-                            type="text"
-                            placeholder={t("search.placeholder") || "Search..."}
-                            className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                            aria-label="Search"
-                        />
-                    </div>
-                )}
-
-                {/* Routes */}
                 <nav className="flex-1 space-y-1 overflow-y-auto" role="navigation">
-                    {routes.filter(r => r.showInNavigation).map(route => (
+                    {routes.filter((r) => r.showInNavigation).map((route) => (
                         <CollapsibleNavItem
                             key={route.href}
                             route={route}
@@ -349,39 +391,65 @@ function MobileBurger({
                         />
                     ))}
                 </nav>
-            </div>
+            </aside>
         </div>
     );
 }
 
-/* -----------------------------
- * Sidebar (Dashboard Style)
- * ----------------------------- */
-function Sidebar({ routes, pathname, state, t }: {
-    routes: IRoute[]; pathname: string, state: AnyObj;
-    t: (key: string) => string
+/* =======================================================
+🧱 Sidebar (Dashboard)
+======================================================= */
+function Sidebar({
+    routes,
+    pathname,
+    state,
+    t,
+    project,
+}: {
+    routes: IRoute[];
+    pathname: string;
+    state: AnyObj;
+    t: (k: string) => string;
+    project: UIProject;
 }) {
+    const visible = evalVisibility(state, t, project.routeList.visibility?.sidebar);
+    if (!visible) return null;
+
     const [openRoutes, setOpenRoutes] = useState<Set<string>>(new Set());
 
     useEffect(() => {
-        const newOpenRoutes = new Set<string>();
-        const topRoutes = routes.filter(r => r.showInNavigation);
-        function collectParents(route: IRoute) {
-            if (route.nested && route.nested.length > 0) {
-                if (route.nested.some(child => isRouteActive(child, pathname))) {
-                    newOpenRoutes.add(route.href);
-                }
-                route.nested.forEach(collectParents);
-            }
-        }
-        topRoutes.forEach(collectParents);
-        setOpenRoutes(newOpenRoutes);
+        const init = new Set<string>();
+        const collect = (r: IRoute) => {
+            if (r.nested?.some((c) => isRouteActive(c, pathname))) init.add(r.href);
+            r.nested?.forEach(collect);
+        };
+        routes.filter((r) => r.showInNavigation).forEach(collect);
+        setOpenRoutes(init);
     }, [pathname, routes]);
 
+    const cfg = project.routeList.sidebarConfig ?? {};
+
     return (
-        <aside className="hidden lg:flex flex-col w-64 h-screen border-r border-border/50 bg-background text-foreground p-6" role="complementary" aria-label="Sidebar navigation">
-            <nav className="flex flex-col space-y-1" role="navigation">
-                {routes.filter(r => r.showInNavigation).map(route => (
+        <aside
+            className={clsx(
+                elevatedSurface(),
+                "hidden lg:flex flex-col w-64 h-screen p-6 animate__animated animate__fadeInLeft"
+            )}
+            role="complementary"
+            aria-label="Sidebar navigation"
+        >
+            {cfg.showSearch && (
+                <div className="mb-4">
+                    <input
+                        type="text"
+                        placeholder="Search…"
+                        className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[color:var(--acp-primary)]/40"
+                    />
+                </div>
+            )}
+
+            <nav className="flex-1 space-y-1" role="navigation">
+                {routes.filter((r) => r.showInNavigation).map((route) => (
                     <CollapsibleNavItem
                         key={route.href}
                         route={route}
@@ -394,104 +462,184 @@ function Sidebar({ routes, pathname, state, t }: {
                     />
                 ))}
             </nav>
+
+            {cfg.customActions?.length ? (
+                <div className="mt-6 border-t border-border/40 pt-3 space-y-2">
+                    {cfg.customActions.map((a) => (
+                        <button
+                            key={a.id}
+                            onClick={() => {
+                                if (a.onClick?.startsWith("http")) {
+                                    window.location.href = a.onClick;
+                                } else {
+                                    // hook into your runtime/event bus if needed
+                                    console.log("Run action:", a.onClick);
+                                }
+                            }}
+                            className={clsx(
+                                "w-full text-left px-3 py-2 rounded-md text-sm",
+                                "text-foreground/80",
+                                hoverSoftPrimary
+                            )}
+                        >
+                            {a.icon && <span className="mr-2">{a.icon}</span>}
+                            {a.label}
+                        </button>
+                    ))}
+                </div>
+            ) : null}
         </aside>
     );
 }
 
-/* -----------------------------
- * Bottom Navigation (Mobile)
- * ----------------------------- */
-function BottomNav({ routes, pathname, state, t }: {
-    routes: IRoute[]; pathname: string, state: AnyObj;
-    t: (key: string) => string
+/* =======================================================
+⬇️ Bottom Navigation (Mobile)
+======================================================= */
+function BottomNav({
+    routes,
+    pathname,
+    state,
+    t,
+    routeListVisibility,
+}: {
+    routes: IRoute[];
+    pathname: string;
+    state: AnyObj;
+    t: (k: string) => string;
+    routeListVisibility?: {
+        bottombar?: VisibilityControl;
+    };
 }) {
-    return (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around bg-background text-foreground border-t border-border/50 px-4 py-2 lg:hidden shadow-lg" role="navigation" aria-label="Bottom navigation">
-            {routes.filter(r => r.showInBottomBar).map(route => {
-                const active = isRouteActive(route, pathname);
-                return (
-                    <a
-                        key={route.href}
-                        href={route.href}
-                        className={clsx(
-                            "flex flex-col items-center gap-1 p-2 rounded-lg text-xs transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[color:var(--acp-primary)]",
-                            active
-                                ? "text-[color:var(--acp-primary)] bg-[color:var(--acp-primary-bg-soft)] shadow-sm"
-                                : "text-muted-foreground hover:text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary-bg-hover)]"
-                        )}
-                        aria-current={active ? "page" : undefined}
-                    >
+    const visible = evalVisibility(state, t, routeListVisibility?.bottombar);
+    if (!visible) return null;
 
-                        {route.icon && <span className="text-base">{route.icon}</span>}
-                        <span className="text-center">{resolveBinding(route.label, state, t) || route.label}</span>
-                    </a>
-                );
-            })}
+    return (
+        <nav
+            className={clsx(
+                "fixed bottom-0 left-0 right-0 z-40 lg:hidden",
+                "border-t border-border/50",
+                "bg-[color:var(--acp-background)]/92 backdrop-blur-lg",
+                "shadow-[0_-4px_12px_rgba(0,0,0,0.08)]"
+            )}
+            role="navigation"
+            aria-label="Bottom navigation"
+        >
+            <div className="flex justify-around px-2 py-2">
+                {routes.filter((r) => r.showInBottomBar).map((route) => {
+                    const active = isRouteActive(route, pathname);
+                    return (
+                        <a
+                            key={route.href}
+                            href={route.href}
+                            className={clsx(
+                                "flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition-all",
+                                active
+                                    ? "text-[color:var(--acp-primary)]"
+                                    : "text-foreground/60 hover:text-[color:var(--acp-primary)]"
+                            )}
+                            aria-current={active ? "page" : undefined}
+                        >
+                            {route.icon && <span className="text-base">{route.icon}</span>}
+                            <span className="text-center">
+                                {resolveBinding(route.label, state, t) || route.label}
+                            </span>
+                        </a>
+                    );
+                })}
+            </div>
         </nav>
     );
 }
 
-export function NavRenderer({ project, state, t }: { project: UIProject, state: AnyObj, t: (key: string) => string }) {
+/* =======================================================
+🏁 Main Renderer
+======================================================= */
+export function NavRenderer({
+    project,
+    state,
+    t,
+}: {
+    project: UIProject;
+    state: AnyObj;
+    t: (key: string) => string;
+}) {
     const [pathname, setPathname] = useState("");
     const [burgerOpen, setBurgerOpen] = useState(false);
 
     useEffect(() => {
         setPathname(window.location.pathname);
-        const handlePop = () => setPathname(window.location.pathname);
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape") setBurgerOpen(false);
-        };
-        window.addEventListener("popstate", handlePop);
-        window.addEventListener("keydown", handleKeyDown);
+        const onPop = () => setPathname(window.location.pathname);
+        const onEsc = (e: KeyboardEvent) => e.key === "Escape" && setBurgerOpen(false);
+        window.addEventListener("popstate", onPop);
+        window.addEventListener("keydown", onEsc);
         return () => {
-            window.removeEventListener("popstate", handlePop);
-            window.removeEventListener("keydown", handleKeyDown);
+            window.removeEventListener("popstate", onPop);
+            window.removeEventListener("keydown", onEsc);
         };
     }, []);
 
-    const routes = project.routeList.routes.filter(
-        f => f.screenConfigUrl || project.screens?.some(s => s.id === f.screenId)
+    const navList = project.routeList;
+    const fullVisible = evalVisibility(state, t, navList.visibility?.fullNav);
+    if (!fullVisible) return null;
+
+    const routes = navList.routes.filter(
+        (r) => r.screenConfigUrl || project.screens?.some((s) => s.id === r.screenId)
     );
 
-    const navType = project.routeList.desktopNavType; // "top" | "side"
-    const mobileNavType = project.routeList.responsiveNavType; // "bottom" | "burger"
-    const searchEnabled = project.search?.enabled;
-    const navStyle = project.routeList.navStyle;
+    const navType = navList.desktopNavType; // "top" | "side"
+    const mobileNavType = navList.responsiveNavType; // "burger" | "bottom"
+
+    // container/overlay/sheet from NavStyle with safe fallbacks
+    const containerStyle = navList.navStyle?.containerStyle;
+    const overlayStyle = navList.navStyle?.overlayStyle;
+    const sheetStyle = navList.navStyle?.sheetStyle;
 
     return (
         <>
-            {/* Header (Top Nav) */}
-            {navType === "top" && (
+            {/* ── Topbar (desktop) ───────────────────────────────────────── */}
+            {navType === "top" && evalVisibility(state, t, navList.visibility?.topbar) && (
                 <header
                     className={clsx(
-                        "w-full flex items-center justify-between px-6 py-4 sticky top-0 z-50 bg-background text-foreground border-b border-border/50 shadow-sm",
-                        project.globalStyles?.headerStyle?.className
+                        elevatedSurface(applyStyleProps(containerStyle)),
+                        "w-full sticky top-0 z-50",
+                        "flex items-center justify-between px-6 py-4",
+                        "animate__animated animate__fadeInDown"
                     )}
                     role="banner"
                 >
                     {/* Brand */}
-                    <a href={project.brand.href || "/"} className="flex items-center gap-3" aria-label="Home">
+                    <a
+                        href={project.brand.href || "/"}
+                        className="flex items-center gap-2"
+                        aria-label="Home"
+                    >
                         {project.brand.logoUrl ? (
-                            <img src={project.brand.logoUrl} alt={`${project.brand.name} logo`} className="h-10 w-auto" />
+                            <img
+                                src={project.brand.logoUrl}
+                                alt={`${project.brand.name} logo`}
+                                className="h-8 w-auto"
+                            />
                         ) : (
-                            <span className="font-bold text-xl">{project.brand.name}</span>
+                            <span className="font-bold text-lg">{project.brand.name}</span>
                         )}
                     </a>
 
-                    {/* Desktop nav */}
+                    {/* Desktop Links */}
                     <DesktopNav
                         routes={routes}
                         pathname={pathname}
-                        searchEnabled={searchEnabled}
                         state={state}
                         t={t}
-                        containerStyle={navStyle.containerStyle?.className}
+                        containerStyle={containerStyle}
                     />
 
-                    {/* Mobile burger trigger */}
+                    {/* Burger trigger (mobile) */}
                     {mobileNavType === "burger" && (
                         <button
-                            className="lg:hidden p-2 rounded-lg hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
+                            className={clsx(
+                                "lg:hidden p-2 rounded-md text-foreground/80",
+                                hoverSoftPrimary
+                            )}
                             onClick={() => setBurgerOpen(true)}
                             aria-label="Open menu"
                             aria-expanded={burgerOpen}
@@ -502,31 +650,43 @@ export function NavRenderer({ project, state, t }: { project: UIProject, state: 
                 </header>
             )}
 
-            {/* Sidebar */}
-            {navType === "side" && (
-                <div className="flex">
-                    <Sidebar routes={routes} pathname={pathname} state={state} t={t} />
-                </div>
-            )}
+            {/* ── Sidebar (desktop dashboard) ────────────────────────────── */}
+            {navType === "side" &&
+                evalVisibility(state, t, navList.visibility?.sidebar) && (
+                    <div className="flex">
+                        <Sidebar
+                            project={project}
+                            routes={routes}
+                            pathname={pathname}
+                            state={state}
+                            t={t}
+                        />
+                    </div>
+                )}
 
-            {/* Burger Menu */}
+            {/* ── Burger Drawer (mobile) ─────────────────────────────────── */}
             {mobileNavType === "burger" && (
                 <MobileBurger
                     routes={routes}
                     pathname={pathname}
-                    state={state}
-                    t={t}
                     isOpen={burgerOpen}
                     onClose={() => setBurgerOpen(false)}
-                    searchEnabled={searchEnabled}
-                    overlayStyle={navStyle.overlayStyle?.className}
-                    sheetStyle={navStyle.sheetStyle?.className}
+                    state={state}
+                    t={t}
+                    overlayStyle={overlayStyle}
+                    sheetStyle={sheetStyle}
                 />
             )}
 
-            {/* Bottom Nav */}
+            {/* ── Bottom Bar (mobile) ────────────────────────────────────── */}
             {mobileNavType === "bottom" && (
-                <BottomNav routes={routes} pathname={pathname} state={state} t={t} />
+                <BottomNav
+                    routes={routes}
+                    pathname={pathname}
+                    state={state}
+                    t={t}
+                    routeListVisibility={navList.visibility}
+                />
             )}
         </>
     );

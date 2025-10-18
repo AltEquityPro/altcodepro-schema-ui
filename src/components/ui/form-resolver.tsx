@@ -18,7 +18,7 @@ import {
 } from "../../types";
 import { resolveBinding, classesFromStyleProps, luhnCheck, getAccessibilityProps, cn, deepResolveBindings, resolveDataSourceValue } from "../../lib/utils";
 
-import { Button } from "../../components/ui/button";
+import { Button, ButtonRenderer } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -1007,8 +1007,6 @@ export function FormResolver({ element, state, t, defaultData, onFormSubmit, onF
     };
     const submitAccProps = element.submit ? getAccessibilityProps(element.submit.accessibility) : {};
     const submitClassName = element.submit ? classesFromStyleProps(element.submit.styles) : '';
-    const cancelAccProps = element.cancel ? getAccessibilityProps(element.cancel.accessibility) : {};
-    const cancelClassName = element.cancel ? classesFromStyleProps(element.cancel.styles) : '';
     return (
         <Form {...form}>
             <form
@@ -1016,17 +1014,22 @@ export function FormResolver({ element, state, t, defaultData, onFormSubmit, onF
                 className={cn("space-y-6 max-w-md mx-auto", className)}
             >
                 {renderContent()}
-                <div className="flex justify-center gap-4 pt-4">
-                    {element.cancel && (
-                        <Button type="button" className={cancelClassName} onClick={onFormCancel || (() => form.reset())} {...cancelAccProps}>
-                            {resolveBinding(element.cancel.text, state, t)}
-                        </Button>
-                    )}
+                <div className="flex flex-col items-center justify-center pt-6 mt-8 border-t border-border space-y-4">
                     {element.submit && (
                         <Button type="submit" disabled={isSubmitting} className={submitClassName} {...submitAccProps}>
                             {isSubmitting ? t("submitting") : resolveBinding(element.submit.text, state, t)}
                         </Button>
                     )}
+                    {element.actions?.length ? (
+                        <div className="flex flex-wrap justify-center gap-3 pt-2">
+                            {element.actions.map((act, index) => (
+                                <ButtonRenderer
+                                    key={`${act.id}_${index}`} element={act}
+                                    runEventHandler={runEventHandler}
+                                    state={state}
+                                    t={t} />
+                            ))}
+                        </div>) : null}
                 </div>
             </form>
         </Form>

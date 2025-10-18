@@ -1,7 +1,5 @@
-
-
 'use client';
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback, useState, createContext, useContext } from "react";
 import {
     ActionType,
     AnyObj,
@@ -12,15 +10,148 @@ import {
     ActionRuntime,
     ActionParams
 } from "../types";
-import { anySignal, deepResolveBindings, resolveDataSource, deepResolveDataSource, resolveDataSourceValue } from "../lib/utils";
+import { anySignal, deepResolveBindings, resolveDataSource, deepResolveDataSource, resolveDataSourceValue, hash } from "../lib/utils";
 import { JSONPath } from "jsonpath-plus";
 import { useAppState } from "./StateContext";
+
+import { useOffline } from "../hooks/OfflineContext";
+type StoredAuth = {
+    token?: string;
+    refreshToken?: string;
+    expiresAt?: number; // epoch in ms
+};
+
+function getAuthKey(globalConfig?: UIProject["globalConfig"]) {
+    return globalConfig?.auth?.cookieName || globalConfig?.auth?.audience || "authToken";
+}
+function isOfflineEnabled(ds: any, screen?: any, project?: any) {
+    // no schema break: read optional flags if present
+    return Boolean(
+        (ds && (ds as any).offline) ||
+        (screen?.metadata?.offline === true) ||
+        (project?.globalConfig?.metadata?.offline === true)
+    );
+}
+function cacheKeyFor(dsId: string, url: string, method: string, body?: any) {
+    const sig = `${dsId}|${method}|${url}|${body ? hash(body) : ''}`;
+    return `offline:${sig}`;
+}
+function decodeJwtExp(token: string): number | null {
+    try {
+        if (!token) return Date.now() + 3600 * 1000;
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        return payload?.exp ? payload.exp * 1000 : Date.now() + 3600 * 1000;
+    } catch {
+        return Date.now() + 3600 * 1000;
+    }
+}
+
+async function refreshAuthToken(globalConfig: UIProject["globalConfig"], refreshToken: string): Promise<StoredAuth | null> {
+    try {
+        const tokenUrl = globalConfig?.auth?.oidc?.tokenUrl;
+        if (!tokenUrl) return null;
+        const clientId =
+            typeof globalConfig?.auth?.oidc?.clientId === "string"
+                ? globalConfig.auth.oidc.clientId
+                : (globalConfig?.auth?.oidc?.clientId as any)?.binding || "";
+
+
+        const res = await fetch(tokenUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+                grant_type: "refresh_token",
+                refresh_token: refreshToken,
+                client_id: clientId,
+            }),
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        const expiresAt =
+            data.expires_in && !isNaN(data.expires_in)
+                ? Date.now() + data.expires_in * 1000
+                : undefined;
+
+        return {
+            token: data.access_token || data.id_token,
+            refreshToken: data.refresh_token || refreshToken,
+            expiresAt,
+        };
+    } catch (e) {
+        console.error("Token refresh failed:", e);
+        return null;
+    }
+}
+
+function storeAuthToken(globalConfig: UIProject["globalConfig"], auth: StoredAuth) {
+    if (!auth) return;
+    const authKey = getAuthKey(globalConfig);
+    const storageType = globalConfig?.auth?.tokenStorage || "localStorage";
+    const data = JSON.stringify(auth);
+
+    switch (storageType) {
+        case "cookie":
+            document.cookie = `${authKey}=${btoa(data)}; path=/; SameSite=Lax`;
+            break;
+        case "memory":
+            (window as any).__memoryAuth = data;
+            break;
+        default:
+            try {
+                localStorage.setItem(authKey, data);
+            } catch {
+                console.warn("LocalStorage unavailable; falling back to memory store");
+                (window as any).__memoryAuth = data;
+            }
+    }
+}
+
+function getStoredAuthToken(globalConfig: UIProject["globalConfig"]): StoredAuth | null {
+    const authKey = getAuthKey(globalConfig);
+    const storageType = globalConfig?.auth?.tokenStorage || "localStorage";
+    let data: string | null = null;
+    switch (storageType) {
+        case "cookie":
+            const match = document.cookie.match(new RegExp(`(^| )${authKey}=([^;]+)`));
+            data = match ? atob(match[2]) : null;
+            break;
+        case "memory":
+            data = (window as any).__memoryAuth || null;
+            break;
+        default:
+            data = localStorage.getItem(authKey);
+    }
+    try {
+        return data ? JSON.parse(data) : null;
+    } catch {
+        return null;
+    }
+}
+
+function clearAuthToken(globalConfig: UIProject["globalConfig"]) {
+    const authKey = getAuthKey(globalConfig);
+    const storageType = globalConfig?.auth?.tokenStorage || "localStorage";
+
+    switch (storageType) {
+        case "cookie":
+            document.cookie = `${authKey}=; Max-Age=0; path=/`;
+            break;
+        case "memory":
+            delete (window as any).__memoryAuth;
+            break;
+        default:
+            localStorage.removeItem(authKey);
+    }
+}
 
 async function withRetry<T>(
     fn: () => Promise<T>,
     attempts: number,
     delay: number,
     strategy: 'exponential' | 'linear' | 'jitter' = 'exponential',
+    runtime: ActionRuntime,
     signal?: AbortSignal
 ): Promise<T> {
     let lastError: any;
@@ -30,7 +161,11 @@ async function withRetry<T>(
             return await fn();
         } catch (e: any) {
             lastError = e;
-            if (i === attempts - 1) throw e;
+            if (i === attempts - 1) {
+                runtime?.toast?.(`Failed after ${attempts} attempts`, "error");
+                throw e;
+            }
+
             if (e.message?.includes('HTTP') && ![429, 500, 502, 503, 504].includes(parseInt(e.message.match(/HTTP (\d+)/)?.[1] || '0', 10))) {
                 throw e;
             }
@@ -51,6 +186,94 @@ async function withRetry<T>(
     throw lastError;
 }
 
+export function useAuth(globalConfig?: UIProject["globalConfig"]) {
+    const [token, setToken] = useState<string | null>(null);
+    const [refreshToken, setRefreshToken] = useState<string | null>(null);
+    const [expiresAt, setExpiresAt] = useState<number | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    // --- Load stored token on mount ---
+    useEffect(() => {
+        const stored = getStoredAuthToken(globalConfig);
+        if (stored?.token) {
+            setToken(stored.token);
+            setRefreshToken(stored.refreshToken || null);
+            setExpiresAt(stored.expiresAt || null);
+        }
+        setLoading(false);
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === getAuthKey(globalConfig)) {
+                const updated = getStoredAuthToken(globalConfig);
+                setToken(updated?.token || null);
+                setRefreshToken(updated?.refreshToken || null);
+                setExpiresAt(updated?.expiresAt || null);
+            }
+        };
+        window.addEventListener("storage", handleStorage);
+        return () => window.removeEventListener("storage", handleStorage);
+    }, [globalConfig]);
+
+    // --- Derived state ---
+    const isLoggedIn =
+        !!token && (!expiresAt || Date.now() < expiresAt - 5 * 60 * 1000);
+
+    // --- Manual login/store ---
+    const login = useCallback(
+        (token: string, refreshToken?: string, expiresIn?: number) => {
+            const expiresAt = Date.now() + (expiresIn || 3600) * 1000;
+            const authObj = { token, refreshToken, expiresAt };
+            storeAuthToken(globalConfig, authObj);
+            setToken(token);
+            setRefreshToken(refreshToken || null);
+            setExpiresAt(expiresAt);
+        },
+        [globalConfig]
+    );
+
+    // --- Manual logout ---
+    const logout = useCallback(() => {
+        clearAuthToken(globalConfig);
+        setToken(null);
+        setRefreshToken(null);
+        setExpiresAt(null);
+    }, [globalConfig]);
+
+    // --- Manual refresh ---
+    const refresh = useCallback(async () => {
+        if (!refreshToken) return;
+        const refreshed = await refreshAuthToken(globalConfig, refreshToken);
+        if (refreshed?.token) {
+            storeAuthToken(globalConfig, refreshed);
+            setToken(refreshed.token);
+            setRefreshToken(refreshed.refreshToken || null);
+            setExpiresAt(refreshed.expiresAt || null);
+            return refreshed.token;
+        } else {
+            logout();
+            return null;
+        }
+    }, [globalConfig, refreshToken, logout]);
+
+    // --- Background refresh every 2 min ---
+    useEffect(() => {
+        if (!refreshToken) return;
+        const interval = setInterval(() => {
+            if (expiresAt && expiresAt - Date.now() < 5 * 60 * 1000) refresh();
+        }, 2 * 60 * 1000);
+        return () => clearInterval(interval);
+    }, [refreshToken, expiresAt, refresh]);
+
+    return {
+        token,
+        refreshToken,
+        expiresAt,
+        isLoggedIn,
+        loading,
+        login,
+        logout,
+        refresh,
+    };
+}
 export function useActionHandler({
     globalConfig,
     runtime,
@@ -63,7 +286,128 @@ export function useActionHandler({
     const { state, setState, t } = useAppState();
     const abortControllers = useRef<Record<string, AbortController>>({});
     const wsCleanups = useRef<Record<string, () => void>>({});
-    const scriptAllowlist = ['customScript1', 'customScript2'];
+    const offline = useOffline();
+
+    useEffect(() => {
+        const stored = getStoredAuthToken(globalConfig);
+        if (!stored) return;
+
+        const now = Date.now();
+        const expiresSoon = stored.expiresAt && stored.expiresAt - now < 5 * 60 * 1000; // 5 min
+
+        if (expiresSoon && stored.refreshToken) {
+            refreshAuthToken(globalConfig, stored.refreshToken).then(refreshed => {
+                if (refreshed?.token) {
+                    storeAuthToken(globalConfig, refreshed);
+                    setState("auth.token", refreshed.token);
+                    setState("auth.refreshToken", refreshed.refreshToken);
+                }
+            });
+        } else if (stored.token) {
+            setState("auth.token", stored.token);
+        }
+        let refreshing = false;
+        const checkAndRefresh = async () => {
+            if (refreshing) return;
+            const stored = getStoredAuthToken(globalConfig);
+            if (!stored?.refreshToken) return;
+            const now = Date.now();
+            const expiresSoon = stored.expiresAt && stored.expiresAt - now < 5 * 60 * 1000;
+            if (expiresSoon) {
+                refreshing = true;
+                try {
+                    const refreshed = await refreshAuthToken(globalConfig, stored.refreshToken);
+                    if (refreshed?.token) {
+                        storeAuthToken(globalConfig, refreshed);
+                        setState("auth.token", refreshed.token);
+                        setState("auth.refreshToken", refreshed.refreshToken);
+                        runtime.toast?.("Session refreshed", "info");
+                    }
+                } finally {
+                    refreshing = false;
+                }
+            }
+        };
+        const interval = setInterval(checkAndRefresh, 2 * 60 * 1000); // every 2 min
+        return () => clearInterval(interval);
+    }, [globalConfig]);
+
+    useEffect(() => {
+        if (!offline?.registerExecutor) return;
+
+        offline.registerExecutor(async (evt) => {
+            const ds =
+                dataSources?.find(d => d.id === evt.dsId) ||
+                (globalConfig?.endpoints?.registry || []).find((d: any) => d.id === evt.dsId);
+
+            if (!ds) throw new Error(`Offline replay: DataSource ${evt.dsId} not found`);
+
+            // Re-run with the SAME DataSource. We rebuild headers/auth here as in execute* methods.
+            if (evt.kind === 'rest') {
+                // Minimal REST re-exec (same rules you use in executeApiAction)
+                const resolvedDs = resolveDataSource(ds, globalConfig, state, evt.body);
+                const baseUrl = resolvedDs.baseUrl || '';
+                const path = resolvedDs.path || '';
+                let url = baseUrl ? new URL(path, baseUrl).toString() : path;
+
+                const headers: Record<string, string> = { ...(resolvedDs.headers || {}) };
+                const stored = getStoredAuthToken(globalConfig);
+                if (stored?.token && !headers["Authorization"]) headers["Authorization"] = `Bearer ${stored.token}`;
+                if (globalConfig?.security?.csrfHeaderName && state?.csrfToken) {
+                    headers[globalConfig.security.csrfHeaderName] = state.csrfToken;
+                }
+                if (evt.queryParams) {
+                    const params = new URLSearchParams(
+                        Object.entries(evt.queryParams).map(([k, v]) => [k, resolveDataSourceValue(v, state, evt.body)])
+                    );
+                    url += (url.includes('?') ? '&' : '?') + params.toString();
+                }
+
+                const body = evt.body instanceof FormData ? evt.body
+                    : evt.body ? JSON.stringify(evt.body)
+                        : resolvedDs.body ? JSON.stringify(resolvedDs.body)
+                            : undefined;
+
+                if (!(body instanceof FormData) && body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+
+                const res = await fetch(url, {
+                    method: evt.method || resolvedDs.method || 'POST',
+                    headers,
+                    body,
+                    credentials: resolvedDs.credentials || 'same-origin',
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+                // no need to set state here — replay is “fire & forget”
+                return;
+            }
+
+            if (evt.kind === 'graphql') {
+                const resolvedDs = resolveDataSource(ds, globalConfig, state, evt.variables);
+                const baseUrl = resolvedDs.baseUrl || '';
+                const path = resolvedDs.path || '';
+                const url = new URL(path, baseUrl).toString();
+
+                const headers: Record<string, string> = { "Content-Type": "application/json", ...(resolvedDs.headers || {}) };
+                const stored = getStoredAuthToken(globalConfig);
+                if (stored?.token && !headers["Authorization"]) headers["Authorization"] = `Bearer ${stored.token}`;
+                if (globalConfig?.security?.csrfHeaderName && state?.csrfToken) {
+                    headers[globalConfig.security.csrfHeaderName] = state.csrfToken;
+                }
+
+                const body = { query: evt.query || resolvedDs.query, variables: evt.variables || resolvedDs.body || {} };
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(body),
+                    credentials: resolvedDs.credentials || 'same-origin',
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+                return;
+            }
+
+            throw new Error('Unknown offline event kind');
+        });
+    }, [offline, dataSources, globalConfig, state]);
 
     const cancel = (actionId: string) => {
         const controller = abortControllers.current[actionId];
@@ -81,16 +425,24 @@ export function useActionHandler({
     const runEventHandler = async (handler?: EventHandler, dataOverride?: AnyObj): Promise<void> => {
         if (!handler) return;
         const h = deepResolveBindings(handler, state, t) as EventHandler & { params?: ActionParams };
-        console.log('handler,h', handler, h);
+
         const controller = new AbortController();
         const actionId = `${h.action}-${Date.now()}`;
         abortControllers.current[actionId] = controller;
+
+        const runSubActions = async (actions?: EventHandler[], context?: AnyObj) => {
+            if (!actions?.length) return;
+            for (const sub of actions) {
+                const bound = deepResolveBindings(sub, { ...state, result: context?.result, error: context?.error }, t);
+                await runEventHandler(bound, context?.result);
+            }
+        };
 
         const executeTransition = async (transition?: TransitionSpec) => {
             if (!transition) return;
             const resolvedTransition = deepResolveBindings(transition, state, t) as TransitionSpec;
             if (resolvedTransition.href) {
-                runtime?.nav ? runtime?.nav?.push?.(resolvedTransition.href) : (window.location.href = resolvedTransition.href)
+                runtime?.nav ? runtime?.nav?.push?.(resolvedTransition.href) : (window.location.href = resolvedTransition.href);
             }
             if (resolvedTransition.modal?.openId) runtime.openModal?.(resolvedTransition.modal.openId);
             if (resolvedTransition.modal?.closeId) runtime.closeModal?.(resolvedTransition.modal.closeId);
@@ -102,18 +454,74 @@ export function useActionHandler({
             }
         };
 
+
         const then = async (ok: boolean, payload?: any, error?: { message: string; status?: number }) => {
-            const next = ok ? h.successAction : h.errorAction;
-            const transition = ok ? h.successTransition : h.errorTransition;
-            await executeTransition(transition);
-            if (next) await runEventHandler(next, dataOverride);
-            if (!ok && error) {
-                if (h.params?.optimisticState) {
-                    setState(h.params.optimisticState.path, state[h.params.optimisticState.path] || null);
+            if (ok) {
+                if (h.params?.successMessage) {
+                    runtime.toast?.(t(h.params?.successMessage), "success");
                 }
-                runtime.toast?.(error.message, "error");
+                if (ok && payload && globalConfig?.auth) {
+                    const isAuthRoute =
+                        (h.dataSourceId?.toLowerCase()?.includes("login") ||
+                            h.dataSourceId?.toLowerCase()?.includes("register") ||
+                            h.params?.isAuthRoute) &&
+                        typeof payload === "object";
+
+                    if (isAuthRoute) {
+                        const token = payload.access_token || payload.token || payload.jwt || payload.data?.token;
+                        const refreshToken = payload.refresh_token || payload.data?.refresh_token;
+                        const expiresIn = payload.expires_in || decodeJwtExp(token) || 3600;
+
+                        if (token) {
+                            const expiresAt = Date.now() + expiresIn * 1000;
+                            const authObj: StoredAuth = { token, refreshToken, expiresAt };
+                            storeAuthToken(globalConfig, authObj);
+
+                            let decodedUser = null;
+                            try {
+                                const payload = JSON.parse(atob(token.split('.')[1]));
+                                decodedUser = {
+                                    id: payload.sub,
+                                    email: payload.email,
+                                    name: payload.name,
+                                    orgId: payload.org_id || payload.orgId,
+                                };
+                            } catch {
+                                decodedUser = { id: 'unknown', email: '', name: '' };
+                            }
+                            setState("auth.user", decodedUser);
+                            setState("auth.token", token);
+                            setState("auth.refreshToken", refreshToken);
+                            setState("auth.expiresAt", expiresAt);
+
+                            runtime.toast?.("Login successful", "success");
+
+                            const redirect = globalConfig.auth.postLoginHref || "/dashboard";
+                            if (redirect) runtime.nav?.push?.(redirect);
+                        }
+                    }
+
+                    // Handle logout
+                    if (h.dataSourceId?.toLowerCase()?.includes("logout")) {
+                        clearAuthToken(globalConfig);
+                        setState("auth.token", null);
+                        setState("auth.refreshToken", null);
+                        setState("auth.expiresAt", null);
+                        runtime.toast?.("Logged out", "info");
+
+                        const redirect = globalConfig.auth.logoutHref || "/";
+                        if (redirect) runtime.nav?.push?.(redirect);
+                    }
+                }
+                await runSubActions(h.successActions, { result: payload });
+                await executeTransition(h.successTransition);
+            } else {
+                await runSubActions(h.errorActions, { error });
+                await executeTransition(h.errorTransition);
             }
+            if (h.finallyActions?.length) await runSubActions(h.finallyActions, { result: payload, error });
         };
+
 
         const applyResultMapping = (result: any, mapping?: ActionParams['resultMapping']) => {
             if (!mapping) return result;
@@ -123,16 +531,13 @@ export function useActionHandler({
                     mapped = JSONPath({ path: mapping.jsonPath, json: result });
                 } catch (e) {
                     console.error("JSONPath mapping error", e);
-                    return { ok: false, error: `JSONPath mapping error: ${String(e)}` };
                 }
             }
             if (mapping.transform) {
                 try {
-                    const fn = new Function("data", mapping.transform);
-                    mapped = fn(mapped);
+                    mapped = new Function("data", mapping.transform)(mapped);
                 } catch (e) {
                     console.error("Transform mapping error", e);
-                    return { ok: false, error: `Transform error: ${String(e)}` };
                 }
             }
             return mapped;
@@ -144,6 +549,10 @@ export function useActionHandler({
             const path = resolvedDs.path || '';
             let url = baseUrl ? new URL(path, baseUrl).toString() : path;
             const headers = resolvedDs.headers || {};
+            const stored = getStoredAuthToken(globalConfig);
+            if (stored?.token && !headers["Authorization"]) {
+                headers["Authorization"] = `Bearer ${stored.token}`;
+            }
             if (globalConfig?.security?.csrfHeaderName && state?.csrfToken) {
                 headers[globalConfig.security.csrfHeaderName] = state.csrfToken;
             }
@@ -175,6 +584,34 @@ export function useActionHandler({
             const controllerWithTimeout = new AbortController();
             const timeoutId = h.params?.timeout ? setTimeout(() => controllerWithTimeout.abort(), h.params.timeout) : null;
             const signal = anySignal([controller.signal, controllerWithTimeout.signal]);
+            // 🔹 resolve query params object (we need the plain object for queueing)
+            const resolvedQueryParams = h.params?.queryParams || resolvedDs.queryParams;
+
+            // 🔹 OFFLINE support
+            const offlineEnabled = isOfflineEnabled(ds, undefined, { globalConfig });
+            const cacheKey = cacheKeyFor(ds.id, url, method, body instanceof FormData ? '[formdata]' : body);
+
+            if (offlineEnabled && offline?.isOffline) {
+                if (method === 'GET') {
+                    const cached = await offline.getCachedData?.(cacheKey);
+                    if (typeof cached !== 'undefined') return cached;
+                    throw new Error('Offline: no cached data available');
+                } else {
+                    // Queue the EXACT same call for replay
+                    await offline.queueEvent?.({
+                        id: `${ds.id}:${Date.now()}`,
+                        kind: 'rest',
+                        dsId: ds.id,
+                        method,
+                        body: body instanceof FormData ? Object.fromEntries((body as FormData).entries()) : (body ? JSON.parse(body as string) : undefined),
+                        queryParams: resolvedQueryParams,
+                        createdAt: Date.now(),
+                    });
+                    runtime.toast?.('Saved offline. Will sync when back online.', 'info');
+                    return { queued: true };
+                }
+            }
+
             const fetchWithRetry = async () => {
                 const res = await fetch(url, {
                     method,
@@ -183,6 +620,22 @@ export function useActionHandler({
                     credentials: resolvedDs.credentials || 'same-origin',
                     signal,
                 });
+                if (res.status === 401 && stored?.refreshToken && globalConfig?.auth?.oidc?.tokenUrl) {
+                    runtime.toast?.("Session expired. Refreshing token...", "info");
+                    const refreshed = await refreshAuthToken(globalConfig, stored.refreshToken);
+                    if (refreshed?.token) {
+                        storeAuthToken(globalConfig, refreshed);
+                        headers["Authorization"] = `Bearer ${refreshed.token}`;
+                        // retry original request once
+                        return await fetch(url, { method, headers, body, credentials: resolvedDs.credentials || 'same-origin', signal });
+                    } else {
+                        clearAuthToken(globalConfig);
+                        runtime.toast?.("Session expired. Please log in again.", "error");
+                        const loginHref = globalConfig?.auth?.loginHref || "/login";
+                        runtime.nav?.push?.(loginHref);
+                        throw new Error("Token refresh failed");
+                    }
+                }
                 if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
                 const contentType = res.headers.get("content-type") || "";
                 const contentDisposition = res.headers.get("content-disposition");
@@ -196,7 +649,7 @@ export function useActionHandler({
                 return await res.blob();
             };
             const result = h.params?.retry
-                ? await withRetry(fetchWithRetry, h.params.retry.attempts, h.params.retry.delay, h.params.retry.strategy || 'exponential', signal)
+                ? await withRetry(fetchWithRetry, h.params.retry.attempts, h.params.retry.delay, h.params.retry.strategy || 'exponential', runtime, signal)
                 : await fetchWithRetry();
             if (timeoutId) clearTimeout(timeoutId);
             return result;
@@ -208,6 +661,10 @@ export function useActionHandler({
             const path = resolvedDs.path || '';
             let url = new URL(path, baseUrl).toString();
             const headers: any = { "Content-Type": "application/json", ...resolvedDs.headers };
+            const stored = getStoredAuthToken(globalConfig);
+            if (stored?.token && !headers["Authorization"]) {
+                headers["Authorization"] = `Bearer ${stored.token}`;
+            }
             if (globalConfig?.security?.csrfHeaderName && state.csrfToken) {
                 headers[globalConfig.security.csrfHeaderName] = state.csrfToken;
             }
@@ -219,7 +676,11 @@ export function useActionHandler({
                 variables = resolvedDs.body || {};
             }
             const body = { query, variables };
-            if (resolvedDs.graphql_operation === 'subscription') {
+            const op = resolvedDs.graphql_operation || 'query';
+            const offlineEnabled = isOfflineEnabled(ds, undefined, { globalConfig });
+            const cacheKey = `offline:gql:${ds.id}|${op}|${hash(query)}|${hash(variables)}`;
+
+            if (op === 'subscription') {
                 let wsUrl = url;
                 if (resolvedDs.auth?.type === 'bearer' && resolvedDs.auth.value) {
                     wsUrl += wsUrl.includes('?') ? '&' : '?';
@@ -245,7 +706,7 @@ export function useActionHandler({
                         } else if (data.type === 'data' || data.type === 'next') {
                             const result = applyResultMapping(data.payload?.data || data.data, h.params?.resultMapping);
                             if (h.responseType === 'data' && h.params?.statePath) {
-                                setState(h.params.statePath, result);
+                                setState(h.params.statePath, applyResultMapping(result, h.params.resultMapping));
                             }
                         }
                     };
@@ -264,10 +725,32 @@ export function useActionHandler({
                     ws?.close();
                 };
                 return;
+            } else {
+                if (offlineEnabled && offline?.isOffline) {
+                    if (op === 'query') {
+                        const cached = await offline.getCachedData?.(cacheKey);
+                        if (typeof cached !== 'undefined') return cached;
+                        throw new Error('Offline: no cached GraphQL data available');
+                    } else {
+                        // mutation => queue for replay
+                        await offline.queueEvent?.({
+                            id: `${ds.id}:${Date.now()}`,
+                            kind: 'graphql',
+                            dsId: ds.id,
+                            operation: 'mutation',
+                            query,
+                            variables,
+                            createdAt: Date.now(),
+                        });
+                        runtime.toast?.('Saved offline. Will sync when back online.', 'info');
+                        return { queued: true };
+                    }
+                }
             }
             const controllerWithTimeout = new AbortController();
             const timeoutId = h.params?.timeout ? setTimeout(() => controllerWithTimeout.abort(), h.params.timeout) : null;
             const signal = anySignal([controller.signal, controllerWithTimeout.signal]);
+
             const fetchWithRetry = async () => {
                 const res = await fetch(url, {
                     method: "POST",
@@ -280,8 +763,11 @@ export function useActionHandler({
                 return await res.json();
             };
             const result = h.params?.retry
-                ? await withRetry(fetchWithRetry, h.params.retry.attempts, h.params.retry.delay, h.params.retry.strategy || 'exponential', signal)
+                ? await withRetry(fetchWithRetry, h.params.retry.attempts, h.params.retry.delay, h.params.retry.strategy || 'exponential', runtime, signal)
                 : await fetchWithRetry();
+            if (offlineEnabled && op === 'query') {
+                await offline.setCachedData?.(cacheKey, result);
+            }
             if (timeoutId) clearTimeout(timeoutId);
             return result;
         };
@@ -295,9 +781,14 @@ export function useActionHandler({
             if (globalConfig?.security?.csrfHeaderName && state.csrfToken) {
                 headers[globalConfig.security.csrfHeaderName] = state.csrfToken;
             }
-            if (resolvedDs.auth?.type === 'bearer' && resolvedDs.auth.value) {
+            if (resolvedDs.auth?.type === 'bearer' && resolvedDs.auth.value && !url.includes('access_token')) {
                 url += url.includes('?') ? '&' : '?';
                 url += `access_token=${encodeURIComponent(resolvedDs.auth.value)}`;
+            }
+            const stored = getStoredAuthToken(globalConfig);
+            if (stored?.token && !url.includes('access_token')) {
+                url += url.includes('?') ? '&' : '?';
+                url += `access_token=${encodeURIComponent(stored.token)}`;
             }
             let initialMessage: AnyObj | undefined;
             if (h.params?.body) {
@@ -349,13 +840,14 @@ export function useActionHandler({
         };
 
         try {
+            await runSubActions(h.beforeActions, {});
             let result: any;
             if (h.params?.optimisticState) {
                 setState(h.params.optimisticState.path, resolveDataSourceValue(h.params.optimisticState.value, state, undefined));
             }
             switch (h.action) {
                 case ActionType.navigation: {
-                    const href = String(h.params?.href || h.successTransition?.href || "/");
+                    const href = String(h.params?.href || "/");
                     if (!href) return;
                     const isReplace = !!h.successTransition?.replace;
                     if (runtime.nav) {
@@ -388,7 +880,6 @@ export function useActionHandler({
                 case ActionType.run_script: {
                     const name = String(h.params?.name);
                     if (!name) throw new Error("Script name required for run_script");
-                    if (!scriptAllowlist.includes(name)) throw new Error(`Script ${name} not in allowlist`);
                     const args = h.params?.args ? (Array.isArray(h.params.args) ? h.params.args : [h.params.args]).map(arg => resolveDataSourceValue(arg, state, undefined)) : [];
                     result = await runtime.runScript?.(name, args);
                     if (h.responseType === "data" && h.params?.statePath) {
@@ -422,6 +913,16 @@ export function useActionHandler({
                         body = { prompt, type, ...(h.params || {}) };
                     }
                     result = await executeApiAction(ds, body);
+                    runtime.toast?.(
+                        t(
+                            h.action === ActionType.crud_create
+                                ? "Created successfully"
+                                : h.action === ActionType.crud_update
+                                    ? "Updated successfully"
+                                    : "Deleted successfully"
+                        ),
+                        "success"
+                    );
                     if (h.responseType === "data" && h.params?.statePath) {
                         setState(h.params.statePath, applyResultMapping(result, h.params.resultMapping));
                     }
@@ -501,16 +1002,25 @@ export function useActionHandler({
                     }
                     break;
                 }
+                case ActionType.toast: {
+                    const msg = String(h.params?.msg || "");
+                    const variant = h.params?.variant || "info";
+                    runtime.toast?.(msg, variant);
+                    break;
+                }
+
                 default:
                     throw new Error(`Unsupported action: ${h.action}`);
             }
             await then(true, result);
+            return result;
         } catch (e: any) {
             const errorObj = {
                 message: String(e.message || e),
                 status: e.message?.includes('HTTP') ? parseInt(e.message.match(/HTTP (\d+)/)?.[1] || '0', 10) : undefined,
             };
             await then(false, undefined, errorObj);
+            runtime.toast?.(errorObj.message, "error");
         } finally {
             controller.abort();
             delete abortControllers.current[actionId];
@@ -528,3 +1038,22 @@ export function useActionHandler({
 
     return { runEventHandler, cancel };
 }
+
+const AuthContext = createContext<ReturnType<typeof useAuth> | null>(null);
+export const useAuthContext = () => {
+    const ctx = useContext(AuthContext);
+    if (!ctx) throw new Error("useAuthContext must be used within an <AuthProvider>");
+    return ctx;
+};
+export function AuthProvider({ children, globalConfig }: { children: React.ReactNode; globalConfig?: any }) {
+    const auth = useAuth(globalConfig);
+    return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
+}
+export const AuthUtils = {
+    getAuthKey,
+    decodeJwtExp,
+    getStoredAuthToken,
+    storeAuthToken,
+    clearAuthToken,
+    refreshAuthToken,
+};

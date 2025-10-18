@@ -165,7 +165,7 @@ function AlertDialogRenderer({
                     key={i}
                     className={cn(
                       variants({
-                        variant: btn.role === "destructive" ? "destructive" : "default",
+                        variant: btn.role === "destructive" ? "ghost" : "default",
                       })
                     )}
                     asChild

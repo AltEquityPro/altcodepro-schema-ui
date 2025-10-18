@@ -1,11 +1,10 @@
 'use client';
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import {
     UIProject,
     UIScreenDef,
     AnyObj,
     RedirectSpec,
-    ConditionExpr,
     ActionRuntime,
     UIElement,
 } from "../types";
@@ -19,6 +18,7 @@ import {
 } from "../lib/utils";
 import { ElementResolver } from "./ElementResolver";
 import { useDataSources } from "./useDataSources";
+import { GuardProvider, useGuardEvaluator } from "../hooks/useGuardEvaluator";
 
 export interface ScreenRendererProps {
     project: UIProject;
@@ -39,39 +39,12 @@ export interface ScreenRendererProps {
         }
     ) => React.ReactNode;
 }
-
-/** ---------- Guard helpers ---------- */
-function evalCondition(expr: ConditionExpr, state: AnyObj, t: (k: string) => string): boolean {
-    const key = resolveBinding(expr.key, state, t);
-    const val = resolveBinding(expr.value, state, t);
-    switch (expr.op) {
-        case "==": return key === val;
-        case "!=": return key !== val;
-        case ">": return key > val;
-        case "<": return key < val;
-        case ">=": return key >= val;
-        case "<=": return key <= val;
-        case "exists": return key !== null && key !== undefined;
-        case "not_exists": return key === null || key === undefined;
-        case "matches": return new RegExp(val).test(String(key ?? ""));
-        case "in": return Array.isArray(val) && val.includes(key);
-        case "not_in": return Array.isArray(val) && !val.includes(key);
-        default: return true;
-    }
-}
-
-function evalGuard(guard: UIScreenDef["guard"] | undefined, state: AnyObj, t: (k: string) => string) {
-    if (!guard) return { ok: true };
-    const mode = guard.mode || "all";
-    const conds = guard.conditions || [];
-    const checks = conds.map(c => evalCondition({ key: c.key, op: c.op as any, value: c.value }, state, t));
-    const ok = mode === "all" ? checks.every(Boolean) : checks.some(Boolean);
-    return { ok, onFail: guard.onFail };
-}
+let lastRedirect: string | null = null;
 
 function gotoRedirect(runtime: ActionRuntime, redirect?: RedirectSpec) {
-    if (!redirect?.href) return
-    return runtime?.nav ? runtime?.nav?.replace?.(redirect?.href) : (window.location.href = redirect?.href);
+    if (!redirect?.href || redirect.href === lastRedirect) return;
+    lastRedirect = redirect.href;
+    runtime?.nav?.replace?.(redirect.href) ?? (window.location.href = redirect.href);
 }
 
 /** ---------- Layout helpers (lightweight) ---------- */
@@ -156,11 +129,15 @@ export function ScreenRenderer({
             if (leave) runEventHandler(leave);
         };
     }, [currentScreenDef.id, runEventHandler]);
+    const guardResult = useGuardEvaluator(currentScreenDef.guard, state, t);
 
-    const guardResult = useMemo(() => evalGuard(currentScreenDef.guard, state, t), [currentScreenDef.guard, state, t]);
     useEffect(() => {
-        if (!guardResult.ok) gotoRedirect(runtime, guardResult.onFail);
+        if (!guardResult.ok) {
+            runtime.toast?.(t("access_denied") || "Access restricted", "warning");
+            gotoRedirect(runtime, guardResult.onFail);
+        }
     }, [guardResult.ok, runtime]);
+
 
     const dsList = currentScreenDef.dataSources || [];
     const isLoading = dsList.length > 0 && dsList.some((ds) => typeof dataMap[ds.id] === "undefined");
@@ -170,43 +147,46 @@ export function ScreenRenderer({
         .map((x) => ({ id: x.id, error: x.data }));
 
     const screenClasses = cn(layoutClasses(currentScreenDef.layoutType), classesFromStyleProps(currentScreenDef.styles));
-    if (!guardResult.ok) return null;
+
     if (isLoading && loadingFallback) return <>{loadingFallback}</>;
     if (errors.length && errorFallback) return <>{errorFallback(errors)}</>;
 
+
     return (
-        <div className={screenClasses} data-screen-id={currentScreenDef.id}>
-            {showDebug && (
-                <div className="mb-4 text-xs text-muted-foreground">
-                    <span className="inline-block rounded bg-muted px-2 py-1 mr-2">
-                        screen: <strong>{resolveBinding(currentScreenDef.name, state, t)}</strong>
-                    </span>
-                    {dsList.length > 0 && (
+        <GuardProvider result={guardResult}>
+            <div className={screenClasses} data-screen-id={currentScreenDef.id}>
+                {showDebug && (
+                    <div className="mb-4 text-xs text-muted-foreground">
                         <span className="inline-block rounded bg-muted px-2 py-1 mr-2">
-                            data: {dsList.map((d) => d.id).join(", ")}
+                            screen: <strong>{resolveBinding(currentScreenDef.name, state, t)}</strong>
                         </span>
-                    )}
-                </div>
-            )}
-            {currentScreenDef.elements?.map((el) => {
-                const visible = isVisible(el.visibility, state, t);
-                if (!visible) return null;
-                const resolved = deepResolveBindings(el, state, t);
-                const key = resolved.id;
-                return (
-                    <ElementResolver
-                        key={key}
-                        state={state}
-                        setState={setState}
-                        t={t}
-                        element={resolved}
-                        runEventHandler={runEventHandler}
-                        globalConfig={project.globalConfig}
-                        dataSources={currentScreenDef.dataSources}
-                        CustomElementResolver={CustomElementResolver}
-                    />
-                );
-            })}
-        </div>
+                        {dsList.length > 0 && (
+                            <span className="inline-block rounded bg-muted px-2 py-1 mr-2">
+                                data: {dsList.map((d) => d.id).join(", ")}
+                            </span>
+                        )}
+                    </div>
+                )}
+                {currentScreenDef.elements?.map((el) => {
+                    const visible = isVisible(el.visibility, state, t);
+                    if (!visible) return null;
+                    const resolved = deepResolveBindings(el, state, t);
+                    const key = resolved.id;
+                    return (
+                        <ElementResolver
+                            key={key}
+                            state={state}
+                            setState={setState}
+                            t={t}
+                            element={resolved}
+                            runEventHandler={runEventHandler}
+                            globalConfig={project.globalConfig}
+                            dataSources={currentScreenDef.dataSources}
+                            CustomElementResolver={CustomElementResolver}
+                        />
+                    );
+                })}
+            </div>
+        </GuardProvider>
     );
 }

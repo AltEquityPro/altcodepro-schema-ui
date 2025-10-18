@@ -2,34 +2,34 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { X } from "lucide-react"
-
 import { cn } from "../../lib/utils"
 
-const alertVariants = cva(
+export const alertVariants = cva(
   "relative w-full rounded-lg border px-4 py-3 text-sm grid has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] grid-cols-[0_1fr] has-[>svg]:gap-x-3 gap-y-0.5 items-start [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current",
   {
     variants: {
       variant: {
-        default: "bg-card text-card-foreground border-border",
+        default: "bg-[var(--acp-background)] text-[var(--acp-foreground)] border-[var(--acp-border)]",
         primary:
-          "bg-primary/10 text-primary border-primary/20 [&>svg]:text-primary",
+          "bg-[color-mix(in_srgb,var(--acp-primary)10%,transparent)] text-[var(--acp-primary)] border-[color-mix(in_srgb,var(--acp-primary)30%,transparent)] [&>svg]:text-[var(--acp-primary)]",
         success:
-          "bg-emerald-50 text-emerald-900 border-emerald-200 [&>svg]:text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-100 dark:border-emerald-800",
+          "bg-[color-mix(in_srgb,green 10%,transparent)] text-green-700 border-green-300 [&>svg]:text-green-600 dark:text-green-100 dark:border-green-700",
         danger:
-          "bg-red-50 text-red-900 border-red-200 [&>svg]:text-red-600 dark:bg-red-900/30 dark:text-red-100 dark:border-red-800",
+          "bg-[color-mix(in_srgb,red 10%,transparent)] text-red-700 border-red-300 [&>svg]:text-red-600 dark:text-red-100 dark:border-red-700",
         warning:
-          "bg-yellow-50 text-yellow-900 border-yellow-200 [&>svg]:text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-100 dark:border-yellow-800",
+          "bg-[color-mix(in_srgb,yellow 10%,transparent)] text-yellow-800 border-yellow-300 [&>svg]:text-yellow-600 dark:text-yellow-100 dark:border-yellow-700",
         info:
-          "bg-blue-50 text-blue-900 border-blue-200 [&>svg]:text-blue-600 dark:bg-blue-900/30 dark:text-blue-100 dark:border-blue-800",
+          "bg-[color-mix(in_srgb,blue 10%,transparent)] text-blue-800 border-blue-300 [&>svg]:text-blue-600 dark:text-blue-100 dark:border-blue-700",
         destructive:
-          "bg-destructive/10 text-destructive border-destructive/30 [&>svg]:text-destructive",
+          "bg-[color-mix(in_srgb,var(--acp-accent)10%,transparent)] text-[var(--acp-accent)] border-[color-mix(in_srgb,var(--acp-accent)40%,transparent)] [&>svg]:text-[var(--acp-accent)]",
       },
     },
     defaultVariants: {
       variant: "default",
     },
   }
-)
+);
+
 
 function Alert({
   className,

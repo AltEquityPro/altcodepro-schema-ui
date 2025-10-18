@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { UIProject } from "@/types";
+import type { UIProject } from "../../types";
 
 /* =======================================================
 🎨 Color Utility Helpers
@@ -65,7 +65,7 @@ export function GlobalThemeProvider({
     project: UIProject;
     children: React.ReactNode;
 }) {
-    const customCss = project?.globalStyles?.projectStyle ?? "";
+    const customCss = project?.globalStyles?.customCss ?? "";
     const theme = project?.globalStyles?.theme ?? {};
 
     const {
@@ -86,26 +86,6 @@ export function GlobalThemeProvider({
         accentDark = "#db2777",
     } = theme;
 
-    /* 🌗 Detect and apply dark mode */
-    React.useEffect(() => {
-        const html = document.documentElement;
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-        const useDark =
-            colorScheme === "dark" ||
-            (colorScheme.includes("light dark") && prefersDark);
-
-        if (useDark) {
-            html.dataset.theme = "dark";
-            html.classList.add("dark"); // <-- add this line
-        } else {
-            html.dataset.theme = "light";
-            html.classList.remove("dark");
-        }
-
-    }, [colorScheme]);
-
-    /* 🎨 Set global CSS variables */
     React.useEffect(() => {
         const root = document.documentElement;
         const setVar = (k: string, v?: string) => v && root.style.setProperty(k, v);
@@ -156,7 +136,14 @@ export function GlobalThemeProvider({
       ${buildScaleCSS("acp-secondary")}
     }
   }
-
+@media (prefers-color-scheme: dark) {
+  .bg-\[var\(--acp-primary\)\] {
+    background-color: var(--acp-primary-dark) !important;
+  }
+  .bg-\[var\(--acp-secondary\)\] {
+    background-color: var(--acp-secondary-dark) !important;
+  }
+}
   html, body {
     font-family: var(--acp-font);
     font-size: var(--acp-font-size-base);

@@ -3,32 +3,91 @@
 import {
   classesFromStyleProps,
   getAccessibilityProps,
-  resolveAnimation,
   resolveBinding,
-} from "@/lib/utils";
-import { AnyObj, Binding, ButtonElement, EventHandler } from "@/types";
+} from "../../lib/utils";
+import { AnyObj, Binding, ButtonElement, EventHandler } from "../../types";
 import clsx from "clsx";
 import React, { useMemo } from "react";
 import { DynamicIcon } from "./dynamic-icon";
 
 
 /* ----------------------------
- * Variant + Size Maps
+ * Theme-Aware Button Variants
  * ---------------------------- */
 const buttonVariants: Record<string, string> = {
-  primary:
-    "bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500",
-  secondary:
-    "bg-gray-300 hover:bg-gray-400 focus:ring-2 focus:ring-gray-400",
-  success:
-    "bg-green-600 text-white hover:bg-green-700 focus:ring-2 focus:ring-green-500",
-  danger:
-    "bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-500",
-  warning:
-    "bg-yellow-500 text-black hover:bg-yellow-600 focus:ring-2 focus:ring-yellow-400",
-  outline:
-    "border border-border text-foreground bg-transparent hover:bg-foreground/10 focus:ring-2 focus:ring-primary focus:border-primary",
+  /* 🌊 PRIMARY: brand color focus */
+  primary: `
+    bg-[var(--acp-primary)]
+    text-white
+    hover:bg-[var(--acp-primary-700)]
+    focus:ring-2 focus:ring-[var(--acp-primary-400)]
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+
+  /* 🩶 SECONDARY: neutral tone, subtle contrast */
+  secondary: `
+    bg-[var(--acp-secondary)]
+    text-white
+    hover:bg-[var(--acp-secondary-700)]
+    focus:ring-2 focus:ring-[var(--acp-secondary-400)]
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+
+  /* ⚪ OUTLINE: transparent with border */
+  outline: `
+    border border-[var(--acp-border)]
+    text-[var(--acp-foreground)]
+    bg-transparent
+    hover:bg-[color-mix(in_srgb,var(--acp-foreground)10%,transparent)]
+    focus:ring-2 focus:ring-[var(--acp-primary)]
+    focus:border-[var(--acp-primary)]
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+
+  /* 🎨 TERTIARY: soft background accent */
+  tertiary: `
+    bg-[color-mix(in_srgb,var(--acp-secondary)10%,transparent)]
+    text-[var(--acp-foreground)]
+    hover:bg-[color-mix(in_srgb,var(--acp-secondary)20%,transparent)]
+    focus:ring-2 focus:ring-[var(--acp-secondary)]
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+
+  /* 🔗 LINK: no background, underline on hover */
+  link: `
+    text-[var(--acp-primary)]
+    underline-offset-4
+    hover:underline
+    hover:text-[var(--acp-primary-700)]
+    focus:ring-2 focus:ring-[var(--acp-primary)]
+    bg-transparent
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+
+  /* 👻 GHOST: text only, transparent background */
+  ghost: `
+    text-[var(--acp-foreground)]
+    bg-transparent
+    hover:bg-[color-mix(in_srgb,var(--acp-foreground)8%,transparent)]
+    focus:ring-2 focus:ring-[var(--acp-primary)]
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+
+  /* ✅ SUCCESS, ⚠️ WARNING, ❌ DANGER */
+  success: `
+    bg-green-600 text-white hover:bg-green-700 focus:ring-2 focus:ring-green-400
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+  warning: `
+    bg-yellow-500 text-black hover:bg-yellow-600 focus:ring-2 focus:ring-yellow-400
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+  danger: `
+    bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-400
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
 };
+
 
 const sizeClasses: Record<string, string> = {
   default: "h-9 px-4 py-2 has-[>svg]:px-3",
@@ -116,6 +175,7 @@ export function ButtonRenderer({
       data-i118key={element.text}
       data-variant={element.variant}
       disabled={disabled}
+      type="button"
       onClick={() => element.onClick && runEventHandler?.(element.onClick)}
       style={{ zIndex: element.zIndex }}
       {...accessibilityProps}

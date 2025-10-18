@@ -22,6 +22,7 @@ export enum ActionType {
     voice_command = 'voice_command',
     wallet_connect = 'wallet_connect',
     wallet_sign = 'wallet_sign',
+    toast = 'toast',
     websocket_call = 'websocket_call',
 }
 
@@ -953,7 +954,7 @@ export interface FormElement extends BaseElement {
     formFields: FormField[];
     formGroupType: FormGroupType;
     submit: ButtonElement;
-    cancel?: ButtonElement;
+    actions?: Array<ButtonElement>;
     tabsConfig?: {
         tabPosition?: 'top' | 'left' | 'right';
         variant?: 'default' | 'outline' | 'pills';
@@ -1839,6 +1840,7 @@ export interface OIDCConfig {
     clientId?: string | Binding;
     discoveryUrl?: string;
     issuer: string;
+    tokenUrl?: string;
     redirectUri?: string;
     scopes?: string[];
 }
@@ -1966,6 +1968,7 @@ export interface IRoute {
     showInBottomBar: boolean;
     showInNavigation: boolean;
     visibility?: VisibilityControl;
+
 }
 
 export interface IRouteList {
@@ -1980,10 +1983,24 @@ export interface IRouteList {
     navStyle: NavStyle;
     responsiveNavType?: 'bottom' | 'burger';
     routes: IRoute[];
+    visibility?: {
+        topbar?: VisibilityControl;
+        sidebar?: VisibilityControl;
+        bottombar?: VisibilityControl;
+        fullNav?: VisibilityControl;
+    };
+    sidebarConfig?: {
+        showSearch?: boolean;
+        customActions?: Array<{
+            id: string;
+            label: string;
+            icon?: string;
+            onClick?: string; // action id or URL
+        }>;
+    };
 }
 
 export interface NavStyle {
-
     containerStyle?: StyleProps;
     overlayStyle?: StyleProps;
     sheetStyle?: StyleProps;
@@ -2012,6 +2029,7 @@ export interface UIScreenDef {
     elements: UIElement[];
     guard?: GuardRule;
     id: string;
+    href: string;
     layoutType: LayoutType;
     lifecycle?: {
         onEnter?: EventHandler;
@@ -2061,7 +2079,6 @@ export interface VisibilityControl {
     show: boolean;
 }
 
-// === Utility Types ===
 export interface EventHandler {
     action: ActionType;
     aiPrompt?: string;
@@ -2071,8 +2088,11 @@ export interface EventHandler {
     exportConfig?: ExportConfig;
     params?: Record<string, any | Binding>;
     responseType?: 'ui' | 'data' | 'none' | 'voice' | 'call';
-    successAction?: EventHandler;
     successTransition?: TransitionSpec;
+    beforeActions?: EventHandler[];      // actions to run before main action
+    successActions?: EventHandler[];     // actions if main succeeds
+    errorActions?: EventHandler[];       // actions if main fails
+    finallyActions?: EventHandler[];     // always runs
 }
 
 export interface ExportConfig {
@@ -2194,7 +2214,7 @@ export interface UIProject {
         walletConnectUrl?: string;
     };
     globalStyles?: {
-        projectStyle?: string;  // Custom Sytles to add at project style
+        customCss?: string;  // Custom Sytles to add at project style
         theme?: {
             colorScheme?: "normal" | "light" | "dark" | "light dark" | "dark light" | "only light";
 

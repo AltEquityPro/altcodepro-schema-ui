@@ -1,4 +1,4 @@
-import { resolveBinding } from "@/lib/utils";
+import { resolveBinding } from "../../lib/utils";
 import clsx from "clsx";
 
 export function NavLink({

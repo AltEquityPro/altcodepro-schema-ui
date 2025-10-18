@@ -876,35 +876,35 @@ export function anySignal(signals: AbortSignal[]): AbortSignal {
 }
 
 export const variants = cva(
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[1px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 outline-none focus-visible:ring-2 focus-visible:ring-[var(--acp-primary)]",
     {
         variants: {
             variant: {
-                default: "bg-primary text-primary-foreground hover:bg-primary/90",
-                pirmary: "bg-primary text-primary-foreground hover:bg-primary/90",
-                destructive:
-                    "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
-                outline:
-                    "border bg-background text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+                default:
+                    "bg-[var(--acp-primary)] text-white hover:bg-[var(--acp-primary-700)]",
+                primary:
+                    "bg-[var(--acp-primary)] text-white hover:bg-[var(--acp-primary-700)]",
                 secondary:
-                    "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+                    "bg-[var(--acp-secondary)] text-white hover:bg-[var(--acp-secondary-700)]",
+                outline:
+                    "border border-[var(--acp-border)] text-[var(--acp-foreground)] bg-transparent hover:bg-[color-mix(in_srgb,var(--acp-foreground)10%,transparent)]",
                 ghost:
-                    "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-                link: "text-primary underline-offset-4 hover:underline",
+                    "text-[var(--acp-foreground)] bg-transparent hover:bg-[color-mix(in_srgb,var(--acp-foreground)8%,transparent)]",
+                link:
+                    "text-[var(--acp-primary)] underline-offset-4 hover:underline hover:text-[var(--acp-primary-700)]",
                 success:
-                    "bg-green-600 text-white hover:bg-green-700 focus-visible:ring-green-500/40 dark:bg-green-700 dark:hover:bg-green-800",
+                    "bg-green-600 text-white hover:bg-green-700",
                 danger:
-                    "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500/40 dark:bg-red-700 dark:hover:bg-red-800",
+                    "bg-red-600 text-white hover:bg-red-700",
                 warning:
-                    "bg-yellow-500 text-black hover:bg-yellow-600 focus-visible:ring-yellow-500/40 dark:bg-yellow-600 dark:hover:bg-yellow-700",
+                    "bg-yellow-500 text-black hover:bg-yellow-600",
                 info:
-                    "bg-blue-500 text-white hover:bg-blue-600 focus-visible:ring-blue-500/40 dark:bg-blue-600 dark:hover:bg-blue-700",
-
+                    "bg-blue-500 text-white hover:bg-blue-600",
             },
             size: {
-                default: "h-9 px-4 py-2 has-[>svg]:px-3",
-                sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-                lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
+                sm: "h-8 px-3 text-xs",
+                default: "h-9 px-4 text-sm",
+                lg: "h-10 px-6 text-base",
                 icon: "size-9",
             },
         },
@@ -913,7 +913,7 @@ export const variants = cva(
             size: "default",
         },
     }
-)
+);
 
 export function resolveDataSource(
     dsOrRef: DataSource | string,
@@ -1047,4 +1047,31 @@ export function resolveDataSourceValue(val: any, state: AnyObj, extra?: AnyObj):
     }
     // Return literal value
     return sanitizeValue(key);
+}
+
+function stableStringify(v: any): string {
+    const seen = new WeakSet();
+    const stringify = (obj: any): any => {
+        if (obj && typeof obj === "object") {
+            if (seen.has(obj)) return null;
+            seen.add(obj);
+            if (Array.isArray(obj)) return obj.map(stringify);
+            return Object.keys(obj).sort().reduce((acc: any, k) => {
+                acc[k] = stringify(obj[k]);
+                return acc;
+            }, {});
+        }
+        return obj;
+    };
+    return JSON.stringify(stringify(v));
+}
+
+export function hash(v: any): string {
+    const s = typeof v === "string" ? v : stableStringify(v);
+    let h = 0;
+    for (let i = 0; i < s.length; i++) {
+        h = (h << 5) - h + s.charCodeAt(i);
+        h |= 0;
+    }
+    return String(h);
 }
