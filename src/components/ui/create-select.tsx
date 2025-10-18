@@ -13,8 +13,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { cn } from "../../lib/utils";
-import { EventHandler } from "../../types";
-import { useActionHandler } from "../../schema/useActionHandler";
+import { AnyObj, EventHandler } from "../../types";
 
 export type CreateSelectOption = { value: string; label: string };
 
@@ -24,8 +23,7 @@ type CreateSelectProps = {
     options: CreateSelectOption[];
     placeholder?: React.ReactNode;
     onChange: (value: string) => void;
-
-    /** Action to run when a user creates a new entry */
+    runEventHandler?: ((handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>) | undefined
     onCreateAction?: EventHandler;
 
     /**
@@ -52,7 +50,6 @@ export function CreateSelect({
     const [adding, setAdding] = React.useState(false);
     const [draft, setDraft] = React.useState("");
     const [busy, setBusy] = React.useState(false);
-    const { runEventHandler } = useActionHandler({ runtime: {} as any });
 
     // Keep local options in sync when upstream changes
     React.useEffect(() => {
@@ -84,21 +81,6 @@ export function CreateSelect({
         try {
             setBusy(true);
 
-            // Fire your action pipeline. It will update app state if the
-            // action was configured with responseType:"data" and a statePath,
-            // and your form will re-render with those new options via bindings.
-            await runEventHandler(
-                {
-                    ...onCreateAction,
-                    // Pass the draft as { value, label } so the action can use it
-                    params: {
-                        ...(onCreateAction.params || {}),
-                        newOption: { value: optimistic.value, label: optimistic.label },
-                    },
-                },
-                // Also pass as dataOverride for APIs that read from action.dataOverride
-                { value: optimistic.value, label: optimistic.label }
-            );
         } catch {
             // roll back optimistic add on failure
             setLocalOptions((prev) => prev.filter((o) => o.value !== optimistic.value));

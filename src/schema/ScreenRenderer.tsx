@@ -19,6 +19,7 @@ import {
 import { ElementResolver } from "./ElementResolver";
 import { useDataSources } from "./useDataSources";
 import { GuardProvider, useGuardEvaluator } from "../hooks/useGuardEvaluator";
+import { useAnalytics } from "../hooks/AnalyticsContext";
 
 export interface ScreenRendererProps {
     project: UIProject;
@@ -113,7 +114,7 @@ export function ScreenRenderer({
         }
     };
     const { runEventHandler } = useActionHandler({ ...action });
-
+    const analytics = useAnalytics()
     useEffect(() => {
         if (!dataMap) return;
         for (const [id, val] of Object.entries(dataMap)) {
@@ -137,6 +138,15 @@ export function ScreenRenderer({
             gotoRedirect(runtime, guardResult.onFail);
         }
     }, [guardResult.ok, runtime]);
+
+    useEffect(() => {
+        analytics.trackPage?.(currentScreenDef.route, {
+            screenId: currentScreenDef.id,
+            name: resolveBinding(currentScreenDef.name, state, t),
+            layout: currentScreenDef.layoutType,
+            projectId: project.globalConfig?.projectId,
+        });
+    }, [currentScreenDef.id]);
 
 
     const dsList = currentScreenDef.dataSources || [];
@@ -165,6 +175,13 @@ export function ScreenRenderer({
                                 data: {dsList.map((d) => d.id).join(", ")}
                             </span>
                         )}
+                        <div className="text-xs text-blue-600">
+                            <strong>Analytics:</strong> Tracking screen & user actions automatically.
+                            <br />
+                            <span className="text-gray-500">
+                                Screen ID: {currentScreenDef.id} | Route: {currentScreenDef.route}
+                            </span>
+                        </div>
                     </div>
                 )}
                 {currentScreenDef.elements?.map((el) => {

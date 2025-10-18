@@ -2156,6 +2156,7 @@ export interface UIProject {
     footer?: FooterElement;
     search?: { enabled?: boolean; path?: string };
     globalConfig?: {
+        projectId?: string;
         accessibilityConfig?: AccessibilityConfig;
         auth?: AuthGlobalConfig;
         endpoints?: {
@@ -2244,7 +2245,6 @@ export interface UIProject {
         };
     };
     initialData?: Record<string, any>;
-    projectId?: string;
     routeBase?: string;
     routeList: IRouteList;
     state?: {
