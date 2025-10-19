@@ -268,7 +268,7 @@ export function useActionHandler({
     const auth = useAuth(globalConfig);
 
     // Mirror token into app state (so guards/telemetry can read from state)
-    useEffect(() => { if (auth.token) setState("auth.token", auth.token); }, [auth.token, setState]);
+    // useEffect(() => { if (auth.token) setState("auth.token", auth.token); }, [auth.token]);
     useEffect(() => {
         const handler = (e: any) => setState("auth.user", e.detail);
         window.addEventListener("authRefreshed", handler);
@@ -298,7 +298,8 @@ export function useActionHandler({
                 let url = baseUrl ? new URL(path, baseUrl).toString() : path;
 
                 const headers: Record<string, string> = { ...(resolved.headers || {}) };
-                if (auth.token && !headers['Authorization']) headers['Authorization'] = `Bearer ${auth.token}`;
+                if (auth.token && !headers['Authorization'])
+                    headers['Authorization'] = `Bearer ${auth.token}`;
                 if (globalConfig?.security?.csrfHeaderName && state?.csrfToken) headers[globalConfig.security.csrfHeaderName] = state.csrfToken;
 
                 if (evt.queryParams) {
@@ -444,7 +445,31 @@ export function useActionHandler({
                 await runSub(h.errorActions, { error });
                 await execTransition(h.errorTransition);
             }
-            if (h.finallyActions?.length) await runSub(h.finallyActions, { result: payload, error });
+            //  Prevent finallyActions when error occurs, unless explicitly allowed
+            if (h.finallyActions?.length) {
+                const hasError = !!error;
+                const hasNavInFinally = h.finallyActions.some(a => a.action === "navigation");
+
+                if (hasError) {
+                    // 🔔 Show toast (global handler)
+                    const message = error?.message || t("Something went wrong. Please try again.");
+                    runtime.toast?.(message, "error");
+
+                    // ❌ Skip navigation if any exists in finally
+                    if (hasNavInFinally) {
+                        console.warn("⏭️ Skipping navigation due to error");
+                        // Optionally run other non-navigation finallyActions
+                        const safeFinally = h.finallyActions.filter(a => a.action !== "navigation");
+                        if (safeFinally.length) await runSub(safeFinally, { result: payload, error });
+                    } else {
+                        await runSub(h.finallyActions, { result: payload, error });
+                    }
+                } else {
+                    // ✅ Success → run all finally actions (normal behavior)
+                    await runSub(h.finallyActions, { result: payload, error });
+                }
+            }
+
         };
 
         const applyMap = (result: any, mapping?: ActionParams['resultMapping']) => {
@@ -460,8 +485,10 @@ export function useActionHandler({
             const baseUrl = resolved.baseUrl || ''; const path = resolved.path || '';
             let url = baseUrl ? new URL(path, baseUrl).toString() : path;
             const headers: Record<string, string> = { ...(resolved.headers || {}) };
-
-            if (auth.token && !headers["Authorization"]) headers["Authorization"] = `Bearer ${auth.token}`;
+            const storedAuth = getStoredAuthToken(globalConfig);
+            const liveToken = auth.token || storedAuth?.token;
+            if (auth.token && !headers["Authorization"])
+                headers["Authorization"] = `Bearer ${liveToken}`;
             if (globalConfig?.security?.csrfHeaderName && state?.csrfToken) headers[globalConfig.security.csrfHeaderName] = state.csrfToken;
 
             const queryParams = h.params?.queryParams || resolved.queryParams;
@@ -691,7 +718,8 @@ export function useActionHandler({
                     if (h.responseType === "data" && h.params?.statePath) setState(h.params.statePath, applyMap(result, h.params.resultMapping));
                     break;
                 }
-                case ActionType.graphql_query:
+                case ActionType.graphql:
+                case ActionType.graphql_mutation:
                 case ActionType.graphql_mutation:
                 case ActionType.graphql_subscription: {
                     const dsId = h.dataSourceId; if (!dsId) throw new Error(`dataSourceId required`);
@@ -701,10 +729,7 @@ export function useActionHandler({
                     if (h.responseType === "data" && h.params?.statePath) setState(h.params.statePath, applyMap(result, h.params.resultMapping));
                     break;
                 }
-                case ActionType.websocket_call: {
-                    // unchanged
-                    break;
-                }
+                case ActionType.export:
                 case ActionType.export_pdf:
                 case ActionType.export_ppt:
                 case ActionType.export_word:
@@ -784,6 +809,27 @@ export const useAuthContext = () => {
 };
 export function AuthProvider({ children, globalConfig }: { children: React.ReactNode; globalConfig?: any }) {
     const auth = useAuth(globalConfig);
+    useEffect(() => {
+        if (typeof window === 'undefined') return; // SSR safety
+
+        // Prevent re-wrapping fetch multiple times (especially in React StrictMode)
+        if ((window as any).__fetchPatched) return;
+        (window as any).__fetchPatched = true;
+
+        window.fetch = new Proxy(window.fetch, {
+            apply(target, thisArg, args) {
+                const [url, options = {}] = args;
+                const storedAuth = getStoredAuthToken(globalConfig);
+                if (storedAuth?.token) {
+                    options.headers = {
+                        ...(options.headers || {}),
+                        Authorization: `Bearer ${storedAuth.token}`,
+                    };
+                }
+                return Reflect.apply(target, thisArg, [url, options]);
+            },
+        });
+    }, [globalConfig]);
     return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
 }
 export const AuthUtils = {

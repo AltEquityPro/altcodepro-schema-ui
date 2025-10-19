@@ -8,7 +8,7 @@ import { cn } from "../../lib/utils"
 function Select({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  return <SelectPrimitive.Root  data-slot="select" {...props} />
+  return <SelectPrimitive.Root data-slot="select" {...props} />
 }
 
 function SelectGroup({
@@ -36,16 +36,19 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[1px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "flex w-full items-center justify-between gap-2 rounded-md border border-[var(--acp-border)] bg-transparent px-3 py-2 text-sm shadow-xs outline-none",
+        "focus-visible:ring-[1px] focus-visible:ring-[var(--acp-primary)]",
+        "disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}
     >
-      {children}
-      <SelectPrimitive.Icon asChild>
+      <span className="flex-1 truncate text-left">{children}</span>
+      <SelectPrimitive.Icon>
         <ChevronDownIcon className="size-4 opacity-50" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
+
   )
 }
 
@@ -55,14 +58,46 @@ function SelectContent({
   position = "popper",
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  // Detect viewport size once on mount
+  React.useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
+
         data-slot="select-content"
+        align="start"
+        sideOffset={isMobile ? 0 : 4}
+        avoidCollisions={false}
         className={cn(
-          "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
+          // --- Base ACP Theme ---
+          "bg-[var(--acp-background)] text-[var(--acp-foreground)] border border-[var(--acp-border)]",
+          "shadow-lg rounded-md overflow-hidden backdrop-blur-sm z-[9999]",
+          // --- Animation states ---
+          "data-[state=open]:animate-in data-[state=closed]:animate-out",
+          "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
+          "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
+          "data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2",
+          // --- Fix for mobile overflow ---
+          isMobile
+            ? [
+              "fixed inset-x-2 bottom-auto top-[15vh] w-[calc(100vw-1rem)] max-h-[70vh]",
+              "mx-auto rounded-xl border border-[var(--acp-border)]",
+              "overflow-y-auto overscroll-contain safe-top safe-bottom",
+            ]
+            : [
+              "relative min-w-[var(--radix-select-trigger-width)] max-h-[var(--radix-select-content-available-height)]",
+            ],
+          "transition-all duration-200 ease-out",
           position === "popper" &&
-            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+          "data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1",
           className
         )}
         position={position}
@@ -71,9 +106,9 @@ function SelectContent({
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport
           className={cn(
-            "p-1",
+            "p-1 w-full",
             position === "popper" &&
-              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1"
+            "min-w-[var(--radix-select-trigger-width)]"
           )}
         >
           {children}
@@ -81,7 +116,7 @@ function SelectContent({
         <SelectScrollDownButton />
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
-  )
+  );
 }
 
 function SelectLabel({
@@ -96,7 +131,6 @@ function SelectLabel({
     />
   )
 }
-
 function SelectItem({
   className,
   children,
@@ -106,19 +140,22 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        "relative flex w-full cursor-pointer items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none select-none",
+        "focus:bg-[var(--acp-primary-100)] focus:text-[var(--acp-primary-700)]",
+        "data-[state=checked]:bg-[var(--acp-primary-50)] data-[state=checked]:text-[var(--acp-primary-800)]",
+        "data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed",
         className
       )}
       {...props}
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="size-4" />
+          <CheckIcon className="size-4 text-[var(--acp-primary-700)]" />
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
     </SelectPrimitive.Item>
-  )
+  );
 }
 
 function SelectSeparator({

@@ -120,7 +120,7 @@ export function ScreenRenderer({
         for (const [id, val] of Object.entries(dataMap)) {
             setState(id, val);
         }
-    }, [dataMap, setState]);
+    }, [dataMap]);
 
     useEffect(() => {
         const enter = currentScreenDef.lifecycle?.onEnter;

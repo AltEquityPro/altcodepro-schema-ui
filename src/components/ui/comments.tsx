@@ -332,10 +332,10 @@ function CommentNode({
                         <div className="font-medium">{comment.author.name || t("anonymous") || "Anonymous"}</div>
                         <div className="text-xs text-muted-foreground">
                             {formatTimeAgo(comment.createdAt)}
-                            {comment.updatedAt ? ` • ${t("edited") || "edited"}` : ""}
-                            {comment.pending ? ` • ${t("pending") || "pending"}` : ""}
-                            {comment.flagged ? ` • ${t("flagged") || "flagged"}` : ""}
-                            {comment.hidden ? ` • ${t("hidden") || "hidden"}` : ""}
+                            {comment.updatedAt ? ` • ${t("edited") || "Edited"}` : ""}
+                            {comment.pending ? ` • ${t("pending") || "Pending"}` : ""}
+                            {comment.flagged ? ` • ${t("flagged") || "Flagged"}` : ""}
+                            {comment.hidden ? ` • ${t("hidden") || "Hidden"}` : ""}
                         </div>
                     </div>
                 </div>
@@ -348,7 +348,7 @@ function CommentNode({
                                 disabled={!!busy}
                                 active={comment.userVote === 1}
                                 onClick={() => handleVote("up")}
-                                title={t("upvote") || "Upvote"}
+                                title={t("upvote") || "Up-Vote"}
                             >
                                 ▲
                             </ActionChip>
@@ -359,7 +359,7 @@ function CommentNode({
                                 disabled={!!busy}
                                 active={comment.userVote === -1}
                                 onClick={() => handleVote("down")}
-                                title={t("downvote") || "Downvote"}
+                                title={t("downvote") || "Down-Vote"}
                             >
                                 ▼
                             </ActionChip>

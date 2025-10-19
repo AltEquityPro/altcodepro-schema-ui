@@ -13,16 +13,21 @@ import { RenderChildren } from "../../schema/RenderChildren";
 // Card Variants (professional, minimal borders, smooth hovers)
 const cardVariants: Record<NonNullable<CardElement["variant"]>, string> = {
   default:
-    "bg-card text-card-foreground flex flex-col gap-4 rounded-xl p-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5",
+    "bg-[var(--acp-background)] text-[var(--acp-foreground)] flex flex-col gap-4 rounded-xl p-6 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5",
+
   outline:
-    "bg-background text-foreground text-foreground flex flex-col gap-4 rounded-xl border border-border p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-sm",
+    "bg-transparent text-[var(--acp-foreground)] flex flex-col gap-4 rounded-xl border border-[var(--acp-border)] p-6 transition-all duration-300 hover:border-[var(--acp-primary)] hover:shadow-sm",
+
   ghost:
-    "bg-transparent text-foreground flex flex-col gap-4 rounded-xl p-6 transition-all duration-300 hover:bg-muted/20",
+    "bg-transparent text-[var(--acp-foreground)] flex flex-col gap-4 rounded-xl p-6 transition-all duration-300 hover:bg-[color-mix(in_srgb,var(--acp-foreground)_8%,transparent)]",
+
   elevated:
-    "bg-card text-card-foreground flex flex-col gap-4 rounded-xl p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5",
+    "bg-[var(--acp-surface)] text-[var(--acp-foreground)] flex flex-col gap-4 rounded-xl p-6 shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5",
+
   borderless:
-    "bg-card text-card-foreground flex flex-col gap-4 rounded-xl p-6 transition-all duration-300 hover:shadow-sm",
+    "bg-[var(--acp-surface)] text-[var(--acp-foreground)] flex flex-col gap-4 rounded-xl p-6 transition-all duration-300 hover:shadow-sm",
 };
+
 
 function Card({ className, ...props }: React.ComponentProps<"div">) {
   return <div data-slot="card" className={cn(className)} {...props} />;

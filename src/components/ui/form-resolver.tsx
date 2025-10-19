@@ -1,11 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useForm, type SubmitHandler } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useMemo, useState } from "react";
+import { useForm, useFormContext, type SubmitHandler } from "react-hook-form";
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
-
 import {
     AnyObj,
     FormElement,
@@ -16,7 +14,14 @@ import {
     FormGroupType,
     EventHandler,
 } from "../../types";
-import { resolveBinding, classesFromStyleProps, luhnCheck, getAccessibilityProps, cn, deepResolveBindings, resolveDataSourceValue } from "../../lib/utils";
+import {
+    resolveBinding,
+    classesFromStyleProps,
+    luhnCheck,
+    getAccessibilityProps, cn,
+    deepResolveBindings,
+    resolveDataSourceValue
+} from "../../lib/utils";
 
 import { Button, ButtonRenderer } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -52,7 +57,8 @@ import { MarkdownInput } from "./markdown-input";
 import { CurrencyInput } from "./currency-input";
 import { TabGroup, WizardGroup } from "./form-group";
 import { FileUpload } from "./file-upload";
-/** ---------- Helpers ---------- */
+import { useStepperDataProvider, useStepperGuard } from "../../hooks/StepperContext";
+import { zodResolver } from "@hookform/resolvers/zod";
 type SelectOption = { value: string; label: string };
 
 const numberCoerce = (val: unknown) => {
@@ -61,8 +67,6 @@ const numberCoerce = (val: unknown) => {
     const n = Number(val);
     return Number.isNaN(n) ? val : n;
 };
-
-/** ---------- UI-Only Elements ---------- */
 
 function Heading({ text, className }: { text: string; className?: string }) {
     return <h2 className={cn("text-lg font-semibold", className)}>{text}</h2>;
@@ -94,7 +98,6 @@ function CardWrapper({ children, className }: { children: React.ReactNode; class
 
 interface FormResolverProps {
     element: FormElement;
-    defaultData?: Record<string, any>;
     onFormSubmit?: (data: Record<string, any>) => void;
     onFormCancel?: () => void;
     state: AnyObj;
@@ -103,8 +106,21 @@ interface FormResolverProps {
 
 }
 const trimString = z.string().transform(v => (v ?? '').trim());
-export function FormResolver({ element, state, t, defaultData, onFormSubmit, onFormCancel, runEventHandler }: FormResolverProps) {
+export function FormResolverStepBridge({ stepIndex }: { stepIndex: number }) {
+    const form = useFormContext()
 
+    // 1) Guard: block Next if invalid (validate visible fields if you want)
+    useStepperGuard(stepIndex, async () => {
+        const ok = await form.trigger() // or trigger(['name','email']) if you map from schema
+        return ok
+    })
+
+    // 2) Data provider: provide values to the wizard final submit
+    useStepperDataProvider(stepIndex, () => form.getValues())
+
+    return null // no UI; just registers behavior
+}
+export function FormResolver({ element, state, t, runEventHandler, onFormSubmit }: FormResolverProps) {
     const formSchema = useMemo(() => {
         const shape: Record<string, z.ZodTypeAny> = {};
 
@@ -354,7 +370,7 @@ export function FormResolver({ element, state, t, defaultData, onFormSubmit, onF
     }, [element.formFields, t]);
 
 
-    const defaultValues = defaultData ? defaultData : useMemo(() => {
+    const defaultValues = useMemo(() => {
         const vals: AnyObj = {};
         for (const f of element.formFields) {
             if (f.fieldType !== FieldType.input) continue;
@@ -985,7 +1001,6 @@ export function FormResolver({ element, state, t, defaultData, onFormSubmit, onF
                 return <div key={group.id} className="space-y-6">{group.formFields?.map(renderField)}</div>;
         }
     };
-    const accessibilityProps = getAccessibilityProps(element.accessibility);
     const className = classesFromStyleProps(element.styles);
     const renderContent = () => {
 
@@ -1011,13 +1026,13 @@ export function FormResolver({ element, state, t, defaultData, onFormSubmit, onF
         <Form {...form}>
             <form
                 onSubmit={form.handleSubmit(onSubmit)}
-                className={cn("space-y-6 max-w-md mx-auto", className)}
+                className={className}
             >
                 {renderContent()}
                 <div className="flex flex-col items-center justify-center pt-6 mt-8 border-t border-border space-y-4">
-                    {element.submit && (
+                    {element.formGroupType !== "step_wizard" && element.submit && (
                         <Button type="submit" disabled={isSubmitting} className={submitClassName} {...submitAccProps}>
-                            {isSubmitting ? t("submitting") : resolveBinding(element.submit.text, state, t)}
+                            {isSubmitting ? t("Submitting") : resolveBinding(element.submit.text, state, t)}
                         </Button>
                     )}
                     {element.actions?.length ? (

@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DataSource, AnyObj, UIProject, DataMapping, UIScreenDef } from "../types";
 import { resolveDataSource, joinUrl } from "../lib/utils";
+import { useAuth } from "./useActionHandler";
 
 type Fetcher = (
     ds: DataSource,
@@ -250,11 +251,21 @@ export function useDataSources({
     const timers = useRef<Record<string, NodeJS.Timeout>>({});
     const wsCleanups = useRef<Record<string, () => void>>({});
     const abortControllers = useRef<Record<string, AbortController>>({});
+    const { token } = useAuth(globalConfig);
 
     const resolved = useMemo(() => {
-        // Filter out POST methods unless explicitly triggered by an action
-        return dataSources.filter(ds => ds.method !== "POST").map((ds) => resolveDataSource(ds, globalConfig, state));
-    }, [dataSources, globalConfig, state]);
+        return dataSources
+            .filter(ds => ds.method !== "POST")
+            .map((ds) => {
+                const rds = resolveDataSource(ds, globalConfig, state);
+                // Inject token dynamically
+                if (token && rds.auth?.type === 'bearer') {
+                    rds.auth.value = token;
+                }
+                return rds;
+            });
+    }, [dataSources, globalConfig, state, token]);
+
 
     const mappings = useMemo(() => {
         const globalMappings = globalConfig?.endpoints?.dataMappings || [];
@@ -403,7 +414,7 @@ export function useDataSources({
         for (const [id, val] of Object.entries(data)) {
             setState(id, val);
         }
-    }, [data, setState]);
+    }, [data]);
 
     return data;
 }

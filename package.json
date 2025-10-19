@@ -3,7 +3,10 @@
   "version": "1.0.22",
   "description": "AltcodePro Schema driven UI",
   "scripts": {
-    "build": "rm -rf dist && tsup && cp dist/* /Users/sireeshpangaluri/Desktop/Projects/AltEquityPro/altcodepro-ai-studio/node_modules/altcodepro-schema-ui/dist"
+    "build": "rm -rf dist && tsup && cp dist/* /Users/sireeshpangaluri/Desktop/Projects/AltEquityPro/altcodepro-ai-studio/node_modules/altcodepro-schema-ui/dist",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest watch",
+    "check:unused": "npx ts-prune'"
   },
   "keywords": [],
   "author": "",
@@ -91,10 +94,13 @@
     "@types/google.maps": "^3.58.1",
     "@types/js-cookie": "^3.0.6",
     "@types/leaflet": "^1.9.20",
+    "@types/node": "^24.8.1",
     "@types/react": "^19.1.15",
     "@types/react-dom": "^19.1.9",
     "@types/react-speech-recognition": "^3.9.6",
+    "ts-prune": "^0.10.3",
     "tsup": "^8.5.0",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
   }
 }

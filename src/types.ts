@@ -7,10 +7,12 @@ export enum ActionType {
     crud_delete = 'crud_delete',
     crud_read = 'crud_read',
     crud_update = 'crud_update',
+    export = 'export',
     export_json = 'export_json',
     export_pdf = 'export_pdf',
     export_ppt = 'export_ppt',
     export_word = 'export_word',
+    graphql='graphql',
     graphql_mutation = 'graphql_mutation',
     graphql_query = 'graphql_query',
     graphql_subscription = 'graphql_subscription',
@@ -1404,6 +1406,8 @@ export interface StepWizardElement extends BaseElement {
     current?: number;
     id: string;
     steps: Step[];
+    submit: ButtonElement;
+    actions?: Array<ButtonElement>;
     zIndex?: number;
 }
 

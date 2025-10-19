@@ -311,7 +311,7 @@ function CalendarRenderer({
 
       {events.length > 0 && (
         <div className="mt-4 space-y-3">
-          {events.map((e) => (
+          {events?.map((e) => (
             <div
               key={e.id}
               className="rounded-md border bg-card p-3 shadow-sm hover:bg-accent/50 transition"

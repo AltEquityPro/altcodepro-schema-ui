@@ -9,7 +9,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { ArrowUpDown, MoreHorizontal, ChevronDown } from "lucide-react"
 import { Calendar } from "../../components/ui/calendar"
-import { DataGridElement, DataGridCol, ElementType, InputType, ActionRuntime, DataSource, EventHandler, AnyObj } from "../../types"
+import { DataGridElement, DataGridCol, ElementType, InputType, DataSource, EventHandler, AnyObj } from "../../types"
 import { resolveBinding, deepResolveBindings, cn } from "../../lib/utils"
 import { useDataSources } from "../../schema/useDataSources"
 import { Checkbox } from "../../components/ui/checkbox"
@@ -619,7 +619,6 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                         </DialogHeader>
                         <FormResolver
                             element={element.editForm}
-                            defaultData={currentEditData}
                             state={state}
                             t={t}
                             onFormSubmit={handleModalSubmit}

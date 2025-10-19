@@ -10,6 +10,12 @@ export * from "./lib/i18n";
 export * from "./lib/utils";
 export * from "./hooks/use-mobile";
 export * from "./hooks/TelemetryContext";
+export * from "./hooks/AnalyticsContext";
+export * from "./hooks/GoogleAnalyticsBridge";
+export * from "./hooks/OfflineContext";
+export * from "./hooks/useClickOutside";
+export * from "./hooks/useGuardEvaluator";
+
 // components/ui/accordion
 import { AccordionRenderer } from "./components/ui/accordion";
 
@@ -120,7 +126,7 @@ import { FileUpload, FileUploadRenderer } from "./components/ui/file-upload";
 import { useFormField, Form, FormItem, FormLabel, FormControl, FormDescription, FormMessage, FormField } from "./components/ui/form";
 
 // components/ui/form-group
-import { TabsBar, Stepper, TabGroup, WizardGroup } from "./components/ui/form-group";
+import { TabsBar, FormStepper, TabGroup, WizardGroup } from "./components/ui/form-group";
 
 // components/ui/form-resolver
 import { FormResolver } from "./components/ui/form-resolver";
@@ -523,7 +529,7 @@ export {
     Skeleton,
     Slider,
     Slot,
-    Stepper,
+    FormStepper,
     StepWizardRenderer,
     Switch,
     Table,

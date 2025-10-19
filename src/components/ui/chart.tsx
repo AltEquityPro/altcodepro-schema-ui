@@ -138,9 +138,9 @@ export function Chart({ element, state, t }: { element: ChartElement, state: Any
   // core render
   const chartCore =
     type === "bar" ? (
-      <Recharts.BarChart data={data} syncId={syncId}>
+      resolvedSeries ? <Recharts.BarChart data={data} syncId={syncId}>
         {maybeGrid}{XAxis}{YAxis}{maybeTooltip}{maybeLegend}{maybeBrush}{maybeReferenceLines}
-        {resolvedSeries.map((s, i) => (
+        {resolvedSeries?.map((s, i) => (
           <Recharts.Bar
             key={s.key}
             dataKey={s.key}
@@ -150,11 +150,11 @@ export function Chart({ element, state, t }: { element: ChartElement, state: Any
             isAnimationActive={!!animation}
           />
         ))}
-      </Recharts.BarChart>
+      </Recharts.BarChart> : null
     ) : type === "line" ? (
-      <Recharts.LineChart data={data} syncId={syncId} >
+      resolvedSeries ? <Recharts.LineChart data={data} syncId={syncId} >
         {maybeGrid}{XAxis}{YAxis}{maybeTooltip}{maybeLegend}{maybeBrush}{maybeReferenceLines}
-        {resolvedSeries.map((s, i) => (
+        {resolvedSeries?.map((s, i) => (
           <Recharts.Line
             key={s.key}
             type="monotone"
@@ -166,11 +166,11 @@ export function Chart({ element, state, t }: { element: ChartElement, state: Any
             isAnimationActive={!!animation}
           />
         ))}
-      </Recharts.LineChart>
+      </Recharts.LineChart> : null
     ) : type === "area" ? (
       <Recharts.AreaChart data={data} syncId={syncId} >
         {maybeGrid}{XAxis}{YAxis}{maybeTooltip}{maybeLegend}{maybeBrush}{maybeReferenceLines}
-        {resolvedSeries.map((s, i) => (
+        {resolvedSeries?.map((s, i) => (
           <Recharts.Area
             key={s.key}
             type="monotone"
@@ -185,29 +185,30 @@ export function Chart({ element, state, t }: { element: ChartElement, state: Any
         ))}
       </Recharts.AreaChart>
     ) : type === "pie" ? (
-      <Recharts.PieChart >
-        {maybeTooltip}{maybeLegend}
-        <Recharts.Pie
-          data={data}
-          dataKey={valueKey}
-          nameKey={xKey}
-          cx="50%" cy="50%"
-          innerRadius={donut ? 60 : 0}
-          outerRadius={radius || 100}
-          label
-        >
-          {data.map((_: any, i) => (
-            <Recharts.Cell key={i} fill={colors[i % colors.length]} />
-          ))}
-        </Recharts.Pie>
-      </Recharts.PieChart>
+      data ?
+        <Recharts.PieChart >
+          {maybeTooltip}{maybeLegend}
+          <Recharts.Pie
+            data={data}
+            dataKey={valueKey}
+            nameKey={xKey}
+            cx="50%" cy="50%"
+            innerRadius={donut ? 60 : 0}
+            outerRadius={radius || 100}
+            label
+          >
+            {data?.map((_: any, i) => (
+              <Recharts.Cell key={i} fill={colors[i % colors.length]} />
+            ))}
+          </Recharts.Pie>
+        </Recharts.PieChart> : null
     ) : type === "radar" ? (
-      <Recharts.RadarChart cx="50%" cy="50%" outerRadius="80%" data={data} >
+      resolvedSeries ? <Recharts.RadarChart cx="50%" cy="50%" outerRadius="80%" data={data} >
         <Recharts.PolarGrid />
         <Recharts.PolarAngleAxis dataKey={xKey} />
         <Recharts.PolarRadiusAxis />
         {maybeTooltip}{maybeLegend}
-        {resolvedSeries.map((s, i) => (
+        {resolvedSeries?.map((s, i) => (
           <Recharts.Radar
             key={s.key}
             name={s.label || s.key}
@@ -218,7 +219,7 @@ export function Chart({ element, state, t }: { element: ChartElement, state: Any
             isAnimationActive={!!animation}
           />
         ))}
-      </Recharts.RadarChart>
+      </Recharts.RadarChart> : null
     ) : type === "radialBar" ? (
       <Recharts.RadialBarChart data={data} innerRadius={donut ? "40%" : "0%"} outerRadius={radius || "80%"} >
         {maybeLegend}
@@ -234,9 +235,9 @@ export function Chart({ element, state, t }: { element: ChartElement, state: Any
         {maybeTooltip}
       </Recharts.RadialBarChart>
     ) : type === "scatter" ? (
-      <Recharts.ScatterChart syncId={syncId} >
+      resolvedSeries ? <Recharts.ScatterChart syncId={syncId} >
         {maybeGrid}{XAxis}{YAxis}{maybeTooltip}{maybeLegend}{maybeBrush}{maybeReferenceLines}
-        {resolvedSeries.map((s, i) => (
+        {resolvedSeries?.map((s, i) => (
           <Recharts.Scatter
             key={s.key}
             name={s.label || s.key}
@@ -247,7 +248,7 @@ export function Chart({ element, state, t }: { element: ChartElement, state: Any
             isAnimationActive={!!animation}
           />
         ))}
-      </Recharts.ScatterChart>
+      </Recharts.ScatterChart> : null
     ) : type === "candlestick" ? (
       <Recharts.ComposedChart data={data} syncId={syncId} >
         {maybeGrid}{XAxis}
@@ -259,9 +260,9 @@ export function Chart({ element, state, t }: { element: ChartElement, state: Any
       </Recharts.ComposedChart>
     ) : (
       // default: composed
-      <Recharts.ComposedChart data={data} syncId={syncId} >
+      resolvedSeries ? <Recharts.ComposedChart data={data} syncId={syncId} >
         {maybeGrid}{XAxis}{YAxis}{maybeTooltip}{maybeLegend}{maybeBrush}{maybeReferenceLines}
-        {resolvedSeries.map((s, i) => {
+        {resolvedSeries?.map((s, i) => {
           const color = s.color || colors[i % colors.length]
           if (s.type === "bar")
             return <Recharts.Bar key={s.key} dataKey={s.key} fill={color} name={s.label || s.key} isAnimationActive={!!animation} />
@@ -291,7 +292,7 @@ export function Chart({ element, state, t }: { element: ChartElement, state: Any
             />
           )
         })}
-      </Recharts.ComposedChart>
+      </Recharts.ComposedChart> : null
     )
 
   return (
@@ -301,7 +302,7 @@ export function Chart({ element, state, t }: { element: ChartElement, state: Any
       aria-description={resolveBinding(description, state, t)}
       className={cn("flex aspect-video justify-center text-xs", element.styles?.className)}
     >
-      {responsive ? (
+      {responsive && chartCore ? (
         <Recharts.ResponsiveContainer width="100%" height="100%">
           {chartCore}
         </Recharts.ResponsiveContainer>

@@ -6,7 +6,6 @@ import { clsx, type ClassValue } from "clsx"
 // import { twMerge } from "tailwind-merge"
 import { cva } from 'class-variance-authority';
 
-const injectedCache = new Set<string>();
 export const languageMap: Record<string, string> = {
     md: 'markdown',
     markdown: 'markdown',
@@ -30,6 +29,7 @@ export function cn(...inputs: ClassValue[]) {
 export function useTranslation(translations: Record<string, Record<string, string>>, locale: string) {
     return (key: string) => translations[locale]?.[key] ?? key;
 }
+
 export function safeJsonParse(str: string) {
     try {
         return { parsed: JSON.parse(str), error: null };
@@ -42,22 +42,6 @@ export function stripBeforeThinkTag(raw: string): string {
     const split = raw.split('</think>');
     return split[split.length - 1];
 }
-// ui/styles/variants.ts
-export const buttonVariants: Record<string, string> = {
-    primary:
-        "bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500",
-    secondary:
-        "bg-gray-300 hover:bg-gray-400 focus:ring-2 focus:ring-gray-400",
-    success:
-        "bg-green-600 text-white hover:bg-green-700 focus:ring-2 focus:ring-green-500",
-    danger:
-        "bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-500",
-    warning:
-        "bg-yellow-500 text-black hover:bg-yellow-600 focus:ring-2 focus:ring-yellow-400",
-    outline:
-        "border border-gray-300 bg-transparent text-gray-900 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400",
-
-};
 
 export function cleanStartingFile(raw: string): string {
     const cleaned = raw.replace(/--[^-]*--\s*/g, '');
@@ -176,62 +160,10 @@ export const getProvider = (): BrowserProvider => {
     return new BrowserProvider((window as any).ethereum);
 };
 
-export function throttle<T extends (...args: any[]) => void>(fn: T, ms = 2000): T {
-    let last = 0;
-    let timer: any;
-    return ((...args: any[]) => {
-        const now = Date.now();
-        if (now - last > ms) { last = now; fn(...args); }
-        else {
-            clearTimeout(timer);
-            timer = setTimeout(() => { last = Date.now(); fn(...args); }, ms - (now - last));
-        }
-    }) as T;
-}
-
-export const makeLogger = (ingestUrl?: string) => {
-    const send = throttle((level: 'info' | 'warn' | 'error', message: string, meta?: any) => {
-        try {
-            if (!ingestUrl) return;
-            fetch(ingestUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ level, message, meta, ts: new Date().toISOString() }),
-            }).catch(() => { });
-        } catch { }
-    }, 2500);
-
-    return {
-        info: (m: string, meta?: any) => { console.info(m, meta); send('info', m, meta); },
-        warn: (m: string, meta?: any) => { console.warn(m, meta); send('warn', m, meta); },
-        error: (m: string, meta?: any) => { console.error(m, meta); send('error', m, meta); },
-    };
-};
-
-const RTL_LANGS = ['ar', 'dv', 'fa', 'he', 'ku', 'ps', 'ur', 'yi'];
-export function localeToDir(locale?: string) {
-    const code = (locale || '').split('-')[0].toLowerCase();
-    return RTL_LANGS.includes(code) ? 'rtl' : 'ltr';
-}
-
-/** Intl helpers */
-export function formatNumber(n: number, locale = 'en-US') {
-    return new Intl.NumberFormat(locale).format(n);
-}
-export function formatDateTime(d: number | Date, locale = 'en-US') {
-    try {
-        return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(typeof d === 'number' ? new Date(d) : d);
-    } catch {
-        return new Date(typeof d === 'number' ? d : d.valueOf()).toLocaleString();
-    }
-}
-
-
 export function getPath(obj: AnyObj, path: string) {
     if (!obj || !path) return undefined;
     return path.split('.').reduce((acc, k) => (acc == null ? acc : acc[k]), obj);
 }
-
 
 export const joinUrl = (base: string, path: string) =>
     `${base.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
@@ -270,13 +202,19 @@ export function resolveBinding(
 ): any {
     if (val == null) return "";
 
-    // 🔹 Normalize to a simple key string
+    // 🔹 Normalize value to string
     const key =
         typeof val === "object" && "binding" in val
             ? String(val.binding)
             : String(val);
 
-    // --- i18n.key ---
+    // --- Direct translation calls like {{t('key')}} ---
+    const tCallPattern = /\{\{\s*t\(['"`]([^'"`]+)['"`]\)\s*\}\}/g;
+    if (tCallPattern.test(key)) {
+        return key.replace(tCallPattern, (_, k) => t(k) || "");
+    }
+
+    // --- i18n.<key> ---
     if (key.startsWith("i18n.")) {
         const k = key.slice(5);
         const out = t(k);
@@ -301,36 +239,47 @@ export function resolveBinding(
         const valFromState = getPath(state, key.slice(6));
         return sanitizeValue(valFromState);
     }
-    // Handle strings (support state.* and form.*)
+
+    // --- form.<path> ---
     if (key.startsWith("form.")) {
         const valFromState = getPath(state, key.slice(5));
         return sanitizeValue(valFromState);
     }
-    if (key.startsWith("{form.")) {
-        const valFromState = getPath(state, key.slice(6));
+    if (key.startsWith("{form.") || key.startsWith("{{form.")) {
+        const cleaned = key.replace(/^\{+\s*|\s*\}+$/g, "");
+        const valFromState = getPath(state, cleaned.slice(5));
         return sanitizeValue(valFromState);
     }
 
-    // --- env / config lookups ---
+    // --- env/config ---
     if (key.startsWith("env.")) return sanitizeValue(readEnv(key.slice(4)));
     if (/^[A-Z0-9_]+$/.test(key)) return sanitizeValue(readEnv(key));
     if (key.includes("API_ENDPOINT")) return sanitizeValue(readEnv("API_ENDPOINT"));
 
-    // --- auto-detect translation-like keys (fallback heuristic) ---
-    // e.g. "hero.title", "footer.contact", "features.cards.0.text"
+    // --- generic template placeholders ---
+    const templatePattern =
+        /\{\{\s*([\w\.\[\]_]+)\s*\}\}|\{([\w\.\[\]_]+)\}/g;
+    if (templatePattern.test(key)) {
+        templatePattern.lastIndex = 0;
+        return key.replace(templatePattern, (_, p1, p2) => {
+            const expr = p1 || p2;
+            const inner = resolveBinding(expr, state, t);
+            return inner == null ? "" : String(inner);
+        });
+    }
+
+    // --- heuristic translation-like fallback ---
     if (
-        key.includes(".") &&                             // has dot notation
+        key.includes(".") &&
         !key.startsWith("state.") &&
         !key.startsWith("env.") &&
         !key.startsWith("data.") &&
         !key.startsWith("config.") &&
         !key.startsWith("props.") &&
-        !key.match(/^[A-Z0-9_]+$/)                       // not constant/ENV
+        !key.match(/^[A-Z0-9_]+$/)
     ) {
         const out = t(key);
         if (out && out !== key) return out;
-
-        // Try resolving without prefix if t() has language namespace internally
         const parts = key.split(".");
         if (parts.length > 1) {
             const sub = parts.slice(1).join(".");
@@ -339,12 +288,13 @@ export function resolveBinding(
         }
     }
 
-    // --- fallback: try state lookup or return literal ---
+    // --- fallback: state lookup or literal ---
     const maybe = getPath(state, key);
     if (maybe !== undefined && maybe !== null)
-        return sanitizeValue(typeof maybe === "string" ? expandEnvTemplates(maybe) : maybe);
+        return sanitizeValue(
+            typeof maybe === "string" ? expandEnvTemplates(maybe) : maybe
+        );
 
-    // --- final fallback: return as literal ---
     return sanitizeValue(key);
 }
 
@@ -519,30 +469,6 @@ export function validateInput(value: any, regex?: string): boolean {
     return true;
 }
 
-
-export const sortRows = (rows: any[], sortKey: string | null, dir: 'asc' | 'desc' | null) => {
-    if (!sortKey || !dir) return rows;
-    const copy = [...rows];
-    copy.sort((a, b) => {
-        const av = a?.[sortKey]; const bv = b?.[sortKey];
-        if (av == null && bv == null) return 0;
-        if (av == null) return dir === 'asc' ? -1 : 1;
-        if (bv == null) return dir === 'asc' ? 1 : -1;
-        if (av < bv) return dir === 'asc' ? -1 : 1;
-        if (av > bv) return dir === 'asc' ? 1 : -1;
-        return 0;
-    });
-    return copy;
-};
-
-export const filterRows = (rows: any[], filters: Record<string, string>) => {
-    const active = Object.entries(filters).filter(([, v]) => v?.trim());
-    if (!active.length) return rows;
-    return rows.filter(r =>
-        active.every(([k, v]) => String(r?.[k] ?? '').toLowerCase().includes(String(v).toLowerCase()))
-    );
-};
-
 export function isVisible(visibility: VisibilityControl | undefined, state: AnyObj, t: (key: string) => string): boolean {
     if (!visibility || !visibility.condition) return true;
     const { key, op, value } = visibility.condition;
@@ -564,44 +490,41 @@ export function isVisible(visibility: VisibilityControl | undefined, state: AnyO
         default: return true;
     }
 }
-/**
- * Convert schema style props into Tailwind class names.
- * Fallback to inline-safe values for unsupported cases.
- */
+
 export function classesFromStyleProps(styles?: StyleProps): string {
     if (!styles) return "";
-    let classes = styles.className || "";
+    let classes = styles.className?.trim() || "";
 
     if (styles.responsiveClasses) {
-        classes += " " + Object.values(styles.responsiveClasses).join(" ");
+        const responsive = Object.values(styles.responsiveClasses)
+            .filter(Boolean)
+            .join(" ");
+        if (responsive) classes += ` ${responsive}`;
     }
 
-    if (styles.background) {
-        switch (styles.background.type) {
+    const bg = styles.background;
+    if (bg && bg.type && bg.value) {
+        switch (bg.type) {
             case "color":
-                // prefer Tailwind color tokens; fallback inline handled elsewhere
-                classes += ` bg-[${styles.background.value}]`;
+                classes += ` bg-[${bg.value}]`;
                 break;
             case "gradient":
-                // expect "from-xxx to-yyy" format
-                classes += ` bg-gradient-to-r ${styles.background.value}`;
+                classes += ` bg-gradient-to-r ${bg.value}`;
                 break;
             case "image":
             case "video":
-                classes += ` bg-[url('${styles.background.value}')] bg-cover`;
+                classes += ` bg-[url('${bg.value}')] bg-cover`;
                 break;
-        }
-        if (styles.background.overlayClass) {
-            classes += ` ${styles.background.overlayClass}`;
         }
     }
 
-    return classes.trim();
+    if (bg?.overlayClass) {
+        classes += ` ${bg.overlayClass}`;
+    }
+
+    return classes.trim().replace(/\s+/g, " ");
 }
 
-/**
- * Convert schema accessibility props to React-friendly attributes.
- */
 export function getAccessibilityProps(
     accessibility?: AccessibilityProps,
     state: Record<string, any> = {},
@@ -632,6 +555,7 @@ export function getAccessibilityProps(
 
     return props;
 }
+
 export function getAllScreenImages(logo: string, screenJson: UIDefinition | null) {
     const images: Array<string> = [logo];
     if (screenJson) {
@@ -650,6 +574,7 @@ export function getAllScreenImages(logo: string, screenJson: UIDefinition | null
     }
     return images;
 }
+
 function getSocialLinks(brand: Brand | undefined): string[] {
     if (!brand?.socialMedia) return [];
 
@@ -657,6 +582,7 @@ function getSocialLinks(brand: Brand | undefined): string[] {
         (url): url is string => typeof url === 'string' && url.trim().startsWith('http')
     );
 }
+
 export async function getMetaData(route: IRoute, project: UIProject, base_url: string, screenDefinition?: UIDefinition | null,): Promise<AnyObj> {
     try {
         const meta = route.metadata ?? {};
@@ -837,9 +763,9 @@ export async function getJSONLD(
     }
 }
 
-// utils/validation.ts
 export function luhnCheck(cardNumber: string): boolean {
-    const sanitized = cardNumber.replace(/\D/g, ""); // remove spaces, dashes
+    const sanitized = cardNumber.replace(/\D/g, "");
+    if (!sanitized.length) return false;
     let sum = 0;
     let shouldDouble = false;
 
@@ -1023,30 +949,80 @@ export function deepResolveDataSource(input: any, state: AnyObj, extra?: AnyObj)
     return input;
 }
 
+/**
+ * Resolve a path or string containing runtime bindings.
+ * Supports both {state.path} and {{state.path}} formats.
+ */
+export function resolveDynamicPath(path: string, state: Record<string, any>): string {
+    if (!path) return path;
+
+    path = path.replace(/\{\{\s*([\w\.\[\]_]+)\s*\}\}/g, (_, key) => {
+        const value = key.split('.').reduce((acc: any, k: any) => acc?.[k], state);
+        return value ?? '';
+    });
+
+    path = path.replace(/\{([\w\.\[\]_]+)\}/g, (_, key) => {
+        const value = key.split('.').reduce((acc: any, k: any) => acc?.[k], state);
+        return value ?? '';
+    });
+
+    return path;
+}
+
+export function normalizeBindings(json: any) {
+    const str = JSON.stringify(json)
+        .replace(/\{\{\s*([\w\.\[\]_]+)\s*\}\}/g, '{$1}');
+    return JSON.parse(str);
+}
+
+/**
+ * Resolve dynamic values in DataSource definitions.
+ * Supports both {key} and {{key}} formats.
+ */
 export function resolveDataSourceValue(val: any, state: AnyObj, extra?: AnyObj): any {
     if (val == null) return "";
 
-    // Normalize to a string
-    const key = String(val);
+    let str = String(val);
 
-    // Handle state.* (support nested paths like user.state.state.state)
-    if (key.startsWith("state.")) {
-        const path = key.slice(6);
-        const value = getPath(state, path);
-        return value !== undefined ? sanitizeValue(value) : key;
-    }
+    // 🔹 Unified context for binding resolution
+    const context: AnyObj = {
+        ...state,
+        user: state.user || state.auth?.user || {},
+        auth: state.auth || {},
+        organization: state.organization || state.org || {},
+        org: state.organization || state.org || {},
+        form: extra || {},
+        state, // allow {state.user.id} style
+    };
 
-    // Handle form.* (for form data in extra)
-    if (key.startsWith("form.") && extra) {
-        const field = key.slice(5);
-        return extra[field] !== undefined ? sanitizeValue(extra[field]) : key;
+    /**
+     * 🔄 Internal function to resolve a binding expression like "user.org_id" or "state.project.id"
+     */
+    const resolveExpr = (expr: string): string => {
+        const trimmed = expr.trim().replace(/^state\./, "");
+        const value = getPath(context, trimmed);
+        return value == null ? "" : sanitizeValue(value);
+    };
+
+    // ✅ Handle {{key}} template syntax
+    str = str.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_m, expr) => resolveExpr(expr));
+
+    // ✅ Handle {key} syntax
+    str = str.replace(/\{([^}]+?)\}/g, (_m, expr) => resolveExpr(expr));
+
+    // ✅ Handle legacy direct "state.xxx"
+    if (str.startsWith("state.")) {
+        return sanitizeValue(getPath(state, str.slice(6)));
     }
-    if (key.startsWith("{form.") && extra) {
-        const field = key.slice(6);
-        return extra[field] !== undefined ? sanitizeValue(extra[field]) : key;
+    if (str.startsWith("form.") && extra) {
+        const field = str.slice(5);
+        return extra[field] !== undefined ? sanitizeValue(extra[field]) : str;
     }
-    // Return literal value
-    return sanitizeValue(key);
+    if (str.startsWith("{form.") && extra) {
+        const field = str.slice(6);
+        return extra[field] !== undefined ? sanitizeValue(extra[field]) : str;
+    }
+    return sanitizeValue(str);
 }
 
 function stableStringify(v: any): string {

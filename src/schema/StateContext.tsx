@@ -1,7 +1,7 @@
 'use client';
-import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback } from "react";
 import { AnyObj, UIProject, Binding, UIScreenDef, UIDefinition } from "../types";
-import { resolveBinding } from "../lib/utils";
+import { resolveBinding, setPath } from "../lib/utils";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -58,7 +58,7 @@ export function StateProvider({
         return true;
     };
 
-    const setState = (path: string, value: any) => {
+    const setState = useCallback((path: string, value: any) => {
         setStateRaw((prev) => {
             const newState = { ...prev };
             const config = project.state?.keys?.[path];
@@ -66,13 +66,28 @@ export function StateProvider({
                 console.warn(`Invalid state update for ${path}:`, value);
                 return prev;
             }
-            const resolvedValue = config?.binding ? resolveBinding(config.binding, newState, t) ?? value : value;
-            setPath(newState, path, resolvedValue);
-            return newState;
-        });
-    };
 
-    const t = (key: string) => {
+            const resolvedValue =
+                config?.binding ? resolveBinding(config.binding, newState, t) ?? value : value;
+
+            // prevent unnecessary updates if value didn’t actually change
+            const parts = path.split('.');
+            let current: any = prev;
+            for (let i = 0; i < parts.length - 1; i++) {
+                if (!current[parts[i]]) current[parts[i]] = {};
+                current = current[parts[i]];
+            }
+            const lastKey = parts[parts.length - 1];
+            if (current[lastKey] === resolvedValue) return prev;
+
+            const updatedState = structuredClone(prev);
+            setPath(updatedState, path, resolvedValue);
+            return updatedState;
+        });
+    }, [project]);
+
+
+    const t = (key: string, defaultLabel?: string) => {
         const locale = state.locale || defaultLocale;
 
         const screenTranslations =
@@ -81,7 +96,7 @@ export function StateProvider({
         const projectTranslations =
             project.translations?.[locale] || {};
 
-        return screenTranslations[key] || projectTranslations[key] || key;
+        return screenTranslations[key] || projectTranslations[key] || defaultLabel || '';
     };
 
     const formSchema: any = z.object(
@@ -123,14 +138,14 @@ export function StateProvider({
 
     useEffect(() => {
         form.reset(state);
-    }, [state, form]);
+    }, [form]);
 
     useEffect(() => {
         if (project.state?.persist && project.state.persistStorage) {
             const storage = project.state.persistStorage === 'localStorage' ? localStorage : sessionStorage;
             storage.setItem('appState', JSON.stringify(state));
         }
-    }, [state, project.state?.persist, project.state?.persistStorage]);
+    }, [project.state?.persist, project.state?.persistStorage]);
 
     useEffect(() => {
         if (project.state?.persist && project.state.persistStorage) {
@@ -221,12 +236,3 @@ export function useAppState() {
     return context;
 }
 
-function setPath(obj: AnyObj, path: string, value: any) {
-    const parts = path.split('.');
-    let current = obj;
-    for (let i = 0; i < parts.length - 1; i++) {
-        current[parts[i]] = current[parts[i]] || {};
-        current = current[parts[i]];
-    }
-    current[parts[parts.length - 1]] = value;
-}

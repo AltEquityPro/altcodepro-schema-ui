@@ -141,7 +141,6 @@ import {
     SignaturePadElement,
     TimelineElement,
     TreeElement,
-    ActionRuntime,
     UIProject,
     DataSource,
     FooterElement,
@@ -155,7 +154,7 @@ interface ElementResolverProps {
     dataSources?: DataSource[];
     state: AnyObj
     setState: (path: string, value: any) => void;
-    t: (key: string) => string
+    t: (key: string, defaultLabel?: string) => string
     runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>;
     CustomElementResolver?: (
         element: UIElement,
