@@ -10,7 +10,7 @@ import {
     ActionRuntime,
     ActionParams
 } from "../types";
-import { anySignal, deepResolveBindings, resolveDataSource, deepResolveDataSource, resolveDataSourceValue, hash } from "../lib/utils";
+import { anySignal, deepResolveBindings, resolveDataSource, deepResolveDataSource, resolveDataSourceValue, hash, getAuthKey } from "../lib/utils";
 import { JSONPath } from "jsonpath-plus";
 import { useAppState } from "./StateContext";
 
@@ -22,9 +22,7 @@ type StoredAuth = {
     expiresAt?: number; // epoch in ms
 };
 
-function getAuthKey(globalConfig?: UIProject["globalConfig"]) {
-    return globalConfig?.auth?.cookieName || globalConfig?.auth?.audience || "authToken";
-}
+
 function isOfflineEnabled(ds: any, screen?: any, project?: any) {
     // no schema break: read optional flags if present
     return Boolean(
@@ -264,17 +262,42 @@ export function useActionHandler({
     const wsCleanups = useRef<Record<string, () => void>>({});
     const offline = useOffline();
     const analytics = useAnalytics();
-    // 👇 useAuth inside the action engine
     const auth = useAuth(globalConfig);
 
-    // Mirror token into app state (so guards/telemetry can read from state)
-    // useEffect(() => { if (auth.token) setState("auth.token", auth.token); }, [auth.token]);
     useEffect(() => {
-        const handler = (e: any) => setState("auth.user", e.detail);
-        window.addEventListener("authRefreshed", handler);
-        return () => window.removeEventListener("authRefreshed", handler);
-    }, []);
-    // Offline replay executor
+        (async () => {
+            if (globalConfig?.profile?.dataSources && auth?.token) {
+                const ds = globalConfig.profile.dataSources;
+                const url = ds.apiUrl;
+                if (!url) {
+                    return;
+                }
+                const method = ds.method || "GET";
+                const headers: Record<string, string> = {
+                    ...(ds.headers || {}),
+                    Authorization: `Bearer ${auth?.token}`,
+                };
+                try {
+                    const options: any = { method, headers }
+                    if (ds.credentials) {
+                        options.credentials = ds.credentials;
+                    }
+                    const res = await fetch(url, options);
+                    if (!res.ok) {
+                        console.log('error loading user', res.status)
+                    }
+                    const profile = await res.json();
+                    setState('profile', profile);
+                    setState('auth.user', profile);
+                    setState('user', profile);
+                } catch (e) {
+                    console.warn("Failed to load user profile:", e);
+                }
+            }
+        })();
+    }, [auth?.token, globalConfig]);
+
+
     useEffect(() => {
         if (!offline?.registerExecutor) return;
         offline.registerExecutor(async (evt) => {
@@ -402,11 +425,13 @@ export function useActionHandler({
                         const expiresIn = payload.expires_in || decodeJwtExp(token) || 3600;
                         if (token) {
                             auth.login(token, refreshToken, typeof expiresIn === 'number' ? expiresIn : 3600);
-                            // mirror decoded user (optional)
+                            setState('authToken', token);
                             try {
                                 const pl = JSON.parse(atob(token.split('.')[1]));
-                                setState("auth.user", { id: pl.sub, email: pl.email, name: pl.name, orgId: pl.org_id || pl.orgId });
-                            } catch { setState("auth.user", { id: 'unknown' }); }
+                                setState("user", payload);
+                            } catch {
+                                setState("user", null);
+                            }
                             runtime.toast?.("Login successful", "success");
                             const redirect = globalConfig.auth.postLoginHref || "/dashboard";
                             if (redirect) runtime.nav?.push?.(redirect);
@@ -415,7 +440,8 @@ export function useActionHandler({
                     // logout
                     if (h.dataSourceId?.toLowerCase()?.includes("logout")) {
                         auth.logout();
-                        setState("auth.user", null);
+                        setState('authToken', '');
+                        setState("user", null);
                         runtime.toast?.("Logged out", "info");
                         const redirect = globalConfig.auth.logoutHref || "/";
                         if (redirect) runtime.nav?.push?.(redirect);
@@ -453,8 +479,7 @@ export function useActionHandler({
                 if (hasError) {
                     // 🔔 Show toast (global handler)
                     const message = error?.message || t("Something went wrong. Please try again.");
-                    runtime.toast?.(message, "error");
-
+                    console.error(message);
                     // ❌ Skip navigation if any exists in finally
                     if (hasNavInFinally) {
                         console.warn("⏭️ Skipping navigation due to error");
@@ -536,13 +561,13 @@ export function useActionHandler({
             }
 
             const doFetch = async () => {
-                const res = await fetch(url, { method, headers, body, credentials: resolved.credentials || 'same-origin', signal });
+                const res = await fetch(url, { method, headers, body });
                 if (res.status === 401 && auth.refreshToken && globalConfig?.auth?.oidc?.tokenUrl) {
                     runtime.toast?.("Session expired. Refreshing token...", "info");
                     const newToken = await auth.refresh();
                     if (newToken) {
                         headers["Authorization"] = `Bearer ${newToken}`;
-                        return await fetch(url, { method, headers, body, credentials: resolved.credentials || 'same-origin', signal });
+                        return await fetch(url, { method, headers, body });
                     }
                     runtime.toast?.("Session expired. Please log in again.", "error");
                     const loginHref = globalConfig?.auth?.loginHref || "/login";
@@ -610,7 +635,8 @@ export function useActionHandler({
             const signal = anySignal([controller.signal, ctl.signal]);
 
             const doFetch = async () => {
-                const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), credentials: resolved.credentials || 'same-origin', signal });
+                // credentials: resolved.credentials || 'same-origin', signal 
+                const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), });
                 if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
                 return await res.json();
             };
@@ -664,8 +690,10 @@ export function useActionHandler({
                     runtime.closeModal?.(id); break;
                 }
                 case ActionType.update_state: {
-                    const path = String(h.params?.path); if (!path) throw new Error("State path required");
-                    setState(path, resolveDataSourceValue(h.params?.value, state, undefined)); break;
+                    const path = String(h.params?.path);
+                    if (path) {
+                        setState(path, resolveDataSourceValue(h.params?.value, state, undefined)); break;
+                    }
                 }
                 case ActionType.run_script: {
                     const name = String(h.params?.name); if (!name) throw new Error("Script name required");
@@ -782,10 +810,11 @@ export function useActionHandler({
         } catch (e: any) {
             const err = { message: String(e.message || e), status: e.message?.includes('HTTP') ? parseInt(e.message.match(/HTTP (\d+)/)?.[1] || '0', 10) : undefined };
             await then(false, undefined, err);
+            console.log('error', err)
             runtime.toast?.(err.message, "error");
         } finally {
-            controller.abort();
-            delete abortControllers.current[actionId];
+            // controller.abort();
+            // delete abortControllers.current[actionId];
         }
     };
 

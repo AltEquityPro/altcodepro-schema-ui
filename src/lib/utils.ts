@@ -1051,3 +1051,7 @@ export function hash(v: any): string {
     }
     return String(h);
 }
+
+export function getAuthKey(globalConfig?: UIProject["globalConfig"]) {
+    return globalConfig?.auth?.cookieName || globalConfig?.auth?.audience || "authToken";
+}

@@ -12,7 +12,7 @@ export enum ActionType {
     export_pdf = 'export_pdf',
     export_ppt = 'export_ppt',
     export_word = 'export_word',
-    graphql='graphql',
+    graphql = 'graphql',
     graphql_mutation = 'graphql_mutation',
     graphql_query = 'graphql_query',
     graphql_subscription = 'graphql_subscription',
@@ -1903,7 +1903,7 @@ export interface DataSource {
     headers?: Record<string, string>;
     heartbeat?: { interval: number; message: string };
     id: string;
-    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'WEBSOCKET' | 'GRAPHQL';
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'WEBSOCKET' | 'GRAPHQL';
     path?: string;
     pollingInterval?: number;
     protocol?: 'graphql-ws' | 'subscriptions-transport-ws' | 'graphql-transport-ws';
@@ -2217,6 +2217,18 @@ export interface UIProject {
         security?: SecurityConfig;
         translateConfig: I18nConfig;
         walletConnectUrl?: string;
+        profile?: { // load user profile to store in global state , this will be called after loggedin
+            dataSources?: {
+                auth?: { type: 'basic' | 'bearer' | 'api_key'; value: string };
+                apiUrl?: string;
+                body?: Record<string, any>;
+                credentials?: 'include' | 'omit' | 'same-origin';
+                graphql_operation?: 'query' | 'mutation' | 'subscription';
+                headers?: Record<string, string>;
+                method?: 'GET' | 'POST' | 'WEBSOCKET' | 'GRAPHQL';
+                protocol?: 'graphql-ws' | 'subscriptions-transport-ws' | 'graphql-transport-ws';
+            },
+        },
     };
     globalStyles?: {
         customCss?: string;  // Custom Sytles to add at project style

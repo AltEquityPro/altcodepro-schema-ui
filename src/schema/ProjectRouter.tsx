@@ -89,7 +89,7 @@ export function ProjectRouter({
 
                                 {/* 4. Main */}
                                 <main className="flex-1">
-                                    <Toaster richColors position="top-right" />
+                                    <Toaster closeButton expand duration={10 * 60 * 60 * 60} richColors position="top-right" />
                                     {currentScreenDef?.screens?.map((sc) => (
                                         <ScreenRenderer
                                             state={state}

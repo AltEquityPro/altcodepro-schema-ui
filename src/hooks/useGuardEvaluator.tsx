@@ -1,8 +1,8 @@
 // useGuardEvaluator.ts
 'use client';
 import { createContext, useContext, useMemo } from "react";
-import { GuardRule, AnyObj, RedirectSpec } from "../types";
-import { resolveBinding } from "../lib/utils";
+import { GuardRule, AnyObj, RedirectSpec, UIProject } from "../types";
+import { getAuthKey, resolveBinding } from "../lib/utils";
 
 export interface GuardResult {
     ok: boolean;
@@ -10,7 +10,10 @@ export interface GuardResult {
     reasons?: string[];
 }
 
-export function useGuardEvaluator(guard: GuardRule | undefined, state: AnyObj, t: (k: string) => string): GuardResult {
+export function useGuardEvaluator(guard: GuardRule | undefined,
+    state: AnyObj,
+    t: (k: string) => string,
+    globalConfig?: UIProject["globalConfig"],): GuardResult {
     return useMemo(() => {
         if (!guard) return { ok: true };
 
@@ -18,32 +21,29 @@ export function useGuardEvaluator(guard: GuardRule | undefined, state: AnyObj, t
         const reasons: string[] = [];
 
         if (guard.requireAuth) {
-            const token = state?.auth?.token || state?.authToken;
+            const authKey = getAuthKey(globalConfig);
+            let token: string | null = null;
+
+            // Try in-memory first
+            if (state?.auth?.token) token = state.auth.token;
+            else if (state?.authToken) token = state.authToken;
+            else {
+                // Try localStorage fallback
+                const stored = localStorage.getItem(authKey);
+                if (stored) {
+                    try {
+                        const parsed = JSON.parse(stored);
+                        token = parsed?.token || null;
+                    } catch {
+                        // maybe legacy plain string
+                        token = stored;
+                    }
+                }
+            }
+
             const valid = !!token && token.length > 10;
             results.push(valid);
             if (!valid) reasons.push("auth_missing");
-        }
-
-        if (guard.requireOrganization) {
-            const org = state?.organization || state?.org;
-            const ok = !!org?.id || !!org?.name;
-            results.push(ok);
-            if (!ok) reasons.push("org_missing");
-        }
-
-        if (guard.requireConsents?.length) {
-            for (const key of guard.requireConsents) {
-                const val = state?.consents?.[key];
-                const ok = !!val;
-                results.push(ok);
-                if (!ok) reasons.push(`consent_${key}_missing`);
-            }
-        }
-
-        if (guard.requireOtp) {
-            const ok = !!state?.auth?.otpVerified;
-            results.push(ok);
-            if (!ok) reasons.push("otp_not_verified");
         }
 
         if (guard.conditions?.length) {

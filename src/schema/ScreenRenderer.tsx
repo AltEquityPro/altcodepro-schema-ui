@@ -20,6 +20,7 @@ import { ElementResolver } from "./ElementResolver";
 import { useDataSources } from "./useDataSources";
 import { GuardProvider, useGuardEvaluator } from "../hooks/useGuardEvaluator";
 import { useAnalytics } from "../hooks/AnalyticsContext";
+import { StateTreeViewer } from "../components/ui/StateTreeViewer";
 
 export interface ScreenRendererProps {
     project: UIProject;
@@ -130,14 +131,19 @@ export function ScreenRenderer({
             if (leave) runEventHandler(leave);
         };
     }, [currentScreenDef.id, runEventHandler]);
-    const guardResult = useGuardEvaluator(currentScreenDef.guard, state, t);
+    const guardResult = useGuardEvaluator(currentScreenDef.guard, state, t, project?.globalConfig);
 
     useEffect(() => {
         if (!guardResult.ok) {
-            runtime.toast?.(t("access_denied") || "Access restricted", "warning");
-            gotoRedirect(runtime, guardResult.onFail);
+            const timeout = setTimeout(() => {
+                try { localStorage.setItem("pendingPath", window.location.pathname + window.location.search); } catch { }
+                runtime.toast?.(t("access_denied") || "Access restricted", "warning");
+                gotoRedirect(runtime, guardResult.onFail);
+            }, 300); // small grace period
+            return () => clearTimeout(timeout);
         }
-    }, [guardResult.ok, runtime]);
+    }, [guardResult.ok]);
+
 
     useEffect(() => {
         analytics.trackPage?.(currentScreenDef.route, {
@@ -166,23 +172,13 @@ export function ScreenRenderer({
         <GuardProvider result={guardResult}>
             <div className={screenClasses} data-screen-id={currentScreenDef.id}>
                 {showDebug && (
-                    <div className="mb-4 text-xs text-muted-foreground">
-                        <span className="inline-block rounded bg-muted px-2 py-1 mr-2">
-                            screen: <strong>{resolveBinding(currentScreenDef.name, state, t)}</strong>
-                        </span>
-                        {dsList.length > 0 && (
-                            <span className="inline-block rounded bg-muted px-2 py-1 mr-2">
-                                data: {dsList.map((d) => d.id).join(", ")}
-                            </span>
-                        )}
-                        <div className="text-xs text-blue-600">
-                            <strong>Analytics:</strong> Tracking screen & user actions automatically.
-                            <br />
-                            <span className="text-gray-500">
-                                Screen ID: {currentScreenDef.id} | Route: {currentScreenDef.route}
-                            </span>
-                        </div>
-                    </div>
+                    <StateTreeViewer
+                        state={state}
+                        setState={(path, val) => {
+                            setState(path, val);
+                            runtime.toast?.(`Updated state: ${path}`, "info");
+                        }}
+                    />
                 )}
                 {currentScreenDef.elements?.map((el) => {
                     const visible = isVisible(el.visibility, state, t);

@@ -41,48 +41,17 @@ export function StateProvider({
 
     const wsRef = useRef<WebSocket | null>(null);
     const wsCleanupRef = useRef<(() => void) | null>(null);
-
-    const validateValue = (key: string, value: any, config: any) => {
-        if (!config.validation) return true;
-        const { required, regex, minLength, maxLength, min, max } = config.validation;
-        if (required && (value === null || value === undefined)) return false;
-        if (typeof value === 'string') {
-            if (minLength && value.length < minLength) return false;
-            if (maxLength && value.length > maxLength) return false;
-            if (regex && !new RegExp(regex).test(value)) return false;
-        }
-        if (typeof value === 'number') {
-            if (min !== undefined && value < min) return false;
-            if (max !== undefined && value > max) return false;
-        }
-        return true;
-    };
-
     const setState = useCallback((path: string, value: any) => {
         setStateRaw((prev) => {
-            const newState = { ...prev };
-            const config = project.state?.keys?.[path];
-            if (config && !validateValue(path, value, config)) {
-                console.warn(`Invalid state update for ${path}:`, value);
-                return prev;
+            const updated = structuredClone(prev);
+            path = path.replace(/^\{\{\s*|\s*\}\}$/g, '').trim();
+            path = path.replace(/^\{\s*|\s*\}$/g, '').trim();
+
+            if (path.includes('state')) {
+                path = path.replace(/^state\./, '');
             }
-
-            const resolvedValue =
-                config?.binding ? resolveBinding(config.binding, newState, t) ?? value : value;
-
-            // prevent unnecessary updates if value didn’t actually change
-            const parts = path.split('.');
-            let current: any = prev;
-            for (let i = 0; i < parts.length - 1; i++) {
-                if (!current[parts[i]]) current[parts[i]] = {};
-                current = current[parts[i]];
-            }
-            const lastKey = parts[parts.length - 1];
-            if (current[lastKey] === resolvedValue) return prev;
-
-            const updatedState = structuredClone(prev);
-            setPath(updatedState, path, resolvedValue);
-            return updatedState;
+            updated[path] = value;
+            return updated;
         });
     }, [project]);
 
