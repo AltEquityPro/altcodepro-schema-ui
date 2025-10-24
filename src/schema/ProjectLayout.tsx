@@ -23,29 +23,37 @@ export interface ProjectLayoutProps {
     children?: React.ReactNode;
 }
 
-export function ProjectLayout({
-    project,
-    children,
-    nav = {},
-    loading,
+// ProjectLayout.tsx
+import React, { useMemo } from "react";
+
+export const ProjectLayout = React.memo(function ProjectLayout({
+    project, children, nav = {}, loading,
 }: ProjectLayoutProps) {
     const isMobile = useIsMobile();
+    if (loading) return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+    );
 
-    if (loading) {
-        return (
-            <div className="flex h-screen w-full items-center justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-        );
-    }
     const { state, t, setState } = useAppState();
 
-    const navType = isMobile
-        ? project.routeList.responsiveNavType
-        : project.routeList.desktopNavType;
+    const user = useMemo(
+        () => state?.auth?.user ?? { id: state?.auth?.userId, orgId: state?.organization?.id },
+        [state?.auth?.user, state?.auth?.userId, state?.organization?.id]
+    );
+
+    const requiresAuth = useMemo(
+        () => !!project?.routeList?.routes?.some(r => r.requiresAuth),
+        [project?.routeList?.routes]
+    );
+
+    const navType = useMemo(
+        () => (isMobile ? project.routeList.responsiveNavType : project.routeList.desktopNavType),
+        [isMobile, project.routeList.responsiveNavType, project.routeList.desktopNavType]
+    );
     const layoutClass = navType === "side" ? "flex" : "flex flex-col";
-    const user = state?.auth?.user || { id: state?.auth?.userId, orgId: state?.organization?.id };
-    const requiresAuth = project.routeList.routes.some(r => r.requiresAuth)
+
     return (
         <GlobalThemeProvider project={project}>
             <OfflineProvider>
@@ -53,25 +61,12 @@ export function ProjectLayout({
                     <AnalyticsProvider project={project} user={user}>
                         <AuthProvider requiresAuth={requiresAuth} globalConfig={project.globalConfig} setState={setState} nav={nav}>
                             <div className={clsx("min-h-screen", layoutClass)}>
-                                <NavRenderer
-                                    project={project}
-                                    nav={nav}
-                                    state={state}
-                                    setState={setState}
-                                    t={t}
-                                />
-
-                                <main className="flex-1">
-                                    {children}
-                                </main>
-
+                                <NavRenderer project={project} nav={nav} state={state} setState={setState} t={t} />
+                                <main className="flex-1">{children}</main>
                                 <CookieBannerRenderer setState={setState} project={project} state={state} t={t} />
-
-                                {project.footer && <ElementResolver
-                                    state={state}
-                                    setState={setState}
-                                    t={t}
-                                    element={project.footer} />}
+                                {project.footer && (
+                                    <ElementResolver state={state} setState={setState} t={t} element={project.footer} />
+                                )}
                             </div>
                         </AuthProvider>
                     </AnalyticsProvider>
@@ -79,4 +74,4 @@ export function ProjectLayout({
             </OfflineProvider>
         </GlobalThemeProvider>
     );
-}
+});
