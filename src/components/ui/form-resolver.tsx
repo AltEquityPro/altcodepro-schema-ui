@@ -17,7 +17,6 @@ import {
 import {
     resolveBinding,
     classesFromStyleProps,
-    luhnCheck,
     getAccessibilityProps, cn,
     deepResolveBindings,
     resolveDataSourceValue
@@ -60,6 +59,24 @@ import { FileUpload } from "./file-upload";
 import { useStepperDataProvider, useStepperGuard } from "../../hooks/StepperContext";
 import { zodResolver } from "@hookform/resolvers/zod";
 type SelectOption = { value: string; label: string };
+function luhnCheck(cardNumber: string): boolean {
+    const sanitized = cardNumber.replace(/\D/g, "");
+    if (!sanitized.length) return false;
+    let sum = 0;
+    let shouldDouble = false;
+
+    for (let i = sanitized.length - 1; i >= 0; i--) {
+        let digit = parseInt(sanitized.charAt(i), 10);
+        if (shouldDouble) {
+            digit *= 2;
+            if (digit > 9) digit -= 9;
+        }
+        sum += digit;
+        shouldDouble = !shouldDouble;
+    }
+
+    return sum % 10 === 0;
+}
 
 const numberCoerce = (val: unknown) => {
     if (val === "" || val === null || val === undefined) return undefined;
@@ -101,7 +118,7 @@ interface FormResolverProps {
     onFormSubmit?: (data: Record<string, any>) => void;
     onFormCancel?: () => void;
     state: AnyObj;
-    t: (key: string) => string;
+    t: (key: string, defaultLabel?: string) => string;
     runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj) => Promise<void>
 
 }
@@ -1032,7 +1049,7 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
                 <div className="flex flex-col items-center justify-center pt-6 mt-8 border-t border-border space-y-4">
                     {element.formGroupType !== "step_wizard" && element.submit && (
                         <Button type="submit" disabled={isSubmitting} className={submitClassName} {...submitAccProps}>
-                            {isSubmitting ? t("Submitting") : resolveBinding(element.submit.text, state, t)}
+                            {isSubmitting ? t("Submitting", "Submitting") : resolveBinding(element.submit.text, state, t)}
                         </Button>
                     )}
                     {element.actions?.length ? (

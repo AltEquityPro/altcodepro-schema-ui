@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { ElementResolver } from "../../schema/ElementResolver";
-import { CarouselElement, UIElement, ActionRuntime, AnyObj, EventHandler } from "../../types";
+import { CarouselElement, AnyObj, EventHandler } from "../../types";
 import { Progress } from "./progress";
 import { ChevronDown } from "lucide-react";
 
@@ -21,12 +21,12 @@ export function Carousel({ element, state, setState, t, runEventHandler }: Carou
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!element.autoPlay || element.items.length <= 1) return;
+    if (!element.autoPlay || element.items?.length <= 1) return;
 
     const intervalTime = element.interval || 3000;
     intervalRef.current = setInterval(() => {
       setCurrentIndex((prev) => {
-        const next = (prev + 1) % element.items.length;
+        const next = (prev + 1) % element.items?.length;
         setProgress(0); // Reset progress on slide change
         return next;
       });
@@ -35,7 +35,7 @@ export function Carousel({ element, state, setState, t, runEventHandler }: Carou
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [element.autoPlay, element.interval, element.items.length]);
+  }, [element.autoPlay, element.interval, element.items?.length]);
 
   // Progress animation
   useEffect(() => {
@@ -54,13 +54,13 @@ export function Carousel({ element, state, setState, t, runEventHandler }: Carou
 
   // Navigation handlers
   const goToPrev = () => {
-    setCurrentIndex((prev) => (prev - 1 + element.items.length) % element.items.length);
+    setCurrentIndex((prev) => (prev - 1 + element.items?.length) % element.items?.length);
     setProgress(0);
     if (intervalRef.current) clearInterval(intervalRef.current);
   };
 
   const goToNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % element.items.length);
+    setCurrentIndex((prev) => (prev + 1) % element.items?.length);
     setProgress(0);
     if (intervalRef.current) clearInterval(intervalRef.current);
   };
@@ -140,7 +140,7 @@ export function Carousel({ element, state, setState, t, runEventHandler }: Carou
       )}
 
       {/* Indicators */}
-      {element.showIndicators && element.items.length > 1 && (
+      {element.showIndicators && element.items?.length > 1 && (
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
           {element.items?.map((_, index) => (
             <button

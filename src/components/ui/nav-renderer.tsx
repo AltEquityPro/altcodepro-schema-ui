@@ -9,18 +9,35 @@ import {
     AnyObj,
     VisibilityControl,
     StyleProps,
+    NavigationAPI,
 } from "../../types";
 import { resolveBinding } from "../../lib/utils";
 import { useClickOutside } from "../../hooks/useClickOutside";
 import { NavLink } from "./navLink";
+import { DynamicIcon } from "./dynamic-icon";
 
-/* =======================================================
-🔧 Helpers
-======================================================= */
 function isRouteActive(route: IRoute, pathname: string): boolean {
     if (route.href === pathname) return true;
     if (route.nested) return route.nested.some((c) => isRouteActive(c, pathname));
     return false;
+}
+
+function handleLogout(setState: (path: string, value: any) => void) {
+    try {
+        // Clear local/session tokens if present
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        sessionStorage.removeItem("access_token");
+        setState('authToken', '');
+        setState('profile', null);
+        setState('isAuthenticated', true);
+        setState('user.isAuthenticated', true);
+        setState('auth.user', null);
+        setState('user', null);
+        window.location.href = "/login";
+    } catch (err) {
+        console.error("Logout failed:", err);
+    }
 }
 
 function evalVisibility(
@@ -29,15 +46,17 @@ function evalVisibility(
     v?: VisibilityControl,
 ) {
     if (!v) return true;
-    const keyVal = resolveBinding(v.condition.key, state, t);
-    const val = resolveBinding(v.condition.value, state, t);
+    if (!v.condition) return true;
+
+    const keyVal = resolveBinding(v.condition?.key, state, t);
+    const val = resolveBinding(v.condition?.value, state, t);
     const show = !!v.show;
 
-    switch (v.condition.op) {
+    switch (v.condition?.op) {
         case "==":
-            return show ? keyVal === val : keyVal !== val;
+            return show ? keyVal == val : keyVal != val;
         case "!=":
-            return show ? keyVal !== val : keyVal === val;
+            return show ? keyVal != val : keyVal == val;
         case ">":
             return show ? keyVal > val : !(keyVal > val);
         case "<":
@@ -47,9 +66,9 @@ function evalVisibility(
         case "<=":
             return show ? keyVal <= val : !(keyVal <= val);
         case "exists":
-            return show ? keyVal !== null && keyVal !== undefined : keyVal === null || keyVal === undefined;
+            return show ? keyVal != null && keyVal != undefined : keyVal == null || keyVal == undefined;
         case "not_exists":
-            return show ? keyVal === null || keyVal === undefined : keyVal !== null && keyVal !== undefined;
+            return show ? keyVal == null || keyVal == undefined : keyVal != null && keyVal != undefined;
         case "matches":
             try {
                 return show ? new RegExp(val).test(String(keyVal ?? "")) : !new RegExp(val).test(String(keyVal ?? ""));
@@ -92,6 +111,7 @@ function CollapsibleNavItem({
     state,
     t,
     openRoutes,
+    nav,
     setOpenRoutes,
     level = 0,
     variant = "sidebar" as "sidebar" | "mobile",
@@ -99,6 +119,7 @@ function CollapsibleNavItem({
     route: IRoute;
     pathname: string;
     state: AnyObj;
+    nav?: NavigationAPI;
     t: (key: string) => string;
     openRoutes: Set<string>;
     setOpenRoutes: (routes: any) => void;
@@ -151,6 +172,7 @@ function CollapsibleNavItem({
                     pathname={pathname}
                     state={state}
                     t={t}
+                    nav={nav}
                     active={active}
                     className={clsx(
                         "flex w-full items-center rounded-md transition-all duration-200",
@@ -170,6 +192,7 @@ function CollapsibleNavItem({
                             route={child}
                             pathname={pathname}
                             state={state}
+                            nav={nav}
                             t={t}
                             openRoutes={openRoutes}
                             setOpenRoutes={setOpenRoutes}
@@ -190,10 +213,12 @@ function DesktopNavItem({
     route,
     pathname,
     state,
+    nav,
     t,
 }: {
     route: IRoute;
     pathname: string;
+    nav?: NavigationAPI;
     state: AnyObj;
     t: (k: string) => string;
 }) {
@@ -218,12 +243,17 @@ function DesktopNavItem({
                 route={route}
                 pathname={pathname}
                 state={state}
+                nav={nav}
                 t={t}
                 active={active}
                 activeClassName={clsx(
                     linkBase,
                     "text-[color:var(--acp-primary)] underline underline-offset-4"
                 )}
+                className={clsx(
+                    "flex w-full items-center rounded-md transition-all duration-200"
+                )}
+                inactiveClassName={"text-foreground/75 " + hoverSoftPrimary}
             />
             {!active && !hasChildren && (
                 <a
@@ -267,13 +297,19 @@ function DesktopNavItem({
 function DesktopNav({
     routes,
     pathname,
+    setState,
     state,
+    nav,
+    requiresAuth,
     t,
     containerStyle,
 }: {
     routes: IRoute[];
     pathname: string;
+    setState: (path: string, value: any) => void;
     state: AnyObj;
+    requiresAuth?: boolean;
+    nav?: NavigationAPI;
     t: (k: string) => string;
     containerStyle?: StyleProps;
 }) {
@@ -290,24 +326,42 @@ function DesktopNav({
                 <DesktopNavItem
                     key={r.href}
                     route={r}
+                    nav={nav}
                     pathname={pathname}
                     state={state}
                     t={t}
                 />
             ))}
+            {requiresAuth && (state?.isAuthenticated || state?.auth?.user) ? (
+                <button
+                    onClick={() => handleLogout(setState)}
+                    className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium bg-[var(--acp-primary)]
+                            text-white
+                            hover:bg-[var(--acp-primary-700)]
+                            focus:ring-2 focus:ring-[var(--acp-primary-400)] transition">
+                    Logout
+                </button>
+            ) : (
+                <a
+                    href="/login"
+                    className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary)]/10 transition"
+                >
+                    Login
+                </a>
+            )}
         </nav>
     );
 }
 
-/* =======================================================
-📱 Mobile Burger Drawer
-======================================================= */
 function MobileBurger({
     routes,
     pathname,
     isOpen,
+    requiresAuth,
+    setState,
     onClose,
     state,
+    nav,
     t,
     overlayStyle,
     sheetStyle,
@@ -316,8 +370,11 @@ function MobileBurger({
     pathname: string;
     isOpen: boolean;
     onClose: () => void;
+    nav?: NavigationAPI;
+    setState: (path: string, value: any) => void
+    requiresAuth?: boolean;
     state: AnyObj;
-    t: (k: string) => string;
+    t: (k: string, defaultLabel?: string) => string;
     overlayStyle?: StyleProps;
     sheetStyle?: StyleProps;
 }) {
@@ -382,6 +439,7 @@ function MobileBurger({
                         <CollapsibleNavItem
                             key={route.href}
                             route={route}
+                            nav={nav}
                             pathname={pathname}
                             state={state}
                             t={t}
@@ -390,26 +448,44 @@ function MobileBurger({
                             variant="mobile"
                         />
                     ))}
+                    {requiresAuth && (state?.isAuthenticated || state?.auth?.user) ? (
+                        <button
+                            onClick={() => handleLogout(setState)}
+                            className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary)]/10 transition"
+                        >
+                            {t('Logout', 'Logout')}
+                        </button>
+                    ) : (
+                        <a
+                            href="/login"
+                            className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary)]/10 transition"
+                        >
+                            {t('Login', 'Login')}
+                        </a>
+                    )}
                 </nav>
             </aside>
         </div>
     );
 }
 
-/* =======================================================
-🧱 Sidebar (Dashboard)
-======================================================= */
 function Sidebar({
     routes,
     pathname,
     state,
+    setState,
+    requiresAuth,
     t,
+    nav,
     project,
 }: {
     routes: IRoute[];
     pathname: string;
     state: AnyObj;
-    t: (k: string) => string;
+    setState: (path: string, value: any) => void
+    nav?: NavigationAPI;
+    requiresAuth?: boolean;
+    t: (k: string, defaultLabel?: string) => string;
     project: UIProject;
 }) {
     const visible = evalVisibility(state, t, project.routeList.visibility?.sidebar);
@@ -456,6 +532,7 @@ function Sidebar({
                         pathname={pathname}
                         state={state}
                         t={t}
+                        nav={nav}
                         openRoutes={openRoutes}
                         setOpenRoutes={setOpenRoutes}
                         variant="sidebar"
@@ -472,39 +549,55 @@ function Sidebar({
                                 if (a.onClick?.startsWith("http")) {
                                     window.location.href = a.onClick;
                                 } else {
-                                    // hook into your runtime/event bus if needed
-                                    console.log("Run action:", a.onClick);
+                                    if (nav && nav.push) {
+                                        nav.push(a.onClick || "/");
+                                    } else {
+                                        window.location.href = a.onClick || "/";
+                                    }
                                 }
                             }}
                             className={clsx(
-                                "w-full text-left px-3 py-2 rounded-md text-sm",
+                                "w-full text-left px-3  flex flex-row py-2 rounded-md text-sm",
                                 "text-foreground/80",
                                 hoverSoftPrimary
                             )}
                         >
-                            {a.icon && <span className="mr-2">{a.icon}</span>}
-                            {a.label}
+                            {a.icon && <DynamicIcon name={a.icon} />}
+                            {resolveBinding(a.label, state, t)}
                         </button>
                     ))}
                 </div>
             ) : null}
+            {requiresAuth && (state?.isAuthenticated || state?.auth?.user) ? (
+                <button
+                    onClick={() => handleLogout(setState)}
+                    className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary)]/10 transition">
+                    {t('Logout', 'Logout')}
+                </button>
+            ) : (
+                <a
+                    href="/login"
+                    className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary)]/10 transition"
+                >
+                    {t('Login', 'Login')}
+                </a>
+            )}
         </aside>
     );
 }
 
-/* =======================================================
-⬇️ Bottom Navigation (Mobile)
-======================================================= */
 function BottomNav({
     routes,
     pathname,
     state,
+    nav,
     t,
     routeListVisibility,
 }: {
     routes: IRoute[];
     pathname: string;
     state: AnyObj;
+    nav?: NavigationAPI;
     t: (k: string) => string;
     routeListVisibility?: {
         bottombar?: VisibilityControl;
@@ -528,9 +621,8 @@ function BottomNav({
                 {routes.filter((r) => r.showInBottomBar).map((route) => {
                     const active = isRouteActive(route, pathname);
                     return (
-                        <a
+                        <NavLink
                             key={route.href}
-                            href={route.href}
                             className={clsx(
                                 "flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition-all",
                                 active
@@ -538,30 +630,33 @@ function BottomNav({
                                     : "text-foreground/60 hover:text-[color:var(--acp-primary)]"
                             )}
                             aria-current={active ? "page" : undefined}
-                        >
-                            {route.icon && <span className="text-base">{route.icon}</span>}
-                            <span className="text-center">
-                                {resolveBinding(route.label, state, t) || route.label}
-                            </span>
-                        </a>
-                    );
+                            route={route}
+                            nav={nav}
+                            state={state}
+                            t={t}
+                            active={active}
+                            pathname={pathname}
+                            activeClassName="text-[color:var(--acp-primary)] bg-[color:var(--acp-primary)]/10 font-semibold border-l-2 border-[color:var(--acp-primary)]"
+                            inactiveClassName={"text-foreground/75 " + hoverSoftPrimary}
+                        />)
                 })}
             </div>
         </nav>
     );
 }
 
-/* =======================================================
-🏁 Main Renderer
-======================================================= */
 export function NavRenderer({
     project,
     state,
+    setState,
     t,
+    nav
 }: {
     project: UIProject;
+    setState: (path: string, value: any) => void;
     state: AnyObj;
-    t: (key: string) => string;
+    nav?: NavigationAPI;
+    t: (key: string, defaultLabel?: string) => string;
 }) {
     const [pathname, setPathname] = useState("");
     const [burgerOpen, setBurgerOpen] = useState(false);
@@ -588,15 +683,13 @@ export function NavRenderer({
 
     const navType = navList.desktopNavType; // "top" | "side"
     const mobileNavType = navList.responsiveNavType; // "burger" | "bottom"
-
-    // container/overlay/sheet from NavStyle with safe fallbacks
     const containerStyle = navList.navStyle?.containerStyle;
     const overlayStyle = navList.navStyle?.overlayStyle;
     const sheetStyle = navList.navStyle?.sheetStyle;
+    const requiresAuth = navList.routes.some((r) => r.requiresAuth);
 
     return (
         <>
-            {/* ── Topbar (desktop) ───────────────────────────────────────── */}
             {navType === "top" && evalVisibility(state, t, navList.visibility?.topbar) && (
                 <header
                     className={clsx(
@@ -607,7 +700,6 @@ export function NavRenderer({
                     )}
                     role="banner"
                 >
-                    {/* Brand */}
                     <a
                         href={project.brand.href || "/"}
                         className="flex items-center gap-2"
@@ -624,12 +716,15 @@ export function NavRenderer({
                         )}
                     </a>
 
-                    {/* Desktop Links */}
+
                     <DesktopNav
                         routes={routes}
+                        nav={nav}
                         pathname={pathname}
                         state={state}
+                        setState={setState}
                         t={t}
+                        requiresAuth={requiresAuth}
                         containerStyle={containerStyle}
                     />
 
@@ -650,38 +745,45 @@ export function NavRenderer({
                 </header>
             )}
 
-            {/* ── Sidebar (desktop dashboard) ────────────────────────────── */}
+
             {navType === "side" &&
                 evalVisibility(state, t, navList.visibility?.sidebar) && (
                     <div className="flex">
                         <Sidebar
                             project={project}
+                            nav={nav}
                             routes={routes}
                             pathname={pathname}
                             state={state}
+                            setState={setState}
+                            requiresAuth={requiresAuth}
                             t={t}
                         />
                     </div>
                 )}
 
-            {/* ── Burger Drawer (mobile) ─────────────────────────────────── */}
+
             {mobileNavType === "burger" && (
                 <MobileBurger
                     routes={routes}
+                    nav={nav}
                     pathname={pathname}
                     isOpen={burgerOpen}
                     onClose={() => setBurgerOpen(false)}
                     state={state}
+                    setState={setState}
+                    requiresAuth={requiresAuth}
                     t={t}
                     overlayStyle={overlayStyle}
                     sheetStyle={sheetStyle}
                 />
             )}
 
-            {/* ── Bottom Bar (mobile) ────────────────────────────────────── */}
+
             {mobileNavType === "bottom" && (
                 <BottomNav
                     routes={routes}
+                    nav={nav}
                     pathname={pathname}
                     state={state}
                     t={t}

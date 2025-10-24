@@ -27,7 +27,27 @@ export enum ActionType {
     toast = 'toast',
     websocket_call = 'websocket_call',
 }
+export type ResolveScope = {
+    state?: AnyObj;
+    form?: AnyObj;
+    props?: AnyObj;
+    config?: AnyObj;
+    data?: AnyObj;
+    auth?: AnyObj;
+    user?: AnyObj;
 
+    router?: AnyObj;
+    params?: AnyObj;
+    query?: AnyObj;
+    headers?: AnyObj;
+    request?: AnyObj;
+    url?: AnyObj;
+    location?: AnyObj;
+    cookies?: AnyObj;
+    session?: AnyObj;
+
+    [k: string]: any;
+};
 export interface ActionRuntime {
     /** Navigation & layout */
     openModal?: (id: string) => void;
@@ -1843,6 +1863,7 @@ export interface OAuthProviderConfig {
 export interface OIDCConfig {
     clientId?: string | Binding;
     discoveryUrl?: string;
+    loginUrl?: string;
     issuer: string;
     tokenUrl?: string;
     redirectUri?: string;
@@ -2031,9 +2052,7 @@ export interface UIScreenDef {
     dataMappings?: DataMapping[];
     dataSources?: DataSource[];
     elements: UIElement[];
-    guard?: GuardRule;
     id: string;
-    href: string;
     layoutType: LayoutType;
     lifecycle?: {
         onEnter?: EventHandler;
@@ -2041,7 +2060,6 @@ export interface UIScreenDef {
     };
     metadata: Record<string, string | number | boolean | Record<string, any>>;
     name: Binding;
-    route: string;
     styles?: StyleProps;
     transition?: { type: string; direction?: string; duration: number };
     version: string;
@@ -2050,7 +2068,10 @@ export interface UIScreenDef {
 export interface UIDefinition {
     id: string;
     initialData?: Record<string, any>;
+    guard?: GuardRule;
     screens: UIScreenDef[];
+    href: string;
+    route: string;
     state?: {
         keys?: Record<string, {
             binding?: Binding;

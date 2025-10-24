@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DataSource, AnyObj, UIProject, DataMapping, UIScreenDef } from "../types";
 import { resolveDataSource, joinUrl } from "../lib/utils";
-import { useAuth } from "./useActionHandler";
+import { useAuth } from "./useAuth";
 
 type Fetcher = (
     ds: DataSource,
@@ -231,6 +231,22 @@ function setupGraphQLSubscription(
         protocol
     );
 }
+function extractBindings(obj: any): string[] {
+    if (!obj) return [];
+    const str = JSON.stringify(obj);
+    const matches = str.match(/{{\s*([^}]+)\s*}}/g) || [];
+    return matches.map(m => m.replace(/{{\s*|\s*}}/g, ""));
+}
+
+function isResolvable(path: string, state: AnyObj): boolean {
+    const parts = path.split(".");
+    let cur: any = state;
+    for (const p of parts) {
+        if (cur == null || !(p in cur)) return false;
+        cur = cur[p];
+    }
+    return true;
+}
 
 export function useDataSources({
     dataSources = [],
@@ -251,7 +267,7 @@ export function useDataSources({
     const timers = useRef<Record<string, NodeJS.Timeout>>({});
     const wsCleanups = useRef<Record<string, () => void>>({});
     const abortControllers = useRef<Record<string, AbortController>>({});
-    const { token } = useAuth(globalConfig);
+    const { token } = useAuth();
 
     const resolved = useMemo(() => {
         return dataSources
@@ -274,10 +290,8 @@ export function useDataSources({
     }, [globalConfig, screen]);
 
     useEffect(() => {
-        // ✅ Prevent running if there are no data sources
         if (!resolved.length) return;
 
-        // ✅ Guard against multiple mounts in React Strict Mode
         let initialized = false;
         if (initialized) return;
         initialized = true;
@@ -375,7 +389,6 @@ export function useDataSources({
                     }
                 }
 
-                // ✅ Optional polling (only if explicitly defined)
                 if (
                     ds.pollingInterval &&
                     ds.method !== "WEBSOCKET" &&
@@ -406,7 +419,6 @@ export function useDataSources({
             Object.values(wsCleanups.current).forEach((c) => c());
             wsCleanups.current = {};
         };
-        // ✅ Empty dependency array: run once
     }, []);
 
     useEffect(() => {

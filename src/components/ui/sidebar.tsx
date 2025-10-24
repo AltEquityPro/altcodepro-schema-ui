@@ -723,7 +723,7 @@ function SidebarRenderer({
 
       {/* Content Groups */}
       <SidebarContent>
-        {element.groups.map((group) => (
+        {element?.groups?.map((group) => (
           <SidebarGroup key={group.id}>
             <SidebarGroupLabel>
               {resolveBinding(group.label, state, t)}

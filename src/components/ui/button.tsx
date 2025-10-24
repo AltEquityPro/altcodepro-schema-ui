@@ -73,7 +73,6 @@ const buttonVariants: Record<string, string> = {
     disabled:opacity-50 disabled:cursor-not-allowed
   `,
 
-  /* ✅ SUCCESS, ⚠️ WARNING, ❌ DANGER */
   success: `
     bg-green-600 text-white hover:bg-green-700 focus:ring-2 focus:ring-green-400
     disabled:opacity-50 disabled:cursor-not-allowed
@@ -90,9 +89,9 @@ const buttonVariants: Record<string, string> = {
 
 
 const sizeClasses: Record<string, string> = {
-  default: "h-9 px-4 py-2 has-[>svg]:px-3",
-  sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5 text-sm",
-  lg: "h-10 rounded-md px-6 has-[>svg]:px-4 text-base",
+  default: "px-4 py-2 has-[>svg]:px-3",
+  sm: "rounded-md gap-1.5 px-3 has-[>svg]:px-2.5 text-sm",
+  lg: "rounded-md px-6 has-[>svg]:px-4 text-base",
   icon: "size-9",
 };
 
@@ -152,7 +151,7 @@ export function ButtonRenderer({
   const variantClass = styles?.includes('bg-') && styles?.includes('text-') ? "" : buttonVariants[(element.variant || 'primary')] ?? "";
 
   const resolvedBinding = useMemo(
-    () => (binding: Binding) => resolveBinding(binding, state, t),
+    () => (binding: Binding) => resolveBinding(binding, state, t) || '',
     [state, t]
   );
 

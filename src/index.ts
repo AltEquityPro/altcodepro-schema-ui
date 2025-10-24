@@ -2,7 +2,6 @@
 export * from "./schema/useActionHandler";
 export * from "./schema/useDataSources";
 export * from "./schema/ElementResolver";
-export * from "./schema/ProjectRouter";
 export * from "./schema/ScreenRenderer";
 export * from "./schema/StateContext";
 export * from "./types";
@@ -284,6 +283,8 @@ import { Toolbar, ToolbarButton, ToolbarToggleGroup, ToolbarSeparator } from "@r
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 import { NavLink } from "./components/ui/navLink";
+import { getJSONLD, getMetaData } from "./lib/meta";
+import { ProjectLayout } from "./schema/ProjectLayout";
 export {
     AccessibleIcon,
     Accordion,
@@ -466,6 +467,7 @@ export {
     Portal,
     Progress,
     ProgressRenderer,
+    ProjectLayout,
     QRCodeRenderer,
     RadioGroup,
     RadioGroupItem,
@@ -569,4 +571,6 @@ export {
     VoiceRenderer,
     WalletRenderer,
     WizardGroup,
+    getMetaData,
+    getJSONLD
 };

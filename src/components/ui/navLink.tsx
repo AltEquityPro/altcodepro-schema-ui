@@ -1,16 +1,29 @@
+import { AnyObj, IRoute, NavigationAPI } from "../../types";
 import { resolveBinding } from "../../lib/utils";
 import clsx from "clsx";
+import { DynamicIcon } from "./dynamic-icon";
 
 export function NavLink({
     route,
     active,
     nav,
+    pathname,
     className,
     activeClassName,
     inactiveClassName,
     state,
     t,
-}: any) {
+}: {
+    route: IRoute;
+    active: boolean;
+    pathname: string;
+    nav?: NavigationAPI;
+    className: string;
+    activeClassName: string;
+    inactiveClassName: string;
+    state: AnyObj;
+    t: (key: string) => string
+}) {
     const label = resolveBinding(route.label, state, t) || route.label;
 
     const handleClick = (e: React.MouseEvent) => {
@@ -31,7 +44,7 @@ export function NavLink({
                 className
             )}
         >
-            {label}
+            {route.icon && <DynamicIcon name={route.icon} />}  {label}
         </button>
     );
 }

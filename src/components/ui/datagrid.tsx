@@ -10,7 +10,7 @@ import { useVirtualizer } from "@tanstack/react-virtual"
 import { ArrowUpDown, MoreHorizontal, ChevronDown } from "lucide-react"
 import { Calendar } from "../../components/ui/calendar"
 import { DataGridElement, DataGridCol, ElementType, InputType, DataSource, EventHandler, AnyObj } from "../../types"
-import { resolveBinding, deepResolveBindings, cn } from "../../lib/utils"
+import { deepResolveBindings, cn, resolveBinding } from "../../lib/utils"
 import { useDataSources } from "../../schema/useDataSources"
 import { Checkbox } from "../../components/ui/checkbox"
 import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog"
@@ -28,6 +28,7 @@ import { Skeleton } from "./skeleton"
 import { TableHeader, TableRow, TableHead, TableBody, TableCell, Table } from "./table"
 import { Button } from "./button"
 import { Badge } from "./badge"
+import { DynamicIcon } from "./dynamic-icon";
 
 
 interface DataGridProps {
@@ -56,17 +57,15 @@ const getFilterFn = (type?: string) => {
 }
 
 export function DataGrid({ element, dataSources, setState, state, t, runEventHandler }: DataGridProps) {
-
-    const [sorting, setSorting] = useState<SortingState>(resolveBinding(element.sorting, state, t) || [])
-    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(resolveBinding(element.filters, state, t) || [])
-    const [globalFilter, setGlobalFilter] = useState<string>(resolveBinding(element.globalFilter, state, t) || "")
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(resolveBinding(element.columnVisibility, state, t) || {})
+    const [sorting, setSorting] = useState<SortingState>(deepResolveBindings(element.sorting, state, t) || [])
+    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(deepResolveBindings(element.filters, state, t) || [])
+    const [globalFilter, setGlobalFilter] = useState<string>(deepResolveBindings(element.globalFilter, state, t) || "")
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(deepResolveBindings(element.columnVisibility, state, t) || {})
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
     const [pagination, setPagination] = useState<PaginationState>({
-        pageIndex: resolveBinding(element.currentPage, state, t) ?? 0,
+        pageIndex: deepResolveBindings(element.currentPage, state, t) ?? 0,
         pageSize: element.pageSize ?? 10,
     })
-    const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
     const [editingRowId, setEditingRowId] = useState<string | null>(null)
     const [editingCell, setEditingCell] = useState<{ rowId: string; colKey: string } | null>(null)
     const [modalOpen, setModalOpen] = useState(false)
@@ -82,7 +81,6 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
         } else {
             raw = resolveBinding(element.rows, state, t) || [];
         }
-
         // 🔹 Normalize rows if they come in "cells" format
         if (Array.isArray(raw) && raw.length > 0 && raw[0]?.cells) {
             return raw.map((r: any) => {
@@ -97,8 +95,7 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
         return raw;
     }, [element, resolvedDataSources, state, t]);
 
-
-    const totalCount = resolveBinding(element.totalCount, state, t) ?? data.length
+    const totalCount = deepResolveBindings(element.totalCount, state, t) ?? data.length
 
     const columns: ColumnDef<any>[] = useMemo(() => {
         const cols: ColumnDef<any>[] = []
@@ -155,7 +152,7 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                             variant="ghost"
                             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                         >
-                            {resolveBinding(resolvedCol.header, state, t)}
+                            {deepResolveBindings(resolvedCol.header, state, t)}
                             <ArrowUpDown className="ml-2 h-4 w-4" />
                         </Button>
                     ) : (
@@ -186,6 +183,7 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                 enableHiding: !resolvedCol.hidden,
                 enableResizing: resolvedCol.resizable,
                 enablePinning: !!resolvedCol.pinned,
+                id: resolvedCol.key || col.key || col.header?.toString(),
             })
         })
 
@@ -205,7 +203,7 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 {actions.map((action) => {
-                                    const show = action.condition ? resolveBinding(action.condition, { ...state, row: row.original }, t) : true
+                                    const show = action.condition ? deepResolveBindings(action.condition, { ...state, row: row.original }, t) : true
                                     if (!show) return null
                                     return (
                                         <DropdownMenuItem
@@ -269,7 +267,6 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
             columnVisibility,
             rowSelection,
             pagination,
-            expanded: expandedRows,
         },
         enableColumnResizing: element.resizableColumns,
         enablePinning: true,
@@ -327,8 +324,8 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
 
     const renderCell = (col: DataGridCol, value: any, rowData: any) => {
         const cellClass = typeof col.cellClass === 'function' ? col.cellClass(rowData) :
-            Array.isArray(col.cellClass) ? col.cellClass.find((c: { condition: any }) => resolveBinding(c.condition, { ...state, row: rowData }, t))?.class :
-                resolveBinding(col.cellClass, { ...state, row: rowData }, t)
+            Array.isArray(col.cellClass) ? col.cellClass.find((c: { condition: any }) => deepResolveBindings(c.condition, { ...state, row: rowData }, t))?.class :
+                deepResolveBindings(col.cellClass, { ...state, row: rowData }, t)
 
         switch (col.renderer) {
             case 'image':
@@ -379,7 +376,7 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                             {Array.isArray(col.options)
                                 ? col.options.map((opt: { value: string; label: any }) =>
                                     <SelectItem key={opt.value}
-                                        value={opt.value}>{resolveBinding(opt.label, state, t)}
+                                        value={opt.value}>{deepResolveBindings(opt.label, state, t)}
                                     </SelectItem>)
                                 : null}
                         </SelectContent>
@@ -415,7 +412,7 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                         <SelectContent>
                             {Array.isArray(colDef.options)
                                 ? colDef.options.map((opt: { value: string; label: any }) => <SelectItem key={opt.value}
-                                    value={opt.value}>{resolveBinding(opt.label, state, t)}</SelectItem>)
+                                    value={opt.value}>{deepResolveBindings(opt.label, state, t)}</SelectItem>)
                                 : null}
                         </SelectContent>
                     </Select>
@@ -440,7 +437,7 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                 return (
                     <div className="flex items-center space-x-2">
                         <Switch checked={filterValue} onCheckedChange={v => column.setFilterValue(v)} />
-                        <Label>{resolveBinding(colDef.header, state, t)}</Label>
+                        <Label>{deepResolveBindings(colDef.header, state, t)}</Label>
                     </div>
                 )
             case 'number':
@@ -453,12 +450,12 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
 
     const rowClass = (row: Row<any>) => {
         if (typeof element.rowClass === 'function') return element.rowClass(row.original)
-        if (Array.isArray(element.rowClass)) return element.rowClass.find(c => resolveBinding(c.condition, { ...state, row: row.original }, t))?.class
-        return resolveBinding(element.rowClass, { ...state, row: row.original }, t)
+        if (Array.isArray(element.rowClass)) return element.rowClass.find(c => deepResolveBindings(c.condition, { ...state, row: row.original }, t))?.class
+        return deepResolveBindings(element.rowClass, { ...state, row: row.original }, t)
     }
 
-    const loading = resolveBinding(element.loading, state, t) ?? false
-    const emptyMessage = resolveBinding(element.emptyMessage, state, t) ?? "No data available"
+    const loading = deepResolveBindings(element.loading, state, t) ?? false
+    const emptyMessage = deepResolveBindings(element.emptyMessage, state, t) ?? "No data available"
 
     return (
         <div
@@ -504,20 +501,20 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                         variant={action.variant as any || 'default'}
                         onClick={() => runEventHandler?.(action.onClick, { selectedRows: table.getSelectedRowModel().rows.map(r => r.original) })}
                     >
-                        {action.icon && <span className="mr-2">{action.icon}</span>}
-                        {resolveBinding(action.label, state, t)}
+                        {action.icon && <DynamicIcon className="mr-2" name={action.icon} />}
+                        {deepResolveBindings(action.label, state, t) || null}
                     </Button>
                 ))}
             </div>
             <Table>
                 <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                            {headerGroup.headers?.map((header) => {
+                    {table.getHeaderGroups().map((headerGroup, hi) => (
+                        <TableRow key={`${headerGroup.id}_${hi}`}>
+                            {headerGroup.headers?.map((header, hdi) => {
                                 const meta = header.column.columnDef.meta as any
                                 return (
                                     <TableHead
-                                        key={header.id}
+                                        key={`${header.id}_${headerGroup.id}_${hi}_${hdi}`}
                                         colSpan={header.colSpan}
                                         style={{ width: header.getSize(), textAlign: meta?.align }}
                                         className={cn(meta?.headerClass)}
@@ -537,9 +534,9 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                 <TableBody>
                     {loading ? (
                         Array.from({ length: pagination.pageSize }).map((_, i) => (
-                            <TableRow key={i}>
+                            <TableRow key={`tr_${i}_${_}`}>
                                 {table.getVisibleLeafColumns().map((col, j) => (
-                                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                                    <TableCell key={`${col.id}_${i}_${j}`}><Skeleton className="h-4 w-full" /></TableCell>
                                 ))}
                             </TableRow>
                         ))
@@ -556,11 +553,11 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                                         if (element.onRowClick) runEventHandler?.(element.onRowClick, { row: row.original })
                                     }}
                                 >
-                                    {row.getVisibleCells().map((cell) => {
+                                    {row.getVisibleCells().map((cell, index) => {
                                         const meta = cell.column.columnDef.meta as any
                                         return (
                                             <TableCell
-                                                key={cell.id}
+                                                key={`get-visible${cell.id}-${index}`}
                                                 style={{ textAlign: meta?.align }}
                                                 className={cn(typeof meta?.cellClass === 'function' ? meta.cellClass(row.original) : meta?.cellClass)}
                                                 onDoubleClick={() => {

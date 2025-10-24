@@ -1,2192 +1,561 @@
-import { describe, it, vi, expect, beforeEach } from 'vitest';
-import {
-    cn,
-    useTranslation,
-    safeJsonParse,
-    stripBeforeThinkTag,
-    cleanStartingFile,
-    cleanJsonLikeAIOutput,
-    cleanCodeContent,
-    getProvider,
-    getPath,
-    joinUrl,
-    expandEnvTemplates,
-    sanitizeValue,
-    resolveBinding,
-    deepResolveBindings,
-    setPath,
-    resolveAnimation,
-    validateInput,
-    isVisible,
-    classesFromStyleProps,
-    getAccessibilityProps,
-    getAllScreenImages,
-    getMetaData,
-    getJSONLD,
-    luhnCheck,
-    anySignal,
-    resolveDataSource,
-    deepResolveDataSource,
-    resolveDynamicPath,
-    normalizeBindings,
-    resolveDataSourceValue,
-    hash,
-} from '../src/lib/utils';
-import { DataSource, ImageElement, StyleProps, UIDefinition, UIProject } from '../src/types';
-
-// ✅ Mock dependencies
-import * as utils from "../src/lib/utils";
-
-// mock fetch globally
-global.fetch = vi.fn();
-
-// base fixtures
-const baseRoute = {
-    href: "/dashboard",
-    label: "Dashboard",
-    metadata: {
-        title: "Dashboard | AltCodePro",
-        description: "Main user dashboard",
-        keywords: ["dashboard", "ai"],
-        openGraph: { title: "OG Dashboard", description: "OG Description", url: "https://altcode.pro/dashboard" },
-        twitter: { title: "Twitter Dashboard", description: "Twitter Desc" },
-    },
-};
-
-const baseProject = {
-    brand: {
-        name: "AltCodePro",
-        logoUrl: "/logo.png",
-        faviconUrl: "/favicon.ico",
-        slogan: "AI for everything",
-    },
-    globalConfig: {
-        metadata: {
-            twitter: { site: "@AltCodePro" },
-            pinterest: { handle: "pinterestHandle" },
-            facebook: { page: "fbpage" },
-            verification: { google: "google123" },
-            category: "AI",
-            classification: "Software",
-        },
-    },
-};
-// Mock dependencies
-vi.mock('ethers', () => ({
-    BrowserProvider: class {
-        constructor(ethereum: any) {
-            return ethereum;
-        }
-    },
-}));
-vi.mock('strip-json-comments', () => ({
-    default: (str: string) => str,
-}));
-vi.mock('fetch', () => ({
-    default: vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) })),
-}));
-vi.mock("../src/lib/utils", async (importOriginal) => {
-    const mod = await importOriginal<typeof import("../src/lib/utils")>();
-    return {
-        ...mod,
-        resolveBinding: (val: any, state: any) => {
-            if (typeof val === "string" && val.startsWith("state.")) {
-                const key = val.replace(/^state\./, "");
-                return state[key];
-            }
-            return val;
-        },
-    };
-});
-
-describe('resolveDataSourceValue', () => {
-    const state = {
-        user: {
-            id: 'u123',
-            token: 'abc123',
-            organization_id: 'org42',
-        },
-        auth: {
-            user: { id: 'u123', org_id: 'org42' },
-            token: 'abc123',
-        },
-        organization: {
-            id: 'org42',
-            name: 'AltCodePro Ltd',
-        },
-        project: {
-            id: 'p555',
-        },
-    };
-
-    it('resolves {user.organization_id}', () => {
-        const result = resolveDataSourceValue(
-            '/v1/organization/{user.organization_id}/projects',
-            state
-        );
-        expect(result).toBe('/v1/organization/org42/projects');
-    });
-
-    it('resolves {{user.organization_id}} double braces syntax', () => {
-        const result = resolveDataSourceValue(
-            "https://api.altcode.pro/v1/organization/{{user.organization_id}}/projects",
-            state
-        );
-        expect(result).toBe('https://api.altcode.pro/v1/organization/org42/projects');
-    });
-
-    it('resolves {auth.token} placeholder', () => {
-        const result = resolveDataSourceValue('Bearer {auth.token}', state);
-        expect(result).toBe('Bearer abc123');
-    });
-
-    it('resolves nested {organization.name}', () => {
-        const result = resolveDataSourceValue('Org: {organization.name}', state);
-        expect(result).toBe('Org: AltCodePro Ltd');
-    });
-
-    it('handles missing keys gracefully', () => {
-        const result = resolveDataSourceValue('/v1/{missing_key}/test', state);
-        expect(result).toBe('/v1//test');
-    });
-
-    it('resolves form bindings when extra is provided', () => {
-        const extra = { email: 'test@example.com' };
-        const result = resolveDataSourceValue('/v1/user/{form.email}', state, extra);
-        expect(result).toBe('/v1/user/test@example.com');
-    });
-
-    it('resolves plain string unchanged', () => {
-        const result = resolveDataSourceValue('/v1/static/url', state);
-        expect(result).toBe('/v1/static/url');
-    });
-});
-
-describe('cn', () => {
-    it('should combine class names using clsx', () => {
-        expect(cn('class1', 'class2')).toBe('class1 class2');
-        expect(cn(['class1', 'class2'], { class3: true })).toBe('class1 class2 class3');
-        expect(cn('class1', null, undefined, false, 'class2')).toBe('class1 class2');
-    });
-});
-
-describe('useTranslation', () => {
-    it('should return translated value for given locale and key', () => {
-        const translations = {
-            en: { hello: 'Hello World' },
-            es: { hello: 'Hola Mundo' },
-        };
-        const t = useTranslation(translations, 'en');
-        expect(t('hello')).toBe('Hello World');
-        expect(t('missing')).toBe('missing');
-    });
-
-    it('should handle missing locale', () => {
-        const translations = {
-            en: { hello: 'Hello World' },
-        };
-        const t = useTranslation(translations, 'es');
-        expect(t('hello')).toBe('hello');
-    });
-});
-
-describe('safeJsonParse', () => {
-    it('should parse valid JSON', () => {
-        const result = safeJsonParse('{"key": "value"}');
-        expect(result.parsed).toEqual({ key: 'value' });
-        expect(result.error).toBeNull();
-    });
-
-    it('should handle invalid JSON', () => {
-        const result = safeJsonParse('invalid json');
-        expect(result.parsed).toBeNull();
-        expect(result.error).toBeDefined();
-    });
-});
-
-describe('stripBeforeThinkTag', () => {
-    it('should return content after the last </think> tag', () => {
-        const input = 'before </think> content </think> final';
-        expect(stripBeforeThinkTag(input)).toBe(' final');
-    });
-
-    it('should return full content if no </think> tag', () => {
-        const input = 'no think tag';
-        expect(stripBeforeThinkTag(input)).toBe('no think tag');
-    });
-});
-
-describe('cleanStartingFile', () => {
-    it('should remove comments and start from first JSON-like character', () => {
-        const input = '-- comment --\n{ "key": "value" }';
-        expect(cleanStartingFile(input)).toBe('{ "key": "value" }');
-    });
-
-    it('should handle arrays', () => {
-        const input = '-- comment --\n[1, 2, 3]';
-        expect(cleanStartingFile(input)).toBe('[1, 2, 3]');
-    });
-
-    it('should return original string if no JSON-like start', () => {
-        const input = '-- comment --\ntext';
-        expect(cleanStartingFile(input)).toBe('text');
-    });
-});
-
-describe('cleanJsonLikeAIOutput', () => {
-    it('should clean and parse valid JSON-like content', () => {
-        const input = '```json\n{ "key": "value" }\n```';
-        expect(cleanJsonLikeAIOutput(input)).toBe('{\n  "key": "value"\n}');
-    });
-
-    it('should handle extra commas', () => {
-        const input = '{ "key": "value", }';
-        expect(cleanJsonLikeAIOutput(input)).toBe('{\n  "key": "value"\n}');
-    });
-
-    it('should balance brackets', () => {
-        const input = '{ "key": "value"';
-        expect(cleanJsonLikeAIOutput(input)).toBe('{\n  "key": "value"\n}');
-    });
-
-    it('should return empty string for empty input', () => {
-        expect(cleanJsonLikeAIOutput('')).toBe('');
-    });
-});
-
-describe('cleanCodeContent', () => {
-    it('should clean JSON content', () => {
-        const input = {
-            fileContent: '```json\n{ "key": "value" }\n```',
-            ext: 'json',
-        };
-        expect(cleanCodeContent(input)).toBe('{\n  "key": "value"\n}');
-    });
-
-    it('should clean markdown content', () => {
-        const input = {
-            fileContent: '---\nmeta: data\n---\nContent',
-            ext: 'md',
-        };
-        expect(cleanCodeContent(input)).toBe('Content');
-    });
-
-    it('should handle plain text', () => {
-        const input = {
-            fileContent: 'plain text',
-            ext: 'txt',
-        };
-        expect(cleanCodeContent(input)).toBe('plain text');
-    });
-});
-
-describe('getProvider', () => {
-    it('should return BrowserProvider if window.ethereum exists', () => {
-        (global as any).window = { ethereum: {} };
-        expect(getProvider()).toEqual({});
-        delete (global as any).window;
-    });
-
-    it('should throw error if no Ethereum provider', () => {
-        (global as any).window = {};
-        expect(() => getProvider()).toThrow('No Ethereum provider found');
-        delete (global as any).window;
-    });
-});
-
-describe("getPath", () => {
-    const data = {
-        user: {
-            id: 1,
-            name: "Alice",
-            address: {
-                city: "London",
-                zip: "E1 6AN",
-            },
-        },
-        items: [
-            { name: "Book", price: 10 },
-            { name: "Pen", price: 2 },
-        ],
-    };
-
-    it("retrieves top-level property", () => {
-        expect(getPath(data, "user")).toEqual(data.user);
-    });
-
-    it("retrieves nested property", () => {
-        expect(getPath(data, "user.name")).toBe("Alice");
-        expect(getPath(data, "user.address.city")).toBe("London");
-    });
-
-    it("returns undefined for missing property", () => {
-        expect(getPath(data, "user.age")).toBeUndefined();
-        expect(getPath(data, "nonexistent.path")).toBeUndefined();
-    });
-
-    it("handles numeric keys for arrays", () => {
-        expect(getPath(data, "items.0.name")).toBe("Book");
-        expect(getPath(data, "items.1.price")).toBe(2);
-    });
-
-    it("returns undefined for out-of-range array index", () => {
-        expect(getPath(data, "items.5.name")).toBeUndefined();
-    });
-
-    it("returns undefined when obj is null or undefined", () => {
-        expect(getPath(null as any, "user.name")).toBeUndefined();
-        expect(getPath(undefined as any, "user.name")).toBeUndefined();
-    });
-
-    it("returns undefined when path is empty or falsy", () => {
-        expect(getPath(data, "")).toBeUndefined();
-        expect(getPath(data, null as any)).toBeUndefined();
-    });
-
-    it("stops traversal early when intermediate value is null or undefined", () => {
-        const obj = { a: { b: null } };
-        expect(getPath(obj, "a.b.c")).toBeUndefined();
-    });
-
-    it("handles paths with numeric-like string keys", () => {
-        const obj = { "2024": { name: "Year Data" } };
-        expect(getPath(obj, "2024.name")).toBe("Year Data");
-    });
-
-    it("returns nested object intact when full path resolves", () => {
-        const result = getPath(data, "user.address");
-        expect(result).toEqual({ city: "London", zip: "E1 6AN" });
-    });
-});
-
-describe("joinUrl", () => {
-    it("joins base and path with a single slash", () => {
-        const result = joinUrl("https://api.example.com", "users");
-        expect(result).toBe("https://api.example.com/users");
-    });
-
-    it("removes trailing slash from base and leading slash from path", () => {
-        const result = joinUrl("https://api.example.com/", "/users");
-        expect(result).toBe("https://api.example.com/users");
-    });
-
-    it("handles multiple trailing and leading slashes cleanly", () => {
-        const result = joinUrl("https://api.example.com///", "///v1/users");
-        expect(result).toBe("https://api.example.com/v1/users");
-    });
-
-    it("works when base has no slash and path starts with one", () => {
-        const result = joinUrl("https://api.example.com", "/v1");
-        expect(result).toBe("https://api.example.com/v1");
-    });
-
-    it("works when base ends with slash and path has no leading slash", () => {
-        const result = joinUrl("https://api.example.com/", "v1");
-        expect(result).toBe("https://api.example.com/v1");
-    });
-
-    it("joins deeply nested paths correctly", () => {
-        const result = joinUrl("https://api.example.com/base/", "/sub/dir/");
-        expect(result).toBe("https://api.example.com/base/sub/dir/");
-    });
-
-    it("handles empty path", () => {
-        const result = joinUrl("https://api.example.com/", "");
-        expect(result).toBe("https://api.example.com/");
-    });
-
-    it("handles empty base", () => {
-        const result = joinUrl("", "/path/to/api");
-        expect(result).toBe("/path/to/api");
-    });
-
-    it("handles both empty base and path", () => {
-        const result = joinUrl("", "");
-        expect(result).toBe("/");
-    });
-
-    it("preserves URL protocol and query strings in base", () => {
-        const result = joinUrl("https://api.example.com/?token=abc", "/users");
-        // trailing ?token=abc/ → kept properly since regex only removes slashes
-        expect(result).toBe("https://api.example.com/?token=abc/users");
-    });
-});
-
-describe("expandEnvTemplates", () => {
-    const mockReadEnv = vi.fn();
-
-    beforeEach(async () => {
-        vi.resetModules();
-    });
-    it("replaces a single ${VAR} with value from readEnv", async () => {
-
-        mockReadEnv.mockImplementation((k) => (k === "API_URL" ? "https://api.test" : ""));
-        const result = expandEnvTemplates("Base URL: ${API_URL}");
-        expect(result).toBe("Base URL: https://api.test");
-        expect(mockReadEnv).toHaveBeenCalledWith("API_URL");
-    });
-
-    it("replaces multiple ${VAR} placeholders in one string", async () => {
-
-        mockReadEnv.mockImplementation((k) =>
-            ({ API_URL: "https://api.test", TOKEN: "abc123" } as any)[k]
-        );
-        const result = expandEnvTemplates("URL=${API_URL}, TOKEN=${TOKEN}");
-        expect(result).toBe("URL=https://api.test, TOKEN=abc123");
-    });
-
-    it("returns empty string for missing variables", async () => {
-
-        mockReadEnv.mockReturnValue(undefined);
-        const result = expandEnvTemplates("Missing: ${UNKNOWN}");
-        expect(result).toBe("Missing: ");
-    });
-
-    it("ignores lowercase or invalid variable names", async () => {
-
-        mockReadEnv.mockReturnValue("shouldNotBeCalled");
-        const result = expandEnvTemplates("Path: ${api_url} ${SomeVar}");
-        expect(result).toBe("Path: ${api_url} ${SomeVar}"); // no match since pattern only allows [A-Z0-9_]
-        expect(mockReadEnv).not.toHaveBeenCalled();
-    });
-
-    it("works when no template variables exist", async () => {
-
-        const input = "This string has no vars";
-        const result = expandEnvTemplates(input);
-        expect(result).toBe(input);
-    });
-
-    it("handles adjacent placeholders", async () => {
-
-        mockReadEnv.mockImplementation((k) =>
-            ({ A: "x", B: "y", C: "z" } as any)[k]
-        );
-        const result = expandEnvTemplates("${A}${B}${C}");
-        expect(result).toBe("xyz");
-    });
-
-    it("handles missing and existing variables together", async () => {
-
-        mockReadEnv.mockImplementation((k) => (k === "A" ? "X" : undefined));
-        const result = expandEnvTemplates("A=${A}, B=${B}");
-        expect(result).toBe("A=X, B=");
-    });
-
-    it("returns empty string if input is empty", async () => {
-
-        const result = expandEnvTemplates("");
-        expect(result).toBe("");
-    });
-});
-
-describe("sanitizeValue", () => {
-    it("returns empty string for null or undefined", () => {
-        expect(sanitizeValue(null)).toBe("");
-        expect(sanitizeValue(undefined)).toBe("");
-    });
-
-    it("returns array as-is (no stringification)", () => {
-        const arr = [1, 2, 3];
-        const result = sanitizeValue(arr);
-        expect(result).toBe(arr); // same reference
-    });
-
-    it("stringifies plain objects correctly", () => {
-        const obj = { a: 1, b: "two" };
-        const result = sanitizeValue(obj);
-        expect(result).toBe(JSON.stringify(obj));
-    });
-
-    it("handles nested objects safely", () => {
-        const obj = { user: { id: 1, name: "Alice" } };
-        const result = sanitizeValue(obj);
-        expect(result).toBe(JSON.stringify(obj));
-    });
-
-    it("returns stringified representation for circular objects", () => {
-        const obj: any = { a: 1 };
-        obj.self = obj; // create circular reference
-        const result = sanitizeValue(obj);
-        // Fallback to String(obj) if JSON.stringify fails
-        expect(result).toContain("[object Object]");
-    });
-
-    it("returns stringified object for non-plain object (Date)", () => {
-        const date = new Date("2024-01-01T00:00:00Z");
-        const result = sanitizeValue(date);
-        expect(result).toBe(JSON.stringify(date));
-    });
-
-    it("converts boolean values to string", () => {
-        expect(sanitizeValue(true)).toBe("true");
-        expect(sanitizeValue(false)).toBe("false");
-    });
-
-    it("converts numbers to string", () => {
-        expect(sanitizeValue(123)).toBe("123");
-        expect(sanitizeValue(0)).toBe("0");
-    });
-
-    it("returns input string unchanged as string", () => {
-        expect(sanitizeValue("hello")).toBe("hello");
-    });
-
-    it("handles symbols safely by converting to string", () => {
-        const sym = Symbol("test");
-        expect(sanitizeValue(sym)).toBe(String(sym));
-    });
-
-    it("handles functions by converting to string", () => {
-        const fn = () => 42;
-        const val = sanitizeValue(fn);
-        expect(typeof val).toBe("string");
-        expect(val.length).toBeGreaterThan(0);
-    });
-});
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { resolveBinding, deepResolveBindings } from "../src/lib/utils";
 
 describe("resolveBinding", () => {
-    const t = vi.fn((k) => {
-        const translations: Record<string, string> = {
-            welcome: "Welcome",
-            "en.greeting": "Hello",
-            greeting: "Hello",
-            "footer.contact": "Contact Us",
-        };
-        return translations[k] ?? k;
-    });
-    const mockGetPath = vi.fn();
-    const mockSanitizeValue = vi.fn((v) => v);
-    const mockReadEnv = vi.fn();
-    const mockExpandEnvTemplates = vi.fn((v) => v);
+    let t: (k: string) => string;
+    let state: any;
 
-    beforeEach(async () => {
-        vi.resetModules();
-        const mockGetPath = vi.hoisted(() => vi.fn());
-        const mockReadEnv = vi.hoisted(() => vi.fn());
-        const mockExpandEnv = vi.hoisted(() => vi.fn((s) => s));
-        const mockSanitize = vi.hoisted(() => vi.fn((v) => v));
-
-        vi.mock("../src/lib/utils", async (importOriginal) => {
-            const mod = await importOriginal<typeof import("../src/lib/utils")>();
-            return {
-                ...mod,
-                getPath: mockGetPath,
-                readEnv: mockReadEnv,
-                expandEnvTemplates: mockExpandEnv,
-                sanitizeValue: mockSanitize,
+    beforeEach(() => {
+        // Mock translation function
+        t = vi.fn((k: string) => {
+            const translations: Record<string, string> = {
+                "i18n.welcome": "Welcome!",
+                "en.greeting": "Hello, {{user.name}}!",
+                "dashboard.welcome": "Welcome to dashboard, {{user.name}}",
+                "dashboard.copy_referral_link": "Copy your referral link",
+                "cyclic.key": "{{cyclic.key}}", // Simulate cyclic translation
+                "deep.key": "{{deep.key}}", // Simulate recursive translation
             };
-        });
-    });
-
-    const state = {
-        user: { name: "Alice", id: 42 },
-        form: { email: "alice@example.com" },
-        env: { API_DOMAIN: "api.altcode.pro" },
-    };
-
-    it("returns empty string when value is null or undefined", async () => {
-
-        expect(resolveBinding(null, state, t)).toBe("");
-        expect(resolveBinding(undefined, state, t)).toBe("");
-    });
-
-    it("resolves i18n key via translator", async () => {
-
-        const result = resolveBinding("i18n.welcome", state, t);
-        expect(result).toBe("Welcome");
-    });
-
-    it("resolves translations.<locale>.<key> format", async () => {
-
-        const result = resolveBinding("translations.en.greeting", state, t);
-        expect(result).toBe("Hello");
-    });
-
-    it("resolves state.<path> via getPath()", async () => {
-
-        mockGetPath.mockReturnValue("Alice");
-        const result = resolveBinding("state.user.name", state, t);
-        expect(mockGetPath).toHaveBeenCalledWith(state, "user.name");
-        expect(result).toBe("Alice");
-    });
-
-    it("resolves form.<path>", async () => {
-
-        mockGetPath.mockReturnValue("alice@example.com");
-        const result = resolveBinding("form.email", state, t);
-        expect(result).toBe("alice@example.com");
-    });
-
-    it("resolves {form.<path>} or {{form.<path>}} syntax", async () => {
-
-        mockGetPath.mockReturnValue("bob@example.com");
-        expect(resolveBinding("{form.email}", state, t)).toBe("bob@example.com");
-        expect(resolveBinding("{{form.email}}", state, t)).toBe("bob@example.com");
-    });
-
-    it("resolves env.<VAR> via readEnv()", async () => {
-
-        mockReadEnv.mockReturnValue("dev.altcode.pro");
-        const result = resolveBinding("env.API_DOMAIN", state, t);
-        expect(result).toBe("dev.altcode.pro");
-    });
-
-    it("resolves UPPERCASE ENV constants directly", async () => {
-
-        mockReadEnv.mockReturnValue("constant.value");
-        const result = resolveBinding("API_ENDPOINT", state, t);
-        expect(mockReadEnv).toHaveBeenCalledWith("API_ENDPOINT");
-        expect(result).toBe("constant.value");
-    });
-
-    it("resolves template strings with {{state.*}} and {form.*}", async () => {
-
-        mockGetPath.mockImplementation((_, path) => {
-            if (path === "user.name") return "Alice";
-            if (path === "form.email") return "alice@example.com";
+            return translations[k] ?? k;
         });
 
-        const input = "Hello {{state.user.name}} ({{form.email}})";
-        const result = resolveBinding(input, state, t);
+        // Mock global env
+        process.env = {
+            API_URL: "https://api.example.com",
+            API_DOMAIN: "https://envdomain.io",
+            USER_TOKEN: "abc123",
+        } as any;
 
-        expect(result).toBe("Hello Alice (alice@example.com)");
-    });
-
-    it("resolves mixed env + state templates", async () => {
-
-        mockGetPath.mockImplementation((_, path) => {
-            if (path === "user.id") return 42;
-        });
-        mockReadEnv.mockReturnValue("api.altcode.pro");
-
-        const input = "https://{{env.API_DOMAIN}}/users/{{state.user.id}}";
-        const result = resolveBinding(input, state, t);
-
-        expect(result).toBe("https://api.altcode.pro/users/42");
-    });
-
-    it("resolves nested template placeholders recursively", async () => {
-
-        mockGetPath.mockReturnValue("42");
-        mockReadEnv.mockReturnValue("api.altcode.pro");
-        const input = "{{env.API_DOMAIN}}/{{state.user.id}}";
-        const result = resolveBinding(input, state, t);
-        expect(result).toBe("api.altcode.pro/42");
-    });
-
-    it("handles translation-like keys heuristically", async () => {
-
-        const result = resolveBinding("footer.contact", state, t);
-        expect(result).toBe("Contact Us");
-    });
-
-    it("returns state value fallback if translation not found", async () => {
-
-        mockGetPath.mockReturnValue("dynamic");
-        const result = resolveBinding("state.dynamicKey", state, t);
-        expect(result).toBe("dynamic");
-    });
-
-    it("expands env templates in state strings", async () => {
-
-        mockGetPath.mockReturnValue("${API_DOMAIN}/users");
-        mockExpandEnvTemplates.mockReturnValue("api.altcode.pro/users");
-
-        const result = resolveBinding("state.userEndpoint", state, t);
-        expect(result).toBe("api.altcode.pro/users");
-    });
-
-    it("returns literal string as final fallback", async () => {
-
-        const result = resolveBinding("literal_value", state, t);
-        expect(result).toBe("literal_value");
-    });
-});
-
-describe("deepResolveBindings", () => {
-    const t = vi.fn((k) => `translated:${k}`);
-    const mockResolveBinding = vi.hoisted(() => vi.fn());
-
-    beforeEach(async () => {
-        vi.resetModules();
-
-        vi.mock("../src/lib/utils", async (importOriginal) => {
-            const mod = await importOriginal<typeof import("../src/lib/utils")>();
-            return {
-                ...mod,
-                resolveBinding: mockResolveBinding,
-            };
-        });
-    });
-
-    const state = {
-        user: { name: "Alice", id: 42 },
-        app: { lang: "en" },
-    };
-
-    it("returns null or undefined as-is", async () => {
-
-        expect(deepResolveBindings(null, state, t)).toBeNull();
-        expect(deepResolveBindings(undefined, state, t)).toBeUndefined();
-    });
-
-    it("resolves primitive strings via resolveBinding()", async () => {
-
-        mockResolveBinding.mockReturnValue("resolvedValue");
-        const result = deepResolveBindings("state.user.name", state, t);
-        expect(mockResolveBinding).toHaveBeenCalledWith("state.user.name", state, t);
-        expect(result).toBe("resolvedValue");
-    });
-
-    it("returns primitive numbers/booleans unchanged", async () => {
-
-        expect(deepResolveBindings(123, state, t)).toBe(123);
-        expect(deepResolveBindings(true, state, t)).toBe(true);
-    });
-
-    it("resolves arrays recursively (primitive + objects)", async () => {
-
-        mockResolveBinding.mockImplementation((val) => `resolved(${val})`);
-
-        const input = ["state.user.id", { value: "state.user.name", label: "translations.hello" }];
-        const result = deepResolveBindings(input, state, t);
-
-        expect(mockResolveBinding).toHaveBeenCalledTimes(3); // 2 strings + nested
-        expect(result).toEqual([
-            "resolved(state.user.id)",
-            { value: "resolved(state.user.name)", label: "resolved(translations.hello)" },
-        ]);
-    });
-
-    it("resolves plain objects recursively", async () => {
-
-        mockResolveBinding.mockImplementation((val) => `resolved(${val})`);
-
-        const input = {
-            user: { binding: "state.user.name" },
-            message: "translations.greeting",
-        };
-        const result = deepResolveBindings(input, state, t);
-
-        // binding object triggers resolveBinding directly
-        expect(mockResolveBinding).toHaveBeenCalledWith({ binding: "state.user.name" }, state, t);
-        expect(result.user).toBeDefined();
-        expect(result.message).toBe("resolved(translations.greeting)");
-    });
-
-    it("handles deeply nested structures correctly", async () => {
-
-        mockResolveBinding.mockImplementation((val) => `resolved(${val})`);
-
-        const input = {
-            a: {
-                b: [
-                    { label: "translations.welcome" },
-                    "state.user.id",
-                    { nested: { val: "i18n.hello" } },
-                ],
+        state = {
+            user: {
+                id: "u1",
+                name: "Sireesh",
+                profile: { display_name: "S. Panglauri" },
             },
-        };
-
-        const result = deepResolveBindings(input, state, t);
-        expect(result).toEqual({
-            a: {
-                b: [
-                    { label: "resolved(translations.welcome)" },
-                    "resolved(state.user.id)",
-                    { nested: { val: "resolved(i18n.hello)" } },
-                ],
+            form: {
+                email: "test@example.com",
+                password: "secret",
             },
-        });
-    });
-
-    it("skips non-plain objects (Date, FormData, File)", async () => {
-
-        const date = new Date();
-        const file = new File(["data"], "test.txt");
-        const fd = new FormData();
-        expect(deepResolveBindings(date, state, t)).toBe(date);
-        expect(deepResolveBindings(file, state, t)).toBe(file);
-        expect(deepResolveBindings(fd, state, t)).toBe(fd);
-    });
-
-    it("handles translation-like strings", async () => {
-
-        mockResolveBinding.mockImplementation((val) => `resolved(${val})`);
-        const result = deepResolveBindings("translations.hello", state, t);
-        expect(result).toBe("resolved(translations.hello)");
-    });
-
-    it("handles plain objects with mixed values", async () => {
-
-        mockResolveBinding.mockImplementation((val) => `resolved(${val})`);
-        const input = { key1: "state.user.id", key2: 5, key3: null };
-        const result = deepResolveBindings(input, state, t);
-        expect(result).toEqual({
-            key1: "resolved(state.user.id)",
-            key2: 5,
-            key3: null,
-        });
-    });
-});
-
-describe("setPath", () => {
-    it("sets a top-level property", () => {
-        const obj = { a: 1 };
-        const result = setPath(obj, "b", 2);
-        expect(result).toEqual({ a: 1, b: 2 });
-    });
-
-    it("sets a deeply nested property", () => {
-        const obj = { user: { profile: { name: "Alice" } } };
-        const result = setPath(obj, "user.profile.age", 30);
-        expect(result).toEqual({ user: { profile: { name: "Alice", age: 30 } } });
-    });
-
-    it("creates intermediate objects if path does not exist", () => {
-        const obj = {};
-        const result = setPath(obj, "a.b.c", 42);
-        expect(result).toEqual({ a: { b: { c: 42 } } });
-    });
-
-    it("sets a value inside an array (using numeric key)", () => {
-        const arr = [{ id: 1 }, { id: 2 }];
-        const result = setPath(arr, "1.name", "Bob");
-        expect(result[1]).toEqual({ id: 2, name: "Bob" });
-    });
-
-    it("does not mutate the original object", () => {
-        const obj = { user: { name: "Alice" } };
-        const result = setPath(obj, "user.age", 25);
-        expect(result).not.toBe(obj);
-        expect(obj).toEqual({ user: { name: "Alice" } });
-    });
-
-    it("clones nested structures rather than modifying references", () => {
-        const obj = { a: { b: { c: 1 } } };
-        const result = setPath(obj, "a.b.c", 2);
-        expect(result.a.b).not.toBe(obj.a.b);
-        expect(result.a.b.c).toBe(2);
-    });
-
-    it("handles array creation correctly for missing intermediate keys", () => {
-        const obj = {};
-        const result = setPath(obj, "items.0.name", "Item1");
-        expect(result).toEqual({ items: { 0: { name: "Item1" } } });
-    });
-
-    it("handles empty path gracefully (returns original)", () => {
-        const obj = { a: 1 };
-        const result = setPath(obj, "", 123);
-        expect(result).toBe(obj);
-    });
-
-    it("works with mixed key types (numbers and strings)", () => {
-        const obj = { nested: [{ value: 1 }] };
-        const result = setPath(obj, "nested.0.value", 99);
-        expect(result.nested[0].value).toBe(99);
-    });
-
-    it("overwrites existing values", () => {
-        const obj = { a: { b: 5 } };
-        const result = setPath(obj, "a.b", 10);
-        expect(result.a.b).toBe(10);
-    });
-
-    it("returns a shallow copy for top-level assignment", () => {
-        const obj = { x: 1 };
-        const result = setPath(obj, "x", 2);
-        expect(result).not.toBe(obj);
-        expect(result).toEqual({ x: 2 });
-    });
-
-    it("creates empty objects for missing intermediate values", () => {
-        const obj = { a: null };
-        const result = setPath(obj, "a.b.c", "value");
-        expect(result).toEqual({ a: { b: { c: "value" } } });
-    });
-});
-
-describe('resolveAnimation', () => {
-    it('should resolve animate.css animation', () => {
-        const animation = { framework: 'animate.css', entrance: 'fadeIn', delay: 100 };
-        expect(resolveAnimation(animation)).toEqual({
-            className: 'animate__animated animate__fadeIn',
-            style: { animationDelay: '100ms' },
-        });
-    });
-
-    it('should handle framer-motion animation', () => {
-        const animation = { framework: 'framer-motion', animate: { x: 100 }, duration: 500 };
-        expect(resolveAnimation(animation)).toEqual({
-            animate: { x: 100 },
-            transition: { duration: 500 },
-        });
-    });
-});
-
-describe("validateInput", () => {
-    it("returns true when no regex is provided", () => {
-        expect(validateInput("anything")).toBe(true);
-        expect(validateInput(123)).toBe(true);
-        expect(validateInput(null)).toBe(true);
-    });
-
-    it("validates simple regex patterns correctly", () => {
-        expect(validateInput("hello@example.com", "^[\\w.-]+@[\\w.-]+\\.[A-Za-z]{2,}$")).toBe(true);
-        expect(validateInput("invalid-email", "^[\\w.-]+@[\\w.-]+\\.[A-Za-z]{2,}$")).toBe(false);
-    });
-
-    it("handles numeric validation patterns", () => {
-        expect(validateInput("12345", "^\\d+$")).toBe(true);
-        expect(validateInput("abc", "^\\d+$")).toBe(false);
-    });
-
-    it("coerces non-string inputs to string before validation", () => {
-        expect(validateInput(123, "^\\d+$")).toBe(true);
-        expect(validateInput(true, "true")).toBe(true);
-        expect(validateInput(false, "false")).toBe(true);
-    });
-
-    it("returns false for invalid regex syntax", () => {
-        // Invalid regex like "(" should not throw, should return false
-        expect(validateInput("test", "(")).toBe(false);
-    });
-
-    it("handles special characters safely", () => {
-        expect(validateInput("abc-123", "^[a-z0-9-]+$")).toBe(true);
-        expect(validateInput("abc_123", "^[a-z0-9-]+$")).toBe(false);
-    });
-
-    it("works with complex regex (e.g., URLs)", () => {
-        const urlRegex =
-            "^(https?:\\/\\/)?([\\w.-]+)\\.([a-z\\.]{2,6})([\\/\\w .-]*)*\\/?$";
-        expect(validateInput("https://example.com", urlRegex)).toBe(true);
-        expect(validateInput("ftp://example.com", urlRegex)).toBe(false);
-    });
-
-    it("returns false when value does not match regex", () => {
-        expect(validateInput("abcdef", "^123")).toBe(false);
-    });
-});
-
-
-describe("🧩 isVisible()", () => {
-    const t = (k: string) => k; // simple translator stub
-
-    it("returns true when visibility is undefined", () => {
-        expect(isVisible(undefined, {}, t)).toBe(true);
-    });
-
-    it("returns true when no condition provided", () => {
-        const visibility = { show: true };
-        expect(isVisible(visibility as any, {}, t)).toBe(true);
-    });
-
-    it("== operator - true when equal", () => {
-        const visibility = {
-            show: true,
-            condition: { key: "state.user.role", op: "==", value: "admin" },
-        };
-        const state = { user: { role: "admin" } };
-        expect(isVisible(visibility as any, state, t)).toBe(true);
-    });
-
-    it("!= operator - true when not equal", () => {
-        const visibility = {
-            condition: { key: "state.user.role", op: "!=", value: "guest" },
-        };
-        const state = { user: { role: "admin" } };
-        expect(isVisible(visibility as any, state, t)).toBe(true);
-    });
-
-    it("> operator", () => {
-        const visibility = {
-            condition: { key: "state.value", op: ">", value: "10" },
-        };
-        const state = { value: 20 };
-        expect(isVisible(visibility as any, state, t)).toBe(true);
-    });
-
-    it("< operator", () => {
-        const visibility = {
-            condition: { key: "state.count", op: "<", value: "100" },
-        };
-        const state = { count: 50 };
-        expect(isVisible(visibility as any, state, t)).toBe(true);
-    });
-
-    it(">= operator", () => {
-        const visibility = {
-            condition: { key: "state.num", op: ">=", value: "5" },
-        };
-        const state = { num: 5 };
-        expect(isVisible(visibility as any, state, t)).toBe(true);
-    });
-
-    it("<= operator", () => {
-        const visibility = {
-            condition: { key: "state.num", op: "<=", value: "5" },
-        };
-        const state = { num: 5 };
-        expect(isVisible(visibility as any, state, t)).toBe(true);
-    });
-
-    it("exists operator - true when key exists", () => {
-        const visibility = {
-            condition: { key: "state.user.name", op: "exists", value: "" },
-        };
-        const state = { user: { name: "Sireesh" } };
-        expect(isVisible(visibility as any, state, t)).toBe(true);
-    });
-
-    it("not_exists operator - true when key is missing", () => {
-        const visibility = {
-            condition: { key: "state.user.age", op: "not_exists", value: "" },
-        };
-        const state = { user: { name: "Sireesh" } };
-        expect(isVisible(visibility as any, state, t)).toBe(true);
-    });
-
-    it("matches operator - regex match", () => {
-        const visibility = {
-            condition: { key: "state.user.email", op: "matches", value: ".*@altcode\\.pro$" },
-        };
-        const state = { user: { email: "founder@altcode.pro" } };
-        expect(isVisible(visibility as any, state, t)).toBe(true);
-    });
-
-    it("in operator - true when value is in array", () => {
-        const visibility = {
-            condition: { key: "state.user.role", op: "in", value: ["admin", "editor"] },
-        };
-        const state = { user: { role: "admin" } };
-        expect(isVisible(visibility as any, state, t)).toBe(true);
-    });
-
-    it("not_in operator - true when value not in array", () => {
-        const visibility = {
-            condition: { key: "state.user.role", op: "not_in", value: ["banned", "guest"] },
-        };
-        const state = { user: { role: "admin" } };
-        expect(isVisible(visibility as any, state, t)).toBe(true);
-    });
-
-    it("returns true for unknown operator", () => {
-        const visibility = {
-            condition: { key: "state.x", op: "unknown", value: "1" },
-        };
-        const state = { x: 5 };
-        expect(isVisible(visibility as any, state, t)).toBe(true);
-    });
-
-    it("returns false for exists when key missing", () => {
-        const visibility = {
-            condition: { key: "state.user.id", op: "exists", value: "" },
-        };
-        const state = {};
-        expect(isVisible(visibility as any, state, t)).toBe(false);
-    });
-
-    it("returns false for not_exists when key present", () => {
-        const visibility = {
-            condition: { key: "state.user.id", op: "not_exists", value: "" },
-        };
-        const state = { user: { id: 10 } };
-        expect(isVisible(visibility as any, state, t)).toBe(false);
-    });
-
-    it("returns true if values are equal even when numbers vs strings", () => {
-        const visibility = {
-            condition: { key: "state.a", op: "==", value: "1" },
-        };
-        const state = { a: 1 };
-        expect(isVisible(visibility as any, state, t)).toBe(true);
-    });
-
-    it("handles nested state paths correctly", () => {
-        const visibility = {
-            condition: { key: "state.settings.preferences.theme", op: "==", value: "dark" },
-        };
-        const state = { settings: { preferences: { theme: "dark" } } };
-        expect(isVisible(visibility as any, state, t)).toBe(true);
-    });
-
-    it("returns true by default if condition key cannot be resolved", () => {
-        const visibility = {
-            condition: { key: "state.nonexistent.value", op: "==", value: "x" },
-        };
-        const state = {};
-        expect(isVisible(visibility as any, state, t)).toBe(false); // resolvedKey empty, resolvedValue "x"
-    });
-});
-
-describe("🧩 classesFromStyleProps()", () => {
-    it("returns empty string when styles are undefined", () => {
-        expect(classesFromStyleProps(undefined)).toBe("");
-    });
-
-    it("handles base class only", () => {
-        const styles: StyleProps = { className: "text-center" };
-        expect(classesFromStyleProps(styles)).toBe("text-center");
-    });
-
-    it("handles background color", () => {
-        const styles: StyleProps = {
-            className: "custom",
-            background: { type: "color", value: "#fff" },
-        };
-        expect(classesFromStyleProps(styles)).toBe("custom bg-[#fff]");
-    });
-
-    it("handles gradient background", () => {
-        const styles: StyleProps = {
-            className: "",
-            background: { type: "gradient", value: "from-red-500 to-yellow-400" },
-        };
-        expect(classesFromStyleProps(styles)).toBe(
-            "bg-gradient-to-r from-red-500 to-yellow-400"
-        );
-    });
-
-    it("handles image background", () => {
-        const styles: StyleProps = {
-            className: "",
-            background: { type: "image", value: "/img/bg.png" },
-        };
-        expect(classesFromStyleProps(styles)).toBe("bg-[url('/img/bg.png')] bg-cover");
-    });
-
-    it("handles video background", () => {
-        const styles: StyleProps = {
-            className: "rounded",
-            background: { type: "video", value: "/video/intro.mp4" },
-        };
-        expect(classesFromStyleProps(styles)).toBe(
-            "rounded bg-[url('/video/intro.mp4')] bg-cover"
-        );
-    });
-
-    it("handles overlay class", () => {
-        const styles: StyleProps = {
-            className: "",
-            background: { type: "color", value: "#000", overlayClass: "opacity-50" },
-        };
-        expect(classesFromStyleProps(styles)).toBe("bg-[#000] opacity-50");
-    });
-
-    it("merges responsive classes", () => {
-        const styles: StyleProps = {
-            className: "base",
-            responsiveClasses: { sm: "sm:px-4", lg: "lg:px-8" },
-        };
-        expect(classesFromStyleProps(styles)).toBe("base sm:px-4 lg:px-8");
-    });
-
-    it("combines everything cleanly", () => {
-        const styles: StyleProps = {
-            className: "rounded-xl",
-            responsiveClasses: { sm: "sm:p-2", md: "md:p-4" },
-            background: {
-                type: "gradient",
-                value: "from-blue-500 to-indigo-600",
-                overlayClass: "opacity-70",
-            },
-        };
-        expect(classesFromStyleProps(styles)).toBe(
-            "rounded-xl sm:p-2 md:p-4 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-70"
-        );
-    });
-
-    it("handles null background gracefully", () => {
-        const styles: StyleProps = {
-            className: "text-sm",
-            background: null,
-        };
-        expect(classesFromStyleProps(styles)).toBe("text-sm");
-    });
-});
-
-describe("🧩 getAccessibilityProps()", () => {
-    const t = (s: string) => s;
-
-    it("returns empty object when accessibility is undefined", () => {
-        expect(getAccessibilityProps(undefined, {}, t)).toEqual({});
-    });
-
-    it("sets aria-label using static string", () => {
-        const result = getAccessibilityProps({ ariaLabel: "Submit button" }, {}, t);
-        expect(result["aria-label"]).toBe("Submit button");
-    });
-
-    it("sets aria-label using state binding", () => {
-        const state = { label: "Dynamic Label" };
-        const result = getAccessibilityProps({ ariaLabel: "state.label" }, state, t);
-        expect(result["aria-label"]).toBe("Dynamic Label");
-    });
-
-    it("sets role when provided", () => {
-        const result = getAccessibilityProps({ ariaRole: "button" }, {}, t);
-        expect(result.role).toBe("button");
-    });
-
-    it("sets aria-hidden when defined", () => {
-        const result = getAccessibilityProps({ ariaHidden: true }, {}, t);
-        expect(result["aria-hidden"]).toBe(true);
-    });
-
-    it("sets tabIndex when provided", () => {
-        const result = getAccessibilityProps({ tabIndex: 5 }, {}, t);
-        expect(result.tabIndex).toBe(5);
-    });
-
-    it("overrides tabIndex when focusable = true", () => {
-        const result = getAccessibilityProps({ tabIndex: 3, focusable: true }, {}, t);
-        expect(result.tabIndex).toBe(0);
-    });
-
-    it("sets aria-description from static text", () => {
-        const result = getAccessibilityProps({ screenReaderText: "For screen readers" }, {}, t);
-        expect(result["aria-description"]).toBe("For screen readers");
-    });
-
-    it("sets aria-description using state binding", () => {
-        const state = { help: "Dynamic screen reader help" };
-        const result = getAccessibilityProps({ screenReaderText: "state.help" }, state, t);
-        expect(result["aria-description"]).toBe("Dynamic screen reader help");
-    });
-
-    it("combines all props correctly", () => {
-        const state = { label: "Submit", help: "Press to submit" };
-        const accessibility = {
-            ariaLabel: "state.label",
-            ariaRole: "button",
-            ariaHidden: false,
-            tabIndex: 2,
-            focusable: true,
-            screenReaderText: "state.help",
-        };
-        const result = getAccessibilityProps(accessibility, state, t);
-
-        expect(result).toEqual({
-            "aria-label": "Submit",
-            role: "button",
-            "aria-hidden": false,
-            tabIndex: 0, // overridden by focusable
-            "aria-description": "Press to submit",
-        });
-    });
-
-    it("ignores unknown or missing values gracefully", () => {
-        const result = getAccessibilityProps(
-            {
-                ariaLabel: undefined,
-                ariaRole: undefined,
-                ariaHidden: undefined,
-            },
-            {},
-            t
-        );
-        expect(Object.keys(result)).toHaveLength(0);
-    });
-});
-
-describe("🖼️ getAllScreenImages()", () => {
-    it("returns only logo when screenJson is null", () => {
-        const result = getAllScreenImages("/logo.png", null);
-        expect(result).toEqual(["/logo.png"]);
-    });
-
-    it("returns logo even when no screens exist", () => {
-        const screenJson = { screens: [] } as unknown as UIDefinition;
-        const result = getAllScreenImages("/logo.svg", screenJson);
-        expect(result).toEqual(["/logo.svg"]);
-    });
-
-    it("extracts image src values from screen elements", () => {
-        const screenJson = {
-            screens: [
-                {
-                    id: "screen_1",
-                    elements: [
-                        { type: "image", src: "/img/hero.png" } as ImageElement,
-                        { type: "text", content: "hello" },
-                    ],
-                },
-            ],
-        } as unknown as UIDefinition;
-
-        const result = getAllScreenImages("/logo.png", screenJson);
-        expect(result).toEqual(["/logo.png", "/img/hero.png"]);
-    });
-
-    it("handles multiple screens and multiple images", () => {
-        const screenJson = {
-            screens: [
-                {
-                    id: "screen_1",
-                    elements: [
-                        { type: "image", src: "/img/hero.png" },
-                        { type: "image", src: "/img/banner.png" },
-                    ],
-                },
-                {
-                    id: "screen_2",
-                    elements: [
-                        { type: "image", src: "/img/footer.png" },
-                        { type: "text", content: "AltCodePro" },
-                    ],
-                },
-            ],
-        } as unknown as UIDefinition;
-
-        const result = getAllScreenImages("/logo.png", screenJson);
-        expect(result).toEqual([
-            "/logo.png",
-            "/img/hero.png",
-            "/img/banner.png",
-            "/img/footer.png",
-        ]);
-    });
-
-    it("skips elements without src", () => {
-        const screenJson = {
-            screens: [
-                {
-                    elements: [
-                        { type: "image" }, // missing src
-                        { type: "image", src: "/img/valid.png" },
-                    ],
-                },
-            ],
-        } as unknown as UIDefinition;
-
-        const result = getAllScreenImages("/logo.png", screenJson);
-        expect(result).toEqual(["/logo.png", "/img/valid.png"]);
-    });
-
-    it("ignores non-image elements", () => {
-        const screenJson = {
-            screens: [
-                {
-                    elements: [
-                        { type: "video", src: "/video/demo.mp4" },
-                        { type: "button", label: "Click" },
-                    ],
-                },
-            ],
-        } as unknown as UIDefinition;
-
-        const result = getAllScreenImages("/logo.png", screenJson);
-        expect(result).toEqual(["/logo.png"]);
-    });
-
-    it("handles malformed or empty screenJson gracefully", () => {
-        const screenJson = {} as unknown as UIDefinition;
-        const result = getAllScreenImages("/logo.png", screenJson);
-        expect(result).toEqual(["/logo.png"]);
-    });
-
-    it("deduplicates identical images if needed", () => {
-        const screenJson = {
-            screens: [
-                {
-                    elements: [
-                        { type: "image", src: "/img/hero.png" },
-                        { type: "image", src: "/img/hero.png" },
-                    ],
-                },
-            ],
-        } as unknown as UIDefinition;
-
-        const result = getAllScreenImages("/logo.png", screenJson);
-        // Duplicates are not removed by function, so both appear — validate that behavior explicitly
-        expect(result).toEqual(["/logo.png", "/img/hero.png", "/img/hero.png"]);
-    });
-});
-
-describe("🧠 getMetaData()", () => {
-    // mock getAllScreenImages
-    vi.spyOn(utils, "getAllScreenImages").mockImplementation(() => ["/logo.png", "/img1.png"]);
-    vi.spyOn(utils, "getMetaData").mockResolvedValueOnce({
-        title: "Dashboard",
-        openGraph: { images: ["/img1.png"] },
-        description: "AltCodePro Dashboard",
-    });
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    it("returns metadata with full structure when given route and project", async () => {
-        const result = await getMetaData(baseRoute as any, baseProject as any, "https://altcode.pro");
-
-        expect(result.title).toBe("Dashboard | AltCodePro");
-        expect(result.description).toBe("Main user dashboard");
-        expect(result.applicationName).toBe("AltCodePro");
-        expect(result.openGraph.title).toBe("OG Dashboard");
-        expect(result.twitter.title).toBe("Twitter Dashboard");
-        expect(result.icons.icon).toContain("/favicon.ico");
-        expect(result.authors[0].name).toBe("AltCodePro");
-        expect(result.metadataBase.href).toBe("https://altcode.pro/");
-        expect(result.alternates.canonical).toBe("https://altcode.pro/dashboard");
-    });
-
-    it("falls back to project brand when route metadata missing", async () => {
-        const route = { href: "/about" }; // no metadata
-        const result = await getMetaData(route as any, baseProject as any, "https://altcode.pro");
-        expect(result.title).toBe("AltCodePro");
-        expect(result.description).toBe("AI for everything");
-    });
-
-    it("constructs screenConfigUrl if missing and label present", async () => {
-        (global.fetch as any).mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ screens: [{ elements: [] }] }),
-        });
-
-        const route = { href: "/home", label: "Home" };
-        const result = await getMetaData(route as any, baseProject as any, "https://altcode.pro");
-        expect(global.fetch).toHaveBeenCalledWith("https://altcode.pro/data/Home_v1.json");
-        expect(result.icons.icon).toBe("/favicon.ico");
-    });
-
-    it("gracefully handles fetch error or invalid response", async () => {
-        (global.fetch as any).mockRejectedValueOnce(new Error("network fail"));
-        const route = { href: "/home", label: "Home" };
-        const result = await getMetaData(route as any, baseProject as any, "https://altcode.pro");
-        expect(result.title).toBe("AltCodePro");
-    });
-
-    it("handles null screenDefinition and still returns valid metadata", async () => {
-        const result = await getMetaData(baseRoute as any, baseProject as any, "https://altcode.pro", null);
-        expect(result.openGraph.images).toContain("/img1.png");
-        expect(result.appleWebApp.title).toBe("AltCodePro");
-    });
-
-    it("filters duplicate and falsy images", async () => {
-        (utils.getAllScreenImages as any).mockReturnValueOnce(["", "/logo.png", "/logo.png", "/img1.png"]);
-        const result = await getMetaData(baseRoute as any, baseProject as any, "https://altcode.pro");
-        expect(result.openGraph.images).toEqual(["/logo.png", "/img1.png"]);
-    });
-
-    it("adds optional metadata fields (itunes, bookmarks, classification)", async () => {
-        const result = await getMetaData(baseRoute as any, baseProject as any, "https://altcode.pro");
-        expect(result.pinterest).toEqual({ handle: "pinterestHandle" });
-        expect(result.facebook).toEqual({ page: "fbpage" });
-        expect(result.verification).toEqual({ google: "google123" });
-        expect(result.category).toBe("AI");
-        expect(result.classification).toBe("Software");
-    });
-
-    it("sets appleWebApp.startupImage to logo when available", async () => {
-        const result = await getMetaData(baseRoute as any, baseProject as any, "https://altcode.pro");
-        expect(result.appleWebApp.startupImage).toEqual([{ url: "/logo.png" }]);
-    });
-
-    it("returns fallback metadata when thrown error occurs", async () => {
-        const badProject = {} as any;
-        const result = await getMetaData({ href: "/" } as any, badProject, "https://altcode.pro");
-        expect(result.title).toBe("AltCodePro");
-    });
-});
-
-describe("🧠 getJSONLD()", () => {
-    const baseRoute = {
-        href: "/dashboard",
-        metadata: {
-            datePublished: "2025-10-18T00:00:00Z",
-            dateModified: "2025-10-19T00:00:00Z",
-            keywords: ["AI", "dashboard"],
-        },
-    };
-
-    const baseProject = {
-        brand: {
-            name: "AltCodePro",
-            logoUrl: "/logo.png",
-            slogan: "AI for Everything",
-            socialMedia: { twitter: "https://twitter.com/altcodepro" },
-        },
-        globalConfig: {
-            metadata: {
-                schemaType: "SoftwareApplication",
-                language: "en",
-                license: "MIT",
-                category: "AI Tools",
-            },
-        },
-    };
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    it("returns full structured JSON-LD with all metadata", async () => {
-        (utils.getMetaData as any).mockResolvedValueOnce({
-            title: "Dashboard",
-            description: "AltCodePro Dashboard",
-            metadataBase: new URL("https://altcode.pro"),
-            openGraph: {
-                url: "https://altcode.pro/dashboard",
-                images: ["/img1.png", "/img2.png"],
-            },
-            keywords: ["AI", "dashboard"],
-        });
-
-        const result = await getJSONLD(baseRoute as any, baseProject as any, "https://altcode.pro");
-
-        expect(result["@context"]).toBe("https://schema.org");
-        expect(result["@type"]).toBe("SoftwareApplication");
-        expect(result.name).toBe("Dashboard");
-        expect(result.description).toBe("AltCodePro Dashboard");
-        expect(result.publisher.name).toBe("AltCodePro");
-        expect(result.author.name).toBe("AltCodePro");
-        expect(result.image).toEqual(["/img1.png", "/img2.png"]);
-        expect(result.url).toBe("https://altcode.pro/dashboard");
-        expect(result.sameAs).toContain("https://twitter.com/altcodepro");
-        expect(result.license).toBe("MIT");
-        expect(result.about.name).toBe("AI Tools");
-        expect(result.genre).toBe("AI Tools");
-        expect(result.keywords).toBe("AI, dashboard");
-    });
-
-    it("adds potentialAction when project search is enabled", async () => {
-        (utils.getMetaData as any).mockResolvedValueOnce({
-            title: "Search Page",
-            openGraph: { url: "https://altcode.pro/search" },
-            metadataBase: new URL("https://altcode.pro"),
-        });
-
-        const projectWithSearch = {
-            ...baseProject,
-            search: { enabled: true, path: "/v1/search" },
-        };
-
-        const result = await getJSONLD(
-            baseRoute as any,
-            projectWithSearch as any,
-            "https://altcode.pro"
-        );
-
-        expect(result.potentialAction["@type"]).toBe("SearchAction");
-        expect(result.potentialAction.target).toBe(
-            "https://altcode.pro/v1/search?q={search_term_string}"
-        );
-        expect(result.potentialAction["query-input"]).toBe("required name=search_term_string");
-    });
-
-    it("uses defaults when getMetaData returns partial info", async () => {
-        (utils.getMetaData as any).mockResolvedValueOnce({});
-        const result = await getJSONLD(baseRoute as any, baseProject as any, "https://altcode.pro");
-
-        expect(result["@type"]).toBe("SoftwareApplication");
-        expect(result.name).toBe("AltCodePro");
-        expect(result.description).toBe("AI for Everything");
-        expect(result.publisher.logo.url).toBe("/logo.png");
-    });
-
-    it("uses fallback schema type and language if missing in global metadata", async () => {
-        const project = { brand: { name: "AltCodePro" }, globalConfig: {} };
-        (utils.getMetaData as any).mockResolvedValueOnce({
-            openGraph: {},
-            metadataBase: new URL("https://altcode.pro"),
-        });
-
-        const result = await getJSONLD(baseRoute as any, project as any, "https://altcode.pro");
-        expect(result["@type"]).toBe("WebPage");
-        expect(result.inLanguage).toBe("en");
-    });
-
-    it("gracefully handles missing metadataBase and openGraph URL", async () => {
-        (utils.getMetaData as any).mockResolvedValueOnce({
-            title: "No URL Page",
-            openGraph: {},
-        });
-
-        const result = await getJSONLD(baseRoute as any, baseProject as any);
-        expect(result.url).toContain("/dashboard");
-    });
-
-    it("adds image and keywords when provided", async () => {
-        (utils.getMetaData as any).mockResolvedValueOnce({
-            openGraph: { images: ["/img1.png"] },
-            keywords: ["ai", "codegen"],
-        });
-
-        const result = await getJSONLD(baseRoute as any, baseProject as any);
-        expect(result.image).toEqual(["/img1.png"]);
-        expect(result.keywords).toBe("ai, codegen");
-    });
-
-    it("returns {} on thrown errors", async () => {
-        (utils.getMetaData as any).mockRejectedValueOnce(new Error("network fail"));
-        const result = await getJSONLD(baseRoute as any, baseProject as any);
-        expect(result).toEqual({});
-    });
-});
-
-describe('luhnCheck', () => {
-    it('✅ returns true for valid Visa number', () => {
-        // 4111 1111 1111 1111 is a standard test Visa number
-        expect(luhnCheck('4111 1111 1111 1111')).toBe(true);
-    });
-
-    it('✅ returns true for valid MasterCard number', () => {
-        // 5555-5555-5555-4444 is a standard MasterCard test number
-        expect(luhnCheck('5555-5555-5555-4444')).toBe(true);
-    });
-
-    it('❌ returns false for an invalid card number', () => {
-        expect(luhnCheck('4111 1111 1111 1112')).toBe(false);
-    });
-
-    it('❌ returns false for random non-digit string', () => {
-        expect(luhnCheck('abcd efgh ijkl')).toBe(false);
-    });
-
-    it('✅ ignores spaces and dashes correctly', () => {
-        expect(luhnCheck('4-1-1-1 1-1-1-1 1-1-1-1 1-1-1-1')).toBe(true);
-    });
-
-    it('❌ returns false for too short numbers', () => {
-        expect(luhnCheck('12345')).toBe(false);
-    });
-
-    it('✅ handles long numeric strings gracefully', () => {
-        const longValid = '79927398713'; // known valid test per Luhn algorithm
-        expect(luhnCheck(longValid)).toBe(true);
-    });
-
-    it('❌ fails when last digit checksum is changed', () => {
-        const invalid = '79927398714'; // last digit off by 1
-        expect(luhnCheck(invalid)).toBe(false);
-    });
-
-    it('✅ handles input with special characters', () => {
-        expect(luhnCheck(' 4111-1111*1111*1111 ')).toBe(true);
-    });
-
-    it('✅ returns false for empty string', () => {
-        expect(luhnCheck('')).toBe(false);
-    });
-});
-
-describe("anySignal", () => {
-    it("returns an AbortSignal", () => {
-        const controller1 = new AbortController();
-        const controller2 = new AbortController();
-        const signal = anySignal([controller1.signal, controller2.signal]);
-        expect(signal).toBeInstanceOf(AbortSignal);
-    });
-
-    it("aborts immediately if one signal is already aborted", () => {
-        const controller1 = new AbortController();
-        const controller2 = new AbortController();
-        controller1.abort("already aborted");
-        const signal = anySignal([controller1.signal, controller2.signal]);
-        expect(signal.aborted).toBe(true);
-        expect(signal.reason).toBe("already aborted");
-    });
-
-    it("aborts when any of the provided signals aborts later", () => {
-        const controller1 = new AbortController();
-        const controller2 = new AbortController();
-
-        const combined = anySignal([controller1.signal, controller2.signal]);
-
-        expect(combined.aborted).toBe(false);
-
-        controller2.abort("signal 2 aborted");
-
-        expect(combined.aborted).toBe(true);
-        expect(combined.reason).toBe("signal 2 aborted");
-    });
-
-    it("removes event listeners after abort", () => {
-        const controller1 = new AbortController();
-        const controller2 = new AbortController();
-
-        const spy1 = vi.spyOn(controller1.signal, "removeEventListener");
-        const spy2 = vi.spyOn(controller2.signal, "removeEventListener");
-
-        const combined = anySignal([controller1.signal, controller2.signal]);
-
-        controller2.abort("test reason");
-
-        expect(combined.aborted).toBe(true);
-        expect(spy1).toHaveBeenCalledWith("abort", expect.any(Function));
-        expect(spy2).toHaveBeenCalledWith("abort", expect.any(Function));
-    });
-
-    it("aborts with the first aborted signal even if others abort later", () => {
-        const c1 = new AbortController();
-        const c2 = new AbortController();
-        const combined = anySignal([c1.signal, c2.signal]);
-
-        c1.abort("first");
-        expect(combined.aborted).toBe(true);
-        expect(combined.reason).toBe("first");
-
-        // Later abort shouldn't override
-        c2.abort("second");
-        expect(combined.reason).toBe("first");
-    });
-
-    it("handles empty input gracefully", () => {
-        const combined = anySignal([]);
-        expect(combined).toBeInstanceOf(AbortSignal);
-        expect(combined.aborted).toBe(false);
-    });
-});
-
-describe("resolveDataSource", () => {
-    const mockResolveValue = vi.fn((val) => val);
-    const mockDeepResolve = vi.fn((val) => val);
-
-    beforeEach(() => {
-        vi.resetModules();
-    });
-
-    const globalConfig = {
-        endpoints: {
-            registry: [
-                {
-                    id: "userList",
-                    baseUrl: "https://api.example.com",
-                    path: "/users",
-                    headers: { "X-Global": "true" },
-                },
-            ],
-            defaultHeaders: { "X-Default": "1" },
-            auth: { type: "bearer", value: "global-token" },
-            environments: {
-                default: "dev",
-                values: {
-                    dev: {
-                        baseUrl: "https://dev.example.com",
-                        headers: { "X-Env": "DEV" },
+            ds_user_info: {
+                data: {
+                    user: {
+                        displayName: "AltCodePro User",
+                        id: "u1",
+                    },
+                    projects: [{ id: 1 }, { id: 2 }, { id: 3 }],
+                    organization: {
+                        members: [
+                            { userId: "u1", roles: ["Founder"] },
+                            { userId: "u2", roles: ["Contributor"] },
+                        ],
                     },
                 },
             },
-        },
-    } as unknown as UIProject["globalConfig"];
-
-    it("resolves DataSource by refId string", async () => {
-
-        const ds = resolveDataSource("userList", globalConfig, {});
-        expect(ds.baseUrl).toBe("https://api.example.com");
-        expect(ds.path).toBe("/users");
-    });
-
-    it("throws if refId string not found", async () => {
-
-        expect(() => resolveDataSource("unknownRef", globalConfig, {})).toThrow(
-            /not found/
-        );
-    });
-
-    it("merges refId object with global reference", async () => {
-
-        const ds = resolveDataSource(
-            {
-                refId: "userList",
-                path: "/users/active",
-            } as unknown as DataSource,
-            globalConfig,
-            {}
-        );
-        expect(ds.path).toBe("/users/active"); // overrides global path
-        expect(ds.baseUrl).toBe("https://api.example.com");
-    });
-
-    it("applies environment-specific baseUrl when DataSource has none", async () => {
-
-        const ds = resolveDataSource(
-            { id: "newSource", path: "/test" },
-            globalConfig,
-            {}
-        );
-        expect(ds.baseUrl).toBe("https://dev.example.com");
-    });
-
-    it("merges headers correctly from global, env, and ds", async () => {
-
-        const ds = resolveDataSource(
-            {
-                id: "custom",
-                path: "/merged",
-                headers: { "X-DS": "yes" },
+            params: { orgId: "org42" },
+            env: process.env,
+            translations: {
+                en: {
+                    "projects.create": "New Project",
+                    "actions.support": "Support",
+                },
             },
-            globalConfig,
-            {}
-        );
-
-        expect(ds.headers).toEqual({
-            "X-Default": "1",
-            "X-Env": "DEV",
-            "X-DS": "yes",
-        });
-    });
-
-    it("applies global auth if missing", async () => {
-
-        const ds = resolveDataSource(
-            { id: "noAuth", path: "/test" },
-            globalConfig,
-            {}
-        );
-        expect(ds.auth?.type).toBe("bearer");
-        expect(ds.auth?.value).toBe("global-token");
-    });
-
-    it("resolves baseUrl, path, and headers using resolveDataSourceValue", async () => {
-
-        mockResolveValue.mockImplementation((v) => `resolved:${v}`);
-
-        const ds = resolveDataSource(
-            {
-                id: "resolveTest",
-                baseUrl: "base",
-                path: "path",
-                headers: { A: "1" },
+            locale: "en",
+            profile: {
+                "user": {
+                    "createdAt": "2025-09-27T14:02:25.997147",
+                    "customerId": "cus_T7ca4rVoU94PxI",
+                    "defaultOrgid": "org:sireeshPangaluri",
+                    "displayName": "Sireesh Pangaluri",
+                    "email": "sireesh.psvs@gmail.com",
+                    "emailVerified": false,
+                    "hashedPassword": "$2b$12$j.u.8ZrKsl.R5alBCorgreTWxiusP6aWzdBHaABY8bWL2FUhy1P8q",
+                    "name": "Sireesh Pangaluri",
+                    "orgId": "org:sireeshPangaluri",
+                    "phone": "+447774398018",
+                    "phoneVerified": false,
+                    "status": "active",
+                    "twofaEnabled": false,
+                    "updatedAt": "2025-09-27T14:02:26.352586+00:00",
+                    "userId": "usr:0eb756a3a9a24ae486c6f961260ae5b4",
+                    "id": "usr:0eb756a3a9a24ae486c6f961260ae5b4"
+                },
+                "org_id": "org:sireeshPangaluri",
+                "user_id": "usr:0eb756a3a9a24ae486c6f961260ae5b4",
+                "organization": {
+                    "brand": {
+                        "href": "https://altcode.pro/",
+                        "name": "AltCodePro",
+                        "logo_url": "https://cdn.altcode.pro/altcodepro/appstore.png",
+                        "favicon_url": "https://cdn.altcode.pro/altcodepro/appstore.png",
+                        "slogan": "AI-Powered Software Development and Autonomous DevOps Platform",
+                        "social_media": {
+                            "twitter": "https://twitter.com/altcodepro",
+                            "linkedin": "https://linkedin.com/company/altcodepro",
+                            "facebook": "https://facebook.com/altcodepro",
+                            "instagram": "https://instagram.com/altcodepro",
+                            "youtube": "https://youtube.com/altcodepro",
+                            "github": "https://github.com/altcodepro",
+                            "discord": "https://discord.com/invite/altcodepro",
+                            "tiktok": "https://tiktok.com/@altcodepro",
+                            "medium": "https://medium.com/altcodepro",
+                            "website": "https://altcode.pro/"
+                        },
+                        "preferred_color": "#38bdf8"
+                    },
+                    "createdAt": "2025-09-27T14:02:26.790047",
+                    "isActive": true,
+                    "members": [
+                        {
+                            "organizationId": "org:sireeshPangaluri",
+                            "assignedProjects": [],
+                            "assignedWorkspaces": [],
+                            "displayName": "Sireesh Pangaluri",
+                            "email": "sireesh.psvs@gmail.com",
+                            "userId": "usr:0eb756a3a9a24ae486c6f961260ae5b4",
+                            "roles": [
+                                "owner"
+                            ],
+                            "joinedAt": "2025-09-27T14:02:26.790103",
+                            "status": "active"
+                        }
+                    ],
+                    "name": "Sireesh Pangaluri's Org",
+                    "orgId": "org:sireeshPangaluri",
+                    "ownerEmail": "sireesh.psvs@gmail.com",
+                    "ownerPhone": "+447774398018",
+                    "projects": [
+                        {
+                            "name": "AltCodePro",
+                            "workspace_id": "ws: 5c21957bd753",
+                            "visibility": "public",
+                            "shared_with": [],
+                            "is_active": true,
+                            "client_type": "website",
+                            "cloud": "firebase",
+                            "frontend": "nextjs",
+                            "backend": "firebase_functions",
+                            "database": "firestore",
+                            "notification": false,
+                            "analytics": false,
+                            "ai": false,
+                            "custom_tools": [],
+                            "settings": {
+                                "api_url": "https: //api.altcode.pro/",
+                                "ui_url": "https://altcode.pro/",
+                                "email_key": null,
+                                "sms_key": null,
+                                "feature_flags": {
+                                    "enable_docs": true
+                                }
+                            },
+                            "extra_env_vars": {
+                                "stripe_secret_key": "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"
+                            },
+                            "integrations": {},
+                            "branding_overrides": null,
+                            "provision_now": true,
+                            "promote_on_portal": true,
+                            "allow_discovery": true,
+                            "launch_stage": "beta",
+                            "domain": "altcode.pro",
+                            "map_domain_to": "frontend",
+                            "enable_subdomain": true,
+                            "verify_domain_status": null,
+                            "domain_dns_required_records": null,
+                            "ssl_status": null,
+                            "id": "prj:a1810ba95fc9",
+                            "user_id": "usr:0eb756a3a9a24ae486c6f961260ae5b4",
+                            "org_id": "org:sireeshPangaluri",
+                            "subscription_id": 3,
+                            "slug": "altcodepro",
+                            "prompt_variables": {
+                                "user_selected_domain": "SaaS",
+                                "user_selected_client_type": "Responsive",
+                                "user_selected_technologies": "nextjs",
+                                "user_selected_database": "firestore",
+                                "user_selected_region": "U.S.A",
+                                "user_selected_cloud": "firebase",
+                                "user_selected_case": "camelcase",
+                                "user_selected_frontend": "nextjs",
+                                "user_selected_backend": "firebase_functions",
+                                "user_selected_languages": "English",
+                                "user_selected_enterprise_services": "auth",
+                                "user_deployment_type": "free",
+                                "user_file_extension": ".ts"
+                            },
+                            "description": "## Project Title\nAltCodePro and AltAutonomousCodeAgent: AI-Driven Software Development and Autonomous DevOps Platform\n\n## Executive Summary\nAltCodePro automates generation of 100+ artifacts across 23 categories, covering the full product lifecycle from ideation to documentation. It helps startups, SMEs, and enterprises build compliant (GDPR, WCAG 2.1) software globally, reducing time/costs by 30-50%. AltAutonomousCodeAgent adds autonomous codebase optimization, analysis, refactoring, testing, and deployment, integrating with GitHub, Bitbucket, GitLab, Jira, Jenkins, Confluence. Together, they streamline workflows, boost quality/scalability. As of Aug 12, 2025, production-ready and marketplace-positioned. Integrations: ChatGPT/xAI agents, GCP/Azure/AWS/DigitalOcean SaaS, WhatsApp chat, Word/PDF plugins.\n\n## Product Overview\n### AltCodePro\nCloud-based AI platform automating artifacts for ideation, planning, design, development, testing, deployment, operations, support, documentation. Addresses manual inefficiencies with customizable, compliant artifacts (business plans, specs, code, UI, manuals). Built on FastAPI backend, PostgreSQL (SQLAlchemy ORM), Next.js frontend; integrates Prometheus/Grafana/Sentry/LogRocket for reliability. Subscription model with usage limits.\n\n### AltAutonomousCodeAgent\nAutonomous AI for repo-wide automation: analysis (tree-sitter), refactoring (LLMs like Grok/Azure OpenAI/Claude/Gemini), testing (Dockerized), deployment (branches/PRs/CI/CD across VCS). Integrates DevOps tools and xAI ecosystem. Scalable/secure (asyncio, Celery/Redis, encryption, sanitization). Freemium with VS Code/GitHub/Atlassian/cloud extensions.\n\n### Combined Vision\nHolistic automation from planning to maintenance, aligning with xAI's mission for faster, compliant software delivery.\n\n## Detailed Description\n### AltCodePro\n23 categories: 1. Ideation (vision/market/business case); 2. Investor Data Room (projections/pitch decks); 3. Branding (guidelines/logos); 4. Planning (roadmaps/requirements); 5. Design (journeys/systems/accessibility); 6. Database (models/migrations); 7. Architecture (scalable/modular); 8. Compliance (GDPR/WCAG checklists); 9. Specification (functional/technical); 10. Backend Code (APIs/scripts); 11. UI Code (wireframes/components/tests); 12. Testing (plans/benchmarks); 13. Release (CI/CD/monitoring); 14. Operations (runbooks/SLAs); 15. Support (guides/FAQs); 16. Marketing (strategies/campaigns); 17. Sales (enablement); 18. Analytics (dashboards/reports); 19. Community (portals/guidelines); 20. Change Management (logs/assessments); 21. Website (sitemaps/Next.js); 22. Training (tutorials/webinars); 23. User Documentation (manuals/API docs). Uses Jinja2 templates, FastAPI, PostgreSQL.\n\n### AltAutonomousCodeAgent\nKey features: Code Analysis (parse/identify issues); Refactoring (LLM improvements); Testing (pytest/npm with retries); Deployment (PRs/builds/auto-merge); Integrations (Jira/Jenkins/Confluence/xAI). Scalable (concurrent/async), secure (encryption/sanitization/rate limits). Packaged with README/MIT LICENSE/setup.\n\n## Expected Outcomes and Impact\n- Outcomes: 100+ artifacts, 30-50% time reduction; 95%+ test passes; marketplace-ready (VS Code/GitHub/etc.).\n- Impact: Faster launches for startups/SMEs; compliant solutions for enterprises; developer innovation; accessible software; leverages xAI/X users for reach.\n\n## Conclusion\nRevolutionary ecosystem automating development/DevOps. AltCodePro generates artifacts; AltAutonomousCodeAgent optimizes code. Robust stack/integrations position it to lead 2025 market vs. Copilot/Devin/etc., delivering value globally.\n\n## Subscription Plans\n- Free: 5k tokens, 10 projects, 1 image/video, 15 artifacts, 3 reviews; generate but no download/CI-CD.\n- Student: 10k tokens, 10 projects, 5 images/1 video, 30 artifacts/reviews; generate/download; $19/mo or $228/yr.\n- Founder: 25k tokens, 10 projects, 10 images/5 videos, 50 artifacts/reviews; full access; $49/mo or $499/yr.\n- Professional: 100k tokens, 10 projects, 15 images/5 videos, 300 artifacts/reviews; full; $149/mo or $1299/yr.\n- Enterprise: 1M tokens, 10 projects, 30 images/10 videos, 1000 artifacts/reviews; custom; contact for pricing.\n\n## Add-ons\n- Extra Tokens: 50k ($9/mo), 200k ($29/mo).\n- Extra Generations: 100 ($25/mo, ~200k tokens).\n- Extra Images: 50 ($15/mo).\n- Extra Videos: 5x10s HD ($49/one-time).\n- Team Seat: $15/mo/user.\n- Storage: 50GB ($10/mo).\n- API Booster: $49/mo.\n- CI/CD Premium: $29/mo.\n- Multi-Cloud Deploy: $99/mo/env.\n- Custom Domain+SSL: $19/mo.\n- Priority Support: $49/mo.\n- Account Manager: $499/mo.\n- Consulting: 10h ($1500/one-time).\n- Custom Branding: $299/mo.\n- Compliance Pack: $999/one-time.\n- SAML/SSO: $199/mo/org.\n- Custom SLA: $999/mo.\n- Analytics Pack: $49/mo.\n- Landing Page Credit: $19/mo/page.\n- Pitch Deck Pack: $299/one-time.\n- Social Automation: $29/mo.\n- SendGrid Email: 10k emails ($19/mo).\n- Twilio SMS: 1k SMS ($29/mo).\n- Local Phone: $5/mo/number.\n- Toll-Free Phone: $12/mo/number.\n- Onboarding: 4h ($199/one-time).\n- Sandbox Env: $99/mo.\n- Premium AI Model: $199/mo.\n- Enterprise Migration: $2999/one-time.\n- Branding Kit: $99/one-time.\n- GDPR Pack: $149/yr.\n- Deploy Automation: $49/mo.\n\n## Artifact Generations\nCategories include Ideation (vision, personas, etc.), Branding (guidelines, logos), Investor Data Room (overviews, projections), Planning (features, roadmap), Specification (functional/tech specs), Design (journeys, stories), Architecture (diagrams, microservices), Database (models, ER diagrams), Compliance (checklists, policies), Backend (structure, APIs, tests), UI Code (structure, screens, code), Testing (plans, cases), Release (notes, runbooks), Operations (SOPs, SLAs), Support (guides, KB), Marketing (campaigns, content), Sales (enablement), Community (portals, guides), Change Management (frameworks, logs), Training (plans, outlines), User Documentation (guides, manuals, videos), Corporate Website (sitemap, code, deployment)."
+                        }
+                    ],
+                    "schemaVersion": 1,
+                    "settings": {
+                        "permissions": {},
+                        "integrations": []
+                    },
+                    "slug": "sireesh-pangaluris-org",
+                    "subscription": {
+                        "id": 3,
+                        "start_date": "2025-10-07T17:27:03.598462",
+                        "end_date": "2026-10-07T17:27:03.598462",
+                        "plan": {
+                            "id": 4,
+                            "name": "Starter",
+                            "tier": "Professional",
+                            "description": "All-in-one power for fast-scaling startups, teams, or consultants. Full compliance and AI-powered reviews..",
+                            "stripe_product_id": "prod_T7HYVY4WdxLVxF",
+                            "stripe_price_id": null,
+                            "token_limit": 500000,
+                            "project_limit": 10,
+                            "artifact_limit": 300,
+                            "video_limit": 15,
+                            "image_limit": 100,
+                            "review_limit": 300,
+                            "audio_limit": 20,
+                            "can_generate_artifacts": true,
+                            "can_download_artifacts": true,
+                            "can_save_artifacts_to_ci_cd": true,
+                            "monthly_price": 49,
+                            "yearly_price": 499,
+                            "display_order": 2,
+                            "highlight": true,
+                            "archived": false,
+                            "is_active": true,
+                            "created_at": "2025-09-25T00:03:53.885949",
+                            "updated_at": "2025-09-25T00:25:09.902698"
+                        }
+                    },
+                    "updatedAt": "2025-10-14T15:08:20.331115+00:00",
+                    "userId": "usr:0eb756a3a9a24ae486c6f961260ae5b4",
+                    "workspaces": [
+                        {
+                            "id": "ws:5c21957bd753",
+                            "name": "Default",
+                            "description": "Personal workspace",
+                            "createdAt": "2025-09-27T14:02:26.790080",
+                            "updatedAt": "2025-09-27T14:02:26.790089",
+                            "isActive": true,
+                            "owners": [
+                                "usr:0eb756a3a9a24ae486c6f961260ae5b4"
+                            ],
+                            "members": [
+                                "usr:0eb756a3a9a24ae486c6f961260ae5b4"
+                            ],
+                            "visibility": "private",
+                            "settings": {}
+                        }
+                    ],
+                    "id": "usr:0eb756a3a9a24ae486c6f961260ae5b4"
+                },
+                "workspaces": [
+                    {
+                        "id": "ws:5c21957bd753",
+                        "name": "Default",
+                        "description": "Personal workspace",
+                        "createdAt": "2025-09-27T14:02:26.790080",
+                        "updatedAt": "2025-09-27T14:02:26.790089",
+                        "isActive": true,
+                        "owners": [
+                            "usr:0eb756a3a9a24ae486c6f961260ae5b4"
+                        ],
+                        "members": [
+                            "usr:0eb756a3a9a24ae486c6f961260ae5b4"
+                        ],
+                        "visibility": "private",
+                        "settings": {}
+                    }
+                ],
+                "projects": [
+                    {
+                        "name": "AltCodePro",
+                        "workspaceId": "ws: 5c21957bd753",
+                        "visibility": "public",
+                        "sharedWith": [],
+                        "isActive": true,
+                        "clientType": "website",
+                        "cloud": "firebase",
+                        "frontend": "nextjs",
+                        "backend": "firebase_functions",
+                        "database": "firestore",
+                        "notification": false,
+                        "analytics": false,
+                        "ai": false,
+                        "customTools": [],
+                        "settings": {
+                            "api_url": "https: //api.altcode.pro/",
+                            "ui_url": "https://altcode.pro/",
+                            "email_key": null,
+                            "sms_key": null,
+                            "feature_flags": {
+                                "enable_docs": true
+                            }
+                        },
+                        "extraEnvVars": {
+                            "stripe_secret_key": "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"
+                        },
+                        "integrations": {},
+                        "brandingOverrides": null,
+                        "provisionNow": true,
+                        "promoteOnPortal": true,
+                        "allowDiscovery": true,
+                        "launchStage": "beta",
+                        "domain": "altcode.pro",
+                        "mapDomainTo": "frontend",
+                        "enableSubdomain": true,
+                        "verifyDomainStatus": null,
+                        "domainDnsRequiredRecords": null,
+                        "sslStatus": null,
+                        "id": "prj:a1810ba95fc9",
+                        "userId": "usr:0eb756a3a9a24ae486c6f961260ae5b4",
+                        "orgId": "org:sireeshPangaluri",
+                        "subscriptionId": 3,
+                        "slug": "altcodepro",
+                        "promptVariables": {
+                            "user_selected_domain": "SaaS",
+                            "user_selected_client_type": "Responsive",
+                            "user_selected_technologies": "nextjs",
+                            "user_selected_database": "firestore",
+                            "user_selected_region": "U.S.A",
+                            "user_selected_cloud": "firebase",
+                            "user_selected_case": "camelcase",
+                            "user_selected_frontend": "nextjs",
+                            "user_selected_backend": "firebase_functions",
+                            "user_selected_languages": "English",
+                            "user_selected_enterprise_services": "auth",
+                            "user_deployment_type": "free",
+                            "user_file_extension": ".ts"
+                        },
+                        "description": "## Project Title\nAltCodePro and AltAutonomousCodeAgent: AI-Driven Software Development and Autonomous DevOps Platform\n\n## Executive Summary\nAltCodePro automates generation of 100+ artifacts across 23 categories, covering the full product lifecycle from ideation to documentation. It helps startups, SMEs, and enterprises build compliant (GDPR, WCAG 2.1) software globally, reducing time/costs by 30-50%. AltAutonomousCodeAgent adds autonomous codebase optimization, analysis, refactoring, testing, and deployment, integrating with GitHub, Bitbucket, GitLab, Jira, Jenkins, Confluence. Together, they streamline workflows, boost quality/scalability. As of Aug 12, 2025, production-ready and marketplace-positioned. Integrations: ChatGPT/xAI agents, GCP/Azure/AWS/DigitalOcean SaaS, WhatsApp chat, Word/PDF plugins.\n\n## Product Overview\n### AltCodePro\nCloud-based AI platform automating artifacts for ideation, planning, design, development, testing, deployment, operations, support, documentation. Addresses manual inefficiencies with customizable, compliant artifacts (business plans, specs, code, UI, manuals). Built on FastAPI backend, PostgreSQL (SQLAlchemy ORM), Next.js frontend; integrates Prometheus/Grafana/Sentry/LogRocket for reliability. Subscription model with usage limits.\n\n### AltAutonomousCodeAgent\nAutonomous AI for repo-wide automation: analysis (tree-sitter), refactoring (LLMs like Grok/Azure OpenAI/Claude/Gemini), testing (Dockerized), deployment (branches/PRs/CI/CD across VCS). Integrates DevOps tools and xAI ecosystem. Scalable/secure (asyncio, Celery/Redis, encryption, sanitization). Freemium with VS Code/GitHub/Atlassian/cloud extensions.\n\n### Combined Vision\nHolistic automation from planning to maintenance, aligning with xAI's mission for faster, compliant software delivery.\n\n## Detailed Description\n### AltCodePro\n23 categories: 1. Ideation (vision/market/business case); 2. Investor Data Room (projections/pitch decks); 3. Branding (guidelines/logos); 4. Planning (roadmaps/requirements); 5. Design (journeys/systems/accessibility); 6. Database (models/migrations); 7. Architecture (scalable/modular); 8. Compliance (GDPR/WCAG checklists); 9. Specification (functional/technical); 10. Backend Code (APIs/scripts); 11. UI Code (wireframes/components/tests); 12. Testing (plans/benchmarks); 13. Release (CI/CD/monitoring); 14. Operations (runbooks/SLAs); 15. Support (guides/FAQs); 16. Marketing (strategies/campaigns); 17. Sales (enablement); 18. Analytics (dashboards/reports); 19. Community (portals/guidelines); 20. Change Management (logs/assessments); 21. Website (sitemaps/Next.js); 22. Training (tutorials/webinars); 23. User Documentation (manuals/API docs). Uses Jinja2 templates, FastAPI, PostgreSQL.\n\n### AltAutonomousCodeAgent\nKey features: Code Analysis (parse/identify issues); Refactoring (LLM improvements); Testing (pytest/npm with retries); Deployment (PRs/builds/auto-merge); Integrations (Jira/Jenkins/Confluence/xAI). Scalable (concurrent/async), secure (encryption/sanitization/rate limits). Packaged with README/MIT LICENSE/setup.\n\n## Expected Outcomes and Impact\n- Outcomes: 100+ artifacts, 30-50% time reduction; 95%+ test passes; marketplace-ready (VS Code/GitHub/etc.).\n- Impact: Faster launches for startups/SMEs; compliant solutions for enterprises; developer innovation; accessible software; leverages xAI/X users for reach.\n\n## Conclusion\nRevolutionary ecosystem automating development/DevOps. AltCodePro generates artifacts; AltAutonomousCodeAgent optimizes code. Robust stack/integrations position it to lead 2025 market vs. Copilot/Devin/etc., delivering value globally.\n\n## Subscription Plans\n- Free: 5k tokens, 10 projects, 1 image/video, 15 artifacts, 3 reviews; generate but no download/CI-CD.\n- Student: 10k tokens, 10 projects, 5 images/1 video, 30 artifacts/reviews; generate/download; $19/mo or $228/yr.\n- Founder: 25k tokens, 10 projects, 10 images/5 videos, 50 artifacts/reviews; full access; $49/mo or $499/yr.\n- Professional: 100k tokens, 10 projects, 15 images/5 videos, 300 artifacts/reviews; full; $149/mo or $1299/yr.\n- Enterprise: 1M tokens, 10 projects, 30 images/10 videos, 1000 artifacts/reviews; custom; contact for pricing.\n\n## Add-ons\n- Extra Tokens: 50k ($9/mo), 200k ($29/mo).\n- Extra Generations: 100 ($25/mo, ~200k tokens).\n- Extra Images: 50 ($15/mo).\n- Extra Videos: 5x10s HD ($49/one-time).\n- Team Seat: $15/mo/user.\n- Storage: 50GB ($10/mo).\n- API Booster: $49/mo.\n- CI/CD Premium: $29/mo.\n- Multi-Cloud Deploy: $99/mo/env.\n- Custom Domain+SSL: $19/mo.\n- Priority Support: $49/mo.\n- Account Manager: $499/mo.\n- Consulting: 10h ($1500/one-time).\n- Custom Branding: $299/mo.\n- Compliance Pack: $999/one-time.\n- SAML/SSO: $199/mo/org.\n- Custom SLA: $999/mo.\n- Analytics Pack: $49/mo.\n- Landing Page Credit: $19/mo/page.\n- Pitch Deck Pack: $299/one-time.\n- Social Automation: $29/mo.\n- SendGrid Email: 10k emails ($19/mo).\n- Twilio SMS: 1k SMS ($29/mo).\n- Local Phone: $5/mo/number.\n- Toll-Free Phone: $12/mo/number.\n- Onboarding: 4h ($199/one-time).\n- Sandbox Env: $99/mo.\n- Premium AI Model: $199/mo.\n- Enterprise Migration: $2999/one-time.\n- Branding Kit: $99/one-time.\n- GDPR Pack: $149/yr.\n- Deploy Automation: $49/mo.\n\n## Artifact Generations\nCategories include Ideation (vision, personas, etc.), Branding (guidelines, logos), Investor Data Room (overviews, projections), Planning (features, roadmap), Specification (functional/tech specs), Design (journeys, stories), Architecture (diagrams, microservices), Database (models, ER diagrams), Compliance (checklists, policies), Backend (structure, APIs, tests), UI Code (structure, screens, code), Testing (plans, cases), Release (notes, runbooks), Operations (SOPs, SLAs), Support (guides, KB), Marketing (campaigns, content), Sales (enablement), Community (portals, guides), Change Management (frameworks, logs), Training (plans, outlines), User Documentation (guides, manuals, videos), Corporate Website (sitemap, code, deployment)."
+                    }
+                ],
+                "marketplaceItems": [],
+                "usage": [],
+                "subscription": {
+                    "id": 3,
+                    "start_date": "2025-10-07T17:27:03.598462",
+                    "end_date": "2026-10-07T17:27:03.598462",
+                    "plan": {
+                        "id": 4,
+                        "name": "Starter",
+                        "tier": "Professional",
+                        "description": "All-in-one power for fast-scaling startups, teams, or consultants. Full compliance and AI-powered reviews..",
+                        "stripe_product_id": "prod_T7HYVY4WdxLVxF",
+                        "stripe_price_id": null,
+                        "token_limit": 500000,
+                        "project_limit": 10,
+                        "artifact_limit": 300,
+                        "video_limit": 15,
+                        "image_limit": 100,
+                        "review_limit": 300,
+                        "audio_limit": 20,
+                        "can_generate_artifacts": true,
+                        "can_download_artifacts": true,
+                        "can_save_artifacts_to_ci_cd": true,
+                        "monthly_price": 49,
+                        "yearly_price": 499,
+                        "display_order": 2,
+                        "highlight": true,
+                        "archived": false,
+                        "is_active": true,
+                        "created_at": "2025-09-25T00:03:53.885949",
+                        "updated_at": "2025-09-25T00:25:09.902698"
+                    }
+                },
+                "notifications": [],
+                "referral_info": null,
+                "feedbacks": []
             },
-            globalConfig,
-            {}
-        );
-
-        expect(mockResolveValue).toHaveBeenCalledWith("base", {}, undefined);
-        expect(mockResolveValue).toHaveBeenCalledWith("path", {}, undefined);
-        expect(mockResolveValue).toHaveBeenCalledWith("1", {}, undefined);
-        expect(ds.baseUrl).toBe("resolved:base");
+            "isAuthenticated": true,
+        };
     });
 
-    it("resolves body deeply via deepResolveDataSource when no {form.} placeholder", async () => {
-
-        const ds = resolveDataSource(
-            {
-                id: "bodyTest",
-                body: { foo: "bar" },
-            },
-            globalConfig,
-            {}
-        );
-
-        expect(mockDeepResolve).toHaveBeenCalledWith({ foo: "bar" }, {}, undefined);
+    it("1) resolves i18n.welcome", () => {
+        expect(resolveBinding("i18n.welcome", state, t)).toBe("Welcome!");
     });
 
-    it("skips deepResolveDataSource if body contains {form.} placeholder", async () => {
-
-        const ds = resolveDataSource(
-            {
-                id: "bodyForm",
-                body: { name: "{form.username}" },
-            },
-            globalConfig,
-            {}
-        );
-        expect(mockDeepResolve).not.toHaveBeenCalled();
-        expect(ds.body).toEqual({ name: "{form.username}" });
+    it("2) resolves translations.en.welcome style", () => {
+        expect(resolveBinding("translations.en.greeting", state, t)).toContain("Hello,");
     });
+
+    it("3) resolves state.user.name", () => {
+        expect(resolveBinding("state.user.name", state, t)).toBe("Sireesh");
+    });
+
+    it("4) resolves form.email", () => {
+        expect(resolveBinding("form.email", state, t)).toBe("test@example.com");
+    });
+
+    it("5) resolves {form.email}", () => {
+        expect(resolveBinding("{form.email}", state, t)).toBe("test@example.com");
+    });
+
+    it("6) resolves {{form.email}}", () => {
+        expect(resolveBinding("{{form.email}}", state, t)).toBe("test@example.com");
+    });
+
+    it("7) resolves env.API_URL", () => {
+        expect(resolveBinding("env.API_URL", state, t)).toBe("https://api.example.com");
+    });
+
+    it("8) resolves UPPERCASE env constant", () => {
+        expect(resolveBinding("API_DOMAIN", state, t)).toBe("https://envdomain.io");
+    });
+
+    it("9) resolves {{state.user.name}}", () => {
+        expect(resolveBinding("{{state.user.name}}", state, t)).toBe("Sireesh");
+    });
+
+    it("10) resolves env + state combined", () => {
+        const result = resolveBinding("{{env.API_URL}}/v1/{{state.user.id}}", state, t);
+        expect(result).toBe("https://api.example.com/v1/u1");
+    });
+
+    it("11) resolves nested template placeholders recursively", () => {
+        const result = resolveBinding("{{env.API_DOMAIN}}/users/{{user.id}}", state, t);
+        expect(result).toBe("https://envdomain.io/users/u1");
+    });
+
+    it("12) resolves heuristic translation-like key", () => {
+        expect(resolveBinding("dashboard.copy_referral_link", state, t)).toBe("Copy your referral link");
+    });
+
+    it("13) expands env templates in state strings", () => {
+        const res = resolveBinding("${API_URL}/login", state, t);
+        expect(res).toBe("https://api.example.com/login");
+    });
+
+    it("14) resolves {{t('dashboard.welcome')}}", () => {
+        const res = resolveBinding("{{t('dashboard.welcome')}}", state, t);
+        expect(res).toContain("Welcome to dashboard");
+    });
+
+    it("15) resolves templates inside translations", () => {
+        const res = resolveBinding("en.greeting", state, t);
+        expect(res).toBe("Hello, Sireesh!");
+    });
+
+    it("16) resolves expression with datasource", () => {
+        const expr = "{{ds_user_info.data.organization.members.filter(m => m.userId == user.id)[0].roles[0]}}";
+        const res = resolveBinding(expr, state, t);
+        expect(res).toBe("Founder");
+    });
+
+    it("17) resolves array length", () => {
+        const res = resolveBinding("{{ds_user_info.data.projects.length}}", state, t);
+        expect(res).toBe(3);
+    });
+
+    it("18) resolves {t('dashboard.copy_referral_link')}", () => {
+        const res = resolveBinding("{t('dashboard.copy_referral_link')}", state, t);
+        expect(res).toBe("Copy your referral link");
+    });
+
+    it("19) resolves {user.displayName}", () => {
+        const res = resolveBinding("{user.profile.display_name}", state, t);
+        expect(res).toBe("S. Panglauri");
+    });
+
+    it("20) resolves {{user.displayName}}", () => {
+        const res = resolveBinding("{{user.name}}", state, t);
+        expect(res).toBe("Sireesh");
+    });
+
+    it("21) returns literal fallback when no match", () => {
+        expect(resolveBinding("some.random.key", state, t)).toBe("some.random.key");
+    });
+
+    it("22) resolves multiple nested templates", () => {
+        const res = resolveBinding(
+            "API: {{API_URL}} | User: {{user.name}} | Org: {{params.orgId}}",
+            state,
+            t
+        );
+        expect(res).toContain("API:");
+        expect(res).toContain("Sireesh");
+        expect(res).toContain("org42");
+    });
+
+    it("23) resolves translation containing nested templates with data", () => {
+        (t as any) = (key: string) =>
+            key === "translate.en.welcome"
+                ? "Welcome, {{user.profile.display_name}}!"
+                : key;
+        const res = resolveBinding("translate.en.welcome", state, t);
+        expect(res).toBe("Welcome, S. Panglauri!");
+    });
+
+    it("24) handles undefined state safely", () => {
+        expect(resolveBinding("state.unknown.path", {}, t)).toBe("");
+    });
+
+    it("25) resolves simple translation from state.translations dictionary", () => {
+        expect(resolveBinding("projects.create", state, t)).toBe("New Project");
+        expect(resolveBinding("{{t('actions.support')}}", state, t)).toBe("Support");
+        expect(resolveBinding("actions.unknown", state, t)).toBe("actions.unknown");
+    });
+    it("26) load data array", () => {
+        const response = resolveBinding("profile.projects", state, t);
+        expect(JSON.stringify(response)).equal(JSON.stringify(state.profile.projects));
+    });
+
+
 });
 
-describe("deepResolveDataSource", () => {
-    const mockResolveValue = vi.fn();
+describe("deepResolveBindings", () => {
+    let t: (k: string) => string;
+    let state: any;
 
-    beforeEach(async () => {
-        vi.resetModules();
-        mockResolveValue.mockReset();
+    beforeEach(() => {
+        t = vi.fn((k: string) => {
+            const translations: Record<string, string> = {
+                "i18n.welcome": "Welcome!",
+                "cyclic.key": "{{cyclic.key}}",
+                "deep.key": "{{deep.key}}",
+            };
+            return translations[k] ?? k;
+        });
+
+        state = {
+            user: { name: "Sireesh" },
+            form: { email: "sireesh@example.com" },
+            env: process.env,
+            translations: {
+                en: {
+                    "projects.create": "New Project",
+                },
+            },
+            locale: "en",
+        };
     });
 
-    it("returns null or undefined as-is", async () => {
-
-        expect(deepResolveDataSource(null, {})).toBe(null);
-        expect(deepResolveDataSource(undefined, {})).toBe(undefined);
-    });
-
-    it("resolves plain string values using resolveDataSourceValue", async () => {
-
-        mockResolveValue.mockReturnValue("resolvedValue");
-        const result = deepResolveDataSource("state.user.name", { user: { name: "Alice" } });
-        expect(mockResolveValue).toHaveBeenCalledWith("state.user.name", { user: { name: "Alice" } }, undefined);
-        expect(result).toBe("resolvedValue");
-    });
-
-    it("recursively resolves all strings inside plain objects", async () => {
-
-        mockResolveValue.mockImplementation((v) => `resolved(${v})`);
-
-        const obj = {
-            a: "state.user.id",
+    it("recursively resolves all nested bindings in objects and arrays", () => {
+        const input = {
+            message: "{{t('i18n.welcome')}} {{user.name}}",
+            meta: ["{form.email}", "env.API_URL"],
             nested: {
-                b: "form.email",
-                c: 42,
+                url: "{{env.API_URL}}/v1/{{user.name}}",
             },
         };
+        const out = deepResolveBindings(input, state, t);
 
-        const result = deepResolveDataSource(obj, { user: { id: 1 } });
-        expect(result).toEqual({
-            a: "resolved(state.user.id)",
-            nested: { b: "resolved(form.email)", c: 42 },
-        });
+        expect(out.message).toBe("Welcome! Sireesh");
+        expect(out.meta[0]).toBe("sireesh@example.com");
+        expect(out.meta[1]).toBe("https://api.example.com");
+        expect(out.nested.url).toBe("https://api.example.com/v1/Sireesh");
     });
 
-    it("recursively resolves strings in arrays", async () => {
-
-        mockResolveValue.mockImplementation((v) => `resolved(${v})`);
-
-        const arr = ["state.foo", "form.bar", 123];
-        const result = deepResolveDataSource(arr, { foo: 1, bar: 2 });
-
-        expect(result).toEqual(["resolved(state.foo)", "resolved(form.bar)", 123]);
-        expect(mockResolveValue).toHaveBeenCalledTimes(2);
-    });
-
-    it("handles deeply nested mixed structures (arrays inside objects inside arrays)", async () => {
-
-        mockResolveValue.mockImplementation((v) => `resolved(${v})`);
-
-        const input = [
-            { a: ["state.user.id", { b: "form.email" }] },
-            "literal",
-        ];
-
-        const result = deepResolveDataSource(input, { user: { id: 7 } });
-        expect(result).toEqual([
-            { a: ["resolved(state.user.id)", { b: "resolved(form.email)" }] },
-            "resolved(literal)",
-        ]);
-    });
-
-    it("returns literal values unchanged (number, boolean, date)", async () => {
-
-
-        const now = new Date();
-        expect(deepResolveDataSource(123, {})).toBe(123);
-        expect(deepResolveDataSource(true, {})).toBe(true);
-        expect(deepResolveDataSource(now, {})).toBe(now);
-    });
-});
-
-describe("resolveDynamicPath", () => {
-    const state = {
-        user: {
-            id: 123,
-            name: "Alice",
-            profile: { age: 30 },
-        },
-        org: {
-            id: "org-xyz",
-        },
-        list: [10, 20, 30],
-        _meta: { env: "dev" },
-    };
-
-    it("returns same path if no bindings present", () => {
-        const result = resolveDynamicPath("/api/static/path", state);
-        expect(result).toBe("/api/static/path");
-    });
-
-    it("resolves single binding with {state.key} format", () => {
-        const result = resolveDynamicPath("/api/users/{user.id}", state);
-        expect(result).toBe("/api/users/123");
-    });
-
-    it("resolves single binding with {{state.key}} format", () => {
-        const result = resolveDynamicPath("/api/org/{{org.id}}", state);
-        expect(result).toBe("/api/org/org-xyz");
-    });
-
-    it("resolves nested object properties", () => {
-        const result = resolveDynamicPath("/api/users/{user.profile.age}", state);
-        expect(result).toBe("/api/users/30");
-    });
-
-    it("resolves multiple bindings in one string", () => {
-        const result = resolveDynamicPath(
-            "/api/{org.id}/user/{{user.id}}/name/{{user.name}}",
-            state
-        );
-        expect(result).toBe("/api/org-xyz/user/123/name/Alice");
-    });
-
-    it("returns empty string for missing keys", () => {
-        const result = resolveDynamicPath("/api/{user.nonexistent}/test", state);
-        expect(result).toBe("/api//test");
-    });
-
-    it("handles array index lookups", () => {
-        const result = resolveDynamicPath("/api/value/{list.1}", state);
-        expect(result).toBe("/api/value/20");
-    });
-
-    it("handles underscores and brackets in keys", () => {
-        const result = resolveDynamicPath("/env/{_meta.env}", state);
-        expect(result).toBe("/env/dev");
-    });
-
-    it("gracefully handles empty or undefined input", () => {
-        expect(resolveDynamicPath("", state)).toBe("");
-        expect(resolveDynamicPath(undefined as any, state)).toBe(undefined);
-        expect(resolveDynamicPath(null as any, state)).toBe(null);
-    });
-
-    it("handles literal strings surrounded by braces (non-binding)", () => {
-        const result = resolveDynamicPath("{notAStateVar}", {});
-        expect(result).toBe(""); // since key not found, replaced with empty string
-    });
-
-    it("handles partial matches and mixed text", () => {
-        const result = resolveDynamicPath(
-            "Hello {{user.name}}, your org is {org.id}",
-            state
-        );
-        expect(result).toBe("Hello Alice, your org is org-xyz");
-    });
-});
-
-describe("normalizeBindings", () => {
-    it("returns object unchanged if there are no {{ }} bindings", () => {
-        const input = { path: "/api/{user.id}" };
-        const result = normalizeBindings(input);
-        expect(result).toEqual(input);
-    });
-
-    it("normalizes single {{ }} binding to { }", () => {
-        const input = { path: "/api/{{user.id}}" };
-        const result = normalizeBindings(input);
-        expect(result).toEqual({ path: "/api/{user.id}" });
-    });
-
-    it("normalizes multiple {{ }} bindings in same string", () => {
-        const input = { path: "/api/{{org.id}}/user/{{user.id}}" };
-        const result = normalizeBindings(input);
-        expect(result).toEqual({ path: "/api/{org.id}/user/{user.id}" });
-    });
-
-    it("works recursively inside nested objects", () => {
+    it("handles deeply nested objects with multiple bindings", () => {
         const input = {
-            outer: {
-                inner: { url: "/v1/{{project.name}}/details" },
+            level1: {
+                level2: {
+                    level3: "{{user.name}}",
+                    level3b: "{{env.API_URL}}",
+                },
+                level2b: ["{{form.email}}", "{{t('i18n.welcome')}}"],
             },
         };
-        const result = normalizeBindings(input);
-        expect(result).toEqual({
-            outer: { inner: { url: "/v1/{project.name}/details" } },
-        });
-    });
-
-    it("works for arrays containing bindings", () => {
-        const input = ["{{user.id}}", "/{{org.slug}}"];
-        const result = normalizeBindings(input);
-        expect(result).toEqual(["{user.id}", "/{org.slug}"]);
-    });
-
-    it("leaves other characters untouched", () => {
-        const input = {
-            message: "Hello {{user.name}}!",
-            plain: "No bindings here.",
-            escaped: "{escaped}",
-        };
-        const result = normalizeBindings(input);
-        expect(result).toEqual({
-            message: "Hello {user.name}!",
-            plain: "No bindings here.",
-            escaped: "{escaped}",
-        });
-    });
-
-    it("handles underscores, brackets, and digits inside bindings", () => {
-        const input = {
-            complex: "/{{user_list[0]._meta.env}}/test",
-        };
-        const result = normalizeBindings(input);
-        expect(result).toEqual({
-            complex: "/{user_list[0]._meta.env}/test",
-        });
-    });
-
-    it("returns empty object safely", () => {
-        const result = normalizeBindings({});
-        expect(result).toEqual({});
-    });
-
-    it("returns null input as null", () => {
-        expect(normalizeBindings(null)).toBeNull();
-    });
-});
-
-describe("hash", () => {
-    it("returns a string hash for a simple string", () => {
-        const result = hash("AltCodePro");
-        expect(typeof result).toBe("string");
-        expect(Number.isNaN(Number(result))).toBe(false);
-    });
-
-    it("produces deterministic output for identical inputs", () => {
-        const h1 = hash("hello world");
-        const h2 = hash("hello world");
-        expect(h1).toBe(h2);
-    });
-
-    it("produces different outputs for different strings", () => {
-        const h1 = hash("hello");
-        const h2 = hash("world");
-        expect(h1).not.toBe(h2);
-    });
-
-    it("handles plain objects consistently regardless of key order", () => {
-        const objA = { b: 2, a: 1 };
-        const objB = { a: 1, b: 2 };
-        const h1 = hash(objA);
-        const h2 = hash(objB);
-        expect(h1).toBe(h2);
-    });
-
-    it("handles arrays deterministically", () => {
-        const arr1 = [1, 2, 3];
-        const arr2 = [1, 2, 3];
-        expect(hash(arr1)).toBe(hash(arr2));
-    });
-
-    it("returns different hashes for arrays with different order", () => {
-        const arr1 = [1, 2, 3];
-        const arr2 = [3, 2, 1];
-        expect(hash(arr1)).not.toBe(hash(arr2));
-    });
-
-    it("handles nested objects", () => {
-        const obj = { user: { id: 1, name: "Alice" } };
-        const result = hash(obj);
-        expect(typeof result).toBe("string");
-    });
-
-    it("handles circular references safely", () => {
-        const obj: any = { a: 1 };
-        obj.self = obj;
-        expect(() => hash(obj)).not.toThrow();
-        expect(typeof hash(obj)).toBe("string");
-    });
-
-    it("handles mixed types correctly", () => {
-        const obj = { arr: [1, { k: "v" }], num: 5, str: "ok" };
-        const h1 = hash(obj);
-        const h2 = hash(obj);
-        expect(h1).toBe(h2);
-    });
-
-    it("hashes numbers, booleans, and null consistently", () => {
-        expect(hash(123)).toBe(hash(123));
-        expect(hash(true)).toBe(hash(true));
-        expect(hash(null)).toBe(hash(null));
-    });
-
-    it("produces same hash for object and its JSON string (content-based)", () => {
-        const obj = { text: "hello" };
-        expect(hash(obj)).toBe(hash(JSON.stringify(obj)));
-    });
-
-    it("handles empty string and empty object distinctly", () => {
-        expect(hash("")).not.toBe(hash({}));
+        const out = deepResolveBindings(input, state, t);
+        expect(out.level1.level2.level3).toBe("Sireesh");
+        expect(out.level1.level2.level3b).toBe("https://api.example.com");
+        expect(out.level1.level2b[0]).toBe("sireesh@example.com");
+        expect(out.level1.level2b[1]).toBe("Welcome!");
     });
 });

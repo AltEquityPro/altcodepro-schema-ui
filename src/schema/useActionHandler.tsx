@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useEffect, useCallback, useState, createContext, useContext } from "react";
+import { useRef, useEffect } from "react";
 import {
     ActionType,
     AnyObj,
@@ -10,18 +10,33 @@ import {
     ActionRuntime,
     ActionParams
 } from "../types";
-import { anySignal, deepResolveBindings, resolveDataSource, deepResolveDataSource, resolveDataSourceValue, hash, getAuthKey } from "../lib/utils";
+import { deepResolveBindings, resolveDataSource, deepResolveDataSource, resolveDataSourceValue, hash, getAuthKey } from "../lib/utils";
 import { JSONPath } from "jsonpath-plus";
 import { useAppState } from "./StateContext";
 
 import { useOffline } from "../hooks/OfflineContext";
 import { useAnalytics } from "../hooks/AnalyticsContext";
-type StoredAuth = {
-    token?: string;
-    refreshToken?: string;
-    expiresAt?: number; // epoch in ms
-};
+import { decodeJwtExp, getStoredAuthToken } from "./authUtils";
+import { useAuth } from "./useAuth";
 
+function anySignal(signals: AbortSignal[]): AbortSignal {
+    const controller = new AbortController();
+
+    const onAbort = (event: Event) => {
+        controller.abort((event.target as AbortSignal).reason);
+        signals.forEach(sig => sig.removeEventListener("abort", onAbort));
+    };
+
+    for (const sig of signals) {
+        if (sig.aborted) {
+            controller.abort(sig.reason);
+            break;
+        }
+        sig.addEventListener("abort", onAbort);
+    }
+
+    return controller.signal;
+}
 
 function isOfflineEnabled(ds: any, screen?: any, project?: any) {
     // no schema break: read optional flags if present
@@ -35,101 +50,8 @@ function cacheKeyFor(dsId: string, url: string, method: string, body?: any) {
     const sig = `${dsId}|${method}|${url}|${body ? hash(body) : ''}`;
     return `offline:${sig}`;
 }
-function decodeJwtExp(token: string): number | null {
-    try {
-        if (!token) return Date.now() + 3600 * 1000;
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        return payload?.exp ? payload.exp * 1000 : Date.now() + 3600 * 1000;
-    } catch {
-        return Date.now() + 3600 * 1000;
-    }
-}
 
-async function refreshAuthToken(globalConfig: UIProject["globalConfig"], refreshToken: string): Promise<StoredAuth | null> {
-    try {
-        const tokenUrl = globalConfig?.auth?.oidc?.tokenUrl;
-        if (!tokenUrl) return null;
-        const clientId =
-            typeof globalConfig?.auth?.oidc?.clientId === "string"
-                ? globalConfig.auth.oidc.clientId
-                : (globalConfig?.auth?.oidc?.clientId as any)?.binding || "";
-
-
-        const res = await fetch(tokenUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({
-                grant_type: "refresh_token",
-                refresh_token: refreshToken,
-                client_id: clientId,
-            }),
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-
-        const expiresAt =
-            data.expires_in && !isNaN(data.expires_in)
-                ? Date.now() + data.expires_in * 1000
-                : undefined;
-
-        return {
-            token: data.access_token || data.id_token,
-            refreshToken: data.refresh_token || refreshToken,
-            expiresAt,
-        };
-    } catch (e) {
-        console.error("Token refresh failed:", e);
-        return null;
-    }
-}
-
-function storeAuthToken(globalConfig: UIProject["globalConfig"], auth: StoredAuth) {
-    if (!auth) return;
-    const authKey = getAuthKey(globalConfig);
-    const storageType = globalConfig?.auth?.tokenStorage || "localStorage";
-    const data = JSON.stringify(auth);
-
-    switch (storageType) {
-        case "cookie":
-            document.cookie = `${authKey}=${btoa(data)}; path=/; SameSite=Lax`;
-            break;
-        case "memory":
-            (window as any).__memoryAuth = data;
-            break;
-        default:
-            try {
-                localStorage.setItem(authKey, data);
-            } catch {
-                console.warn("LocalStorage unavailable; falling back to memory store");
-                (window as any).__memoryAuth = data;
-            }
-    }
-}
-
-function getStoredAuthToken(globalConfig: UIProject["globalConfig"]): StoredAuth | null {
-    const authKey = getAuthKey(globalConfig);
-    const storageType = globalConfig?.auth?.tokenStorage || "localStorage";
-    let data: string | null = null;
-    switch (storageType) {
-        case "cookie":
-            const match = document.cookie.match(new RegExp(`(^| )${authKey}=([^;]+)`));
-            data = match ? atob(match[2]) : null;
-            break;
-        case "memory":
-            data = (window as any).__memoryAuth || null;
-            break;
-        default:
-            data = localStorage.getItem(authKey);
-    }
-    try {
-        return data ? JSON.parse(data) : null;
-    } catch {
-        return null;
-    }
-}
-
-function clearAuthToken(globalConfig: UIProject["globalConfig"]) {
+export function clearAuthToken(globalConfig: UIProject["globalConfig"]) {
     const authKey = getAuthKey(globalConfig);
     const storageType = globalConfig?.auth?.tokenStorage || "localStorage";
 
@@ -185,118 +107,19 @@ async function withRetry<T>(
     throw lastError;
 }
 
-export function useAuth(globalConfig?: UIProject["globalConfig"]) {
-    const [token, setToken] = useState<string | null>(null);
-    const [refreshTokenV, setRefreshToken] = useState<string | null>(null);
-    const [expiresAt, setExpiresAt] = useState<number | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const stored = getStoredAuthToken(globalConfig);
-        if (stored?.token) {
-            setToken(stored.token);
-            setRefreshToken(stored.refreshToken || null);
-            setExpiresAt(stored.expiresAt || null);
-        }
-        setLoading(false);
-        const onStorage = (e: StorageEvent) => {
-            if (e.key === getAuthKey(globalConfig)) {
-                const updated = getStoredAuthToken(globalConfig);
-                setToken(updated?.token || null);
-                setRefreshToken(updated?.refreshToken || null);
-                setExpiresAt(updated?.expiresAt || null);
-            }
-        };
-        window.addEventListener("storage", onStorage);
-        return () => window.removeEventListener("storage", onStorage);
-    }, [globalConfig]);
-
-    const isLoggedIn = !!token && (!expiresAt || Date.now() < expiresAt - 5 * 60 * 1000);
-
-    const login = useCallback((tkn: string, rt?: string, expiresIn?: number) => {
-        const exp = Date.now() + (expiresIn || 3600) * 1000;
-        storeAuthToken(globalConfig, { token: tkn, refreshToken: rt, expiresAt: exp });
-        setToken(tkn); setRefreshToken(rt || null); setExpiresAt(exp);
-    }, [globalConfig]);
-
-    const logout = useCallback(() => {
-        clearAuthToken(globalConfig);
-        setToken(null); setRefreshToken(null); setExpiresAt(null);
-    }, [globalConfig]);
-
-    const refresh = useCallback(async () => {
-        if (!refreshTokenV) return null;
-        const refreshed = await refreshAuthToken(globalConfig, refreshTokenV);
-        if (refreshed?.token) {
-            storeAuthToken(globalConfig, refreshed);
-            setToken(refreshed.token);
-            setRefreshToken(refreshed.refreshToken || null);
-            setExpiresAt(refreshed.expiresAt || null);
-            try {
-                const pl = JSON.parse(atob(refreshed.token.split('.')[1]));
-                window.dispatchEvent(new CustomEvent("authRefreshed", { detail: pl }));
-            } catch { }
-            return refreshed.token;
-        }
-        logout();
-        return null;
-    }, [globalConfig, refreshTokenV, logout]);
-
-    // gentle background refresh
-    useEffect(() => {
-        if (!refreshTokenV) return;
-        const id = setInterval(() => {
-            if (expiresAt && expiresAt - Date.now() < 5 * 60 * 1000) refresh();
-        }, 120000);
-        return () => clearInterval(id);
-    }, [refreshTokenV, expiresAt, refresh]);
-
-    return { token, refreshToken: refreshTokenV, expiresAt, isLoggedIn, loading, login, logout, refresh };
-}
-
 export function useActionHandler({
     globalConfig, runtime, dataSources,
-}: { globalConfig?: UIProject['globalConfig']; runtime: ActionRuntime; dataSources?: DataSource[]; }) {
+}: {
+    globalConfig?: UIProject['globalConfig'];
+    runtime: ActionRuntime;
+    dataSources?: DataSource[];
+}) {
     const { state, setState, t } = useAppState();
     const abortControllers = useRef<Record<string, AbortController>>({});
     const wsCleanups = useRef<Record<string, () => void>>({});
     const offline = useOffline();
     const analytics = useAnalytics();
-    const auth = useAuth(globalConfig);
-
-    useEffect(() => {
-        (async () => {
-            if (globalConfig?.profile?.dataSources && auth?.token) {
-                const ds = globalConfig.profile.dataSources;
-                const url = ds.apiUrl;
-                if (!url) {
-                    return;
-                }
-                const method = ds.method || "GET";
-                const headers: Record<string, string> = {
-                    ...(ds.headers || {}),
-                    Authorization: `Bearer ${auth?.token}`,
-                };
-                try {
-                    const options: any = { method, headers }
-                    if (ds.credentials) {
-                        options.credentials = ds.credentials;
-                    }
-                    const res = await fetch(url, options);
-                    if (!res.ok) {
-                        console.log('error loading user', res.status)
-                    }
-                    const profile = await res.json();
-                    setState('profile', profile);
-                    setState('auth.user', profile);
-                    setState('user', profile);
-                } catch (e) {
-                    console.warn("Failed to load user profile:", e);
-                }
-            }
-        })();
-    }, [auth?.token, globalConfig]);
-
+    const auth = useAuth();
 
     useEffect(() => {
         if (!offline?.registerExecutor) return;
@@ -364,6 +187,15 @@ export function useActionHandler({
         });
     }, [offline, dataSources, globalConfig, state, auth.token]);
 
+
+    useEffect(() => {
+        return () => {
+            Object.values(abortControllers.current).forEach(c => c.abort());
+            Object.values(wsCleanups.current).forEach(c => c());
+            abortControllers.current = {};
+            wsCleanups.current = {};
+        };
+    }, []);
     const cancel = (actionId: string) => {
         abortControllers.current[actionId]?.abort();
         delete abortControllers.current[actionId];
@@ -507,14 +339,19 @@ export function useActionHandler({
 
         const executeApi = async (ds: DataSource, bodyOverride?: AnyObj | FormData) => {
             const resolved = resolveDataSource(ds, globalConfig, state, bodyOverride);
-            const baseUrl = resolved.baseUrl || ''; const path = resolved.path || '';
+            const baseUrl = resolved.baseUrl || '';
+            const path = resolved.path || '';
             let url = baseUrl ? new URL(path, baseUrl).toString() : path;
+            console.log('Resolved URL:', url);
+            console.log("state", state)
+            url = resolveDataSourceValue(url, state, bodyOverride);
             const headers: Record<string, string> = { ...(resolved.headers || {}) };
             const storedAuth = getStoredAuthToken(globalConfig);
             const liveToken = auth.token || storedAuth?.token;
             if (auth.token && !headers["Authorization"])
                 headers["Authorization"] = `Bearer ${liveToken}`;
-            if (globalConfig?.security?.csrfHeaderName && state?.csrfToken) headers[globalConfig.security.csrfHeaderName] = state.csrfToken;
+            if (globalConfig?.security?.csrfHeaderName && state?.csrfToken)
+                headers[globalConfig.security.csrfHeaderName] = state.csrfToken;
 
             const queryParams = h.params?.queryParams || resolved.queryParams;
             if (queryParams) {
@@ -818,54 +655,7 @@ export function useActionHandler({
         }
     };
 
-    useEffect(() => {
-        return () => {
-            Object.values(abortControllers.current).forEach(c => c.abort());
-            Object.values(wsCleanups.current).forEach(c => c());
-            abortControllers.current = {};
-            wsCleanups.current = {};
-        };
-    }, []);
 
-    return { runEventHandler, cancel, auth }; // expose auth if UI needs it
+    return { runEventHandler, cancel }; // expose auth if UI needs it
 }
 
-const AuthContext = createContext<ReturnType<typeof useAuth> | null>(null);
-export const useAuthContext = () => {
-    const ctx = useContext(AuthContext);
-    if (!ctx) throw new Error("useAuthContext must be used within an <AuthProvider>");
-    return ctx;
-};
-export function AuthProvider({ children, globalConfig }: { children: React.ReactNode; globalConfig?: any }) {
-    const auth = useAuth(globalConfig);
-    useEffect(() => {
-        if (typeof window === 'undefined') return; // SSR safety
-
-        // Prevent re-wrapping fetch multiple times (especially in React StrictMode)
-        if ((window as any).__fetchPatched) return;
-        (window as any).__fetchPatched = true;
-
-        window.fetch = new Proxy(window.fetch, {
-            apply(target, thisArg, args) {
-                const [url, options = {}] = args;
-                const storedAuth = getStoredAuthToken(globalConfig);
-                if (storedAuth?.token) {
-                    options.headers = {
-                        ...(options.headers || {}),
-                        Authorization: `Bearer ${storedAuth.token}`,
-                    };
-                }
-                return Reflect.apply(target, thisArg, [url, options]);
-            },
-        });
-    }, [globalConfig]);
-    return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
-}
-export const AuthUtils = {
-    getAuthKey,
-    decodeJwtExp,
-    getStoredAuthToken,
-    storeAuthToken,
-    clearAuthToken,
-    refreshAuthToken,
-};

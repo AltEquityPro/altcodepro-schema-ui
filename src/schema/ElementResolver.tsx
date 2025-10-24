@@ -10,58 +10,56 @@ import {
     getAccessibilityProps
 } from "../lib/utils";
 // Lazy load shadcn components
-const AccordionRenderer = lazy(() => import("../components/ui/accordion").then(module => ({ default: module.AccordionRenderer })));
-const AlertDialogRenderer = lazy(() => import("../components/ui/alert-dialog").then(module => ({ default: module.AlertDialogRenderer })));
-const Alert = lazy(() => import("../components/ui/alert").then(module => ({ default: module.Alert })));
-const AlertDescription = lazy(() => import("../components/ui/alert").then(module => ({ default: module.AlertDescription })));
-const AvatarRenderer = lazy(() => import("../components/ui/avatar").then(module => ({ default: module.AvatarRenderer })));
-const BadgeRenderer = lazy(() => import("../components/ui/badge").then(module => ({ default: module.BadgeRenderer })));
-const BreadcrumbRenderer = lazy(() => import("../components/ui/breadcrumb").then(module => ({ default: module.BreadcrumbRenderer })));
-const ButtonRenderer = lazy(() => import("../components/ui/button").then(module => ({ default: module.ButtonRenderer })));
-const CalendarRenderer = lazy(() => import("../components/ui/calendar").then(module => ({ default: module.CalendarRenderer })));
-const CardRenderer = lazy(() => import("../components/ui/card").then(module => ({ default: module.CardRenderer })));
+import { AccordionRenderer } from "../components/ui/accordion";
+import { AlertDialogRenderer } from "../components/ui/alert-dialog";
+import { Alert, AlertDescription } from "../components/ui/alert";
+import { AvatarRenderer } from "../components/ui/avatar";
+import { BadgeRenderer } from "../components/ui/badge";
+import { BreadcrumbRenderer } from "../components/ui/breadcrumb";
+import { ButtonRenderer } from "../components/ui/button";
+import { CalendarRenderer } from "../components/ui/calendar";
+import { CardRenderer } from "../components/ui/card";
+import { CollapsibleRenderer } from "../components/ui/collapsible";
+import { CommandRenderer } from "../components/ui/command";
+import { ContextMenuRenderer } from "../components/ui/context-menu";
+import { ModalRenderer } from "../components/ui/dialog";
+import { DrawerRenderer } from "../components/ui/drawer";
+import { DropdownRenderer } from "../components/ui/dropdown-menu";
+import { PopoverRenderer } from "../components/ui/popover";
+import { ProgressRenderer } from "../components/ui/progress";
+import { RadioGroupRenderer } from "../components/ui/radio-group";
+import { ResizableRenderer } from "../components/ui/resizable";
+import { ScrollAreaRenderer } from "../components/ui/scroll-area";
+import { Separator } from "../components/ui/separator";
+import { SheetRenderer } from "../components/ui/sheet";
+import { SidebarRenderer } from "../components/ui/sidebar";
+import { Skeleton } from "../components/ui/skeleton";
+import { Switch } from "../components/ui/switch";
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "../components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
+import { ToggleGroup } from "../components/ui/toggle-group";
+import { Tooltip, TooltipTrigger, TooltipContent } from "../components/ui/tooltip";
+import { ContainerRenderer } from "../components/ui/container";
+import { DynamicIcon } from "../components/ui/dynamic-icon";
+import CustomComponentRender from "../components/ui/custom-component";
+import { MenuRenderer } from "../components/ui/menu-render";
+import StepWizardRenderer from "../components/ui/stepper";
+import { ListRenderer } from "../components/ui/list";
+import { ListItemRenderer } from "../components/ui/list_item";
+import { RatingInput } from "../components/ui/rating-input";
+import { SearchRenderer } from "../components/ui/search";
+import { FormResolver } from "../components/ui/form-resolver";
+import { DataGrid } from "../components/ui/datagrid";
+import { CodeInput } from "../components/ui/code-input";
+
+import { RenderChildren } from "./RenderChildren";
+import { Toggle } from "../components/ui/toggle";
+import { PageRenderer } from "../components/ui/pagination";
+
 const CarouselRenderer = lazy(() => import("../components/ui/carousel").then(module => ({ default: module.Carousel })));
 const Chart = lazy(() => import("../components/ui/chart").then(module => ({ default: module.Chart })));
-const CollapsibleRenderer = lazy(() => import("../components/ui/collapsible").then(module => ({ default: module.CollapsibleRenderer })));
-const CommandRenderer = lazy(() => import("../components/ui/command").then(module => ({ default: module.CommandRenderer })));
-const ContextMenuRenderer = lazy(() => import("../components/ui/context-menu").then(module => ({ default: module.ContextMenuRenderer })));
-const ModalRenderer = lazy(() => import("../components/ui/dialog").then(module => ({ default: module.ModalRenderer })));
-const DrawerRenderer = lazy(() => import("../components/ui/drawer").then(module => ({ default: module.DrawerRenderer })));
-const DropdownRenderer = lazy(() => import("../components/ui/dropdown-menu").then(module => ({ default: module.DropdownRenderer })));
-const PageRenderer = lazy(() => import("../components/ui/pagination").then(module => ({ default: module.PageRenderer })));
-const PopoverRenderer = lazy(() => import("../components/ui/popover").then(module => ({ default: module.PopoverRenderer })));
-const ProgressRenderer = lazy(() => import("../components/ui/progress").then(module => ({ default: module.ProgressRenderer })));
-const RadioGroupRenderer = lazy(() => import("../components/ui/radio-group").then(module => ({ default: module.RadioGroupRenderer })));
-const ResizableRenderer = lazy(() => import("../components/ui/resizable").then(module => ({ default: module.ResizableRenderer })));
-const ScrollAreaRenderer = lazy(() => import("../components/ui/scroll-area").then(module => ({ default: module.ScrollAreaRenderer })));
-const Separator = lazy(() => import("../components/ui/separator").then(module => ({ default: module.Separator })));
-const SheetRenderer = lazy(() => import("../components/ui/sheet").then(module => ({ default: module.SheetRenderer })));
-const SidebarRenderer = lazy(() => import("../components/ui/sidebar").then(module => ({ default: module.SidebarRenderer })));
-const Skeleton = lazy(() => import("../components/ui/skeleton").then(module => ({ default: module.Skeleton })));
-const Switch = lazy(() => import("../components/ui/switch").then(module => ({ default: module.Switch })));
-const Table = lazy(() => import("../components/ui/table").then(module => ({ default: module.Table })));
-const TableHeader = lazy(() => import("../components/ui/table").then(module => ({ default: module.TableHeader })));
-const TableBody = lazy(() => import("../components/ui/table").then(module => ({ default: module.TableBody })));
-const TableHead = lazy(() => import("../components/ui/table").then(module => ({ default: module.TableHead })));
-const TableRow = lazy(() => import("../components/ui/table").then(module => ({ default: module.TableRow })));
-const TableCell = lazy(() => import("../components/ui/table").then(module => ({ default: module.TableCell })));
-const Tabs = lazy(() => import("../components/ui/tabs").then(module => ({ default: module.Tabs })));
-const TabsList = lazy(() => import("../components/ui/tabs").then(module => ({ default: module.TabsList })));
-const TabsTrigger = lazy(() => import("../components/ui/tabs").then(module => ({ default: module.TabsTrigger })));
-const TabsContent = lazy(() => import("../components/ui/tabs").then(module => ({ default: module.TabsContent })));
-const ToggleGroup = lazy(() => import("../components/ui/toggle-group").then(module => ({ default: module.ToggleGroup })));
-const Toggle = lazy(() => import("../components/ui/toggle").then(module => ({ default: module.Toggle })));
-const Tooltip = lazy(() => import("../components/ui/tooltip").then(module => ({ default: module.Tooltip })));
-const TooltipTrigger = lazy(() => import("../components/ui/tooltip").then(module => ({ default: module.TooltipTrigger })));
-const TooltipContent = lazy(() => import("../components/ui/tooltip").then(module => ({ default: module.TooltipContent })));
-
-const ContainerRenderer = lazy(() => import("../components/ui/container").then(module => ({ default: module.ContainerRenderer })));
-const DynamicIcon = lazy(() => import("../components/ui/dynamic-icon").then(module => ({ default: module.DynamicIcon })));
-const CustomComponentRender = lazy(() => import("../components/ui/custom-component"));
 const RichTextEditor = lazy(() => import("../components/ui/richtext-input").then(module => ({ default: module.RichTextEditor })));
 const FileUploadRenderer = lazy(() => import("../components/ui/file-upload").then(module => ({ default: module.FileUploadRenderer })));
-const MenuRenderer = lazy(() => import("../components/ui/menu-render").then(module => ({ default: module.MenuRenderer })));
-const StepWizardRenderer = lazy(() => import("../components/ui/stepper"));
 const VideoRenderer = lazy(() => import("../components/ui/videoplayer").then(module => ({ default: module.VideoRenderer })));
 const CallRenderer = lazy(() => import("../components/ui/call-renderer").then(module => ({ default: module.CallRenderer })));
 const QRCodeRenderer = lazy(() => import("../components/ui/qr-code").then(module => ({ default: module.QRCodeRenderer })));
@@ -73,20 +71,12 @@ const CalendarEventRenderer = lazy(() => import("../components/ui/calendar_event
 const AudioRenderer = lazy(() => import("../components/ui/audio-render").then(module => ({ default: module.AudioRenderer })));
 const ChatRenderer = lazy(() => import("../components/ui/chat").then(module => ({ default: module.ChatRenderer })));
 const CommentsRenderer = lazy(() => import("../components/ui/comments").then(module => ({ default: module.CommentsRenderer })));
-const ListRenderer = lazy(() => import("../components/ui/list").then(module => ({ default: module.ListRenderer })));
-const ListItemRenderer = lazy(() => import("../components/ui/list_item").then(module => ({ default: module.ListItemRenderer })));
 const LottieRenderer = lazy(() => import("../components/ui/lottie").then(module => ({ default: module.LottieRenderer })));
-const RatingInput = lazy(() => import("../components/ui/rating-input").then(module => ({ default: module.RatingInput })));
-const SearchRenderer = lazy(() => import("../components/ui/search").then(module => ({ default: module.SearchRenderer })));
 const SignaturePadRenderer = lazy(() => import("../components/ui/signature").then(module => ({ default: module.SignaturePadRenderer })));
 const TimelineRenderer = lazy(() => import("../components/ui/timeline").then(module => ({ default: module.TimelineRenderer })));
 const TreeRenderer = lazy(() => import("../components/ui/tree").then(module => ({ default: module.TreeRenderer })));
 const MapRenderer = lazy(() => import("../components/ui/map-renderer").then(module => ({ default: module.MapRenderer })));
-const FormResolver = lazy(() => import("../components/ui/form-resolver").then(module => ({ default: module.FormResolver })));
-const DataGrid = lazy(() => import("../components/ui/datagrid").then(module => ({ default: module.DataGrid })));
-const CodeInput = lazy(() => import("../components/ui/code-input").then(module => ({ default: module.CodeInput })));
 
-import { RenderChildren } from "./RenderChildren";
 import {
     AnyObj,
     UIElement,
@@ -148,6 +138,7 @@ import {
     EventHandler
 } from "../types";
 
+
 interface ElementResolverProps {
     element: UIElement;
     globalConfig?: UIProject['globalConfig'];
@@ -168,7 +159,6 @@ interface ElementResolverProps {
 
 export function ElementResolver({ element, state, setState, t, runEventHandler, CustomElementResolver }: ElementResolverProps) {
     if (!isVisible(element.visibility, state, t)) return null;
-    const resolvedElement = useMemo(() => deepResolveBindings(element, state, t), [element, state, t]);
 
     const LazyComponent = ({ children }: { children: React.ReactNode }) => (
         <Suspense fallback={<Skeleton />}>
@@ -177,19 +167,19 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
     );
     const accessibilityProps = getAccessibilityProps(element.accessibility);
     const className = classesFromStyleProps(element.styles);
-    switch (resolvedElement.type) {
+    switch (element.type) {
         case ElementType.accordion:
             return <LazyComponent>
                 <AccordionRenderer
                     state={state}
                     t={t}
                     setState={setState}
-                    element={resolvedElement as AccordionElement}
+                    element={element as AccordionElement}
                     runEventHandler={runEventHandler}
                 />
             </LazyComponent>
         case ElementType.alert:
-            const alert = resolvedElement as AlertElement;
+            const alert = element as AlertElement;
             return <LazyComponent>
                 <Alert dismissible={alert.dismissible} variant={alert.variant || 'default'} className={className}{...accessibilityProps} >
                     <AlertDescription>{resolveBinding(alert.message, state, t)}</AlertDescription>
@@ -201,14 +191,14 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     state={state}
                     t={t}
                     setState={setState}
-                    element={resolvedElement as AlertDialogElement}
+                    element={element as AlertDialogElement}
                     className={className}{...accessibilityProps}
                     runEventHandler={runEventHandler} />
             </LazyComponent>
         case ElementType.audio:
             return (
                 <LazyComponent>
-                    <AudioRenderer element={resolvedElement as AudioElement} state={state} t={t} runEventHandler={runEventHandler} />
+                    <AudioRenderer element={element as AudioElement} state={state} t={t} runEventHandler={runEventHandler} />
                 </LazyComponent>
             );
 
@@ -217,14 +207,14 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                 <AvatarRenderer
                     state={state}
                     t={t}
-                    element={resolvedElement as AvatarElement} />
+                    element={element as AvatarElement} />
             </LazyComponent>
         case ElementType.badge:
             return <LazyComponent>
                 <BadgeRenderer
                     state={state}
                     t={t}
-                    element={resolvedElement as BadgeElement} runEventHandler={runEventHandler} />
+                    element={element as BadgeElement} runEventHandler={runEventHandler} />
             </LazyComponent>
         case ElementType.breadcrumb:
             return <LazyComponent>
@@ -232,62 +222,62 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     state={state}
                     t={t}
                     setState={setState}
-                    element={resolvedElement as BreadcrumbElement} runEventHandler={runEventHandler} />
+                    element={element as BreadcrumbElement} runEventHandler={runEventHandler} />
             </LazyComponent>
         case ElementType.button:
             return <ButtonRenderer
                 state={state}
                 t={t}
-                element={resolvedElement as ButtonElement} runEventHandler={runEventHandler} />
+                element={element as ButtonElement} runEventHandler={runEventHandler} />
 
         case ElementType.calendar:
             return <LazyComponent>
-                <CalendarRenderer element={resolvedElement as CalendarElement} state={state} t={t} runEventHandler={runEventHandler} />
+                <CalendarRenderer element={element as CalendarElement} state={state} t={t} runEventHandler={runEventHandler} />
             </LazyComponent>
         case ElementType.calendar_event:
             return (
                 <LazyComponent>
-                    <CalendarEventRenderer element={resolvedElement as CalendarEventElement} state={state} t={t} runEventHandler={runEventHandler} />
+                    <CalendarEventRenderer element={element as CalendarEventElement} state={state} t={t} runEventHandler={runEventHandler} />
                 </LazyComponent>
             );
 
         case ElementType.call: {
-            const call = resolvedElement as CallElement;
+            const call = element as CallElement;
             return <LazyComponent>
                 <CallRenderer element={call} state={state} t={t} runEventHandler={runEventHandler} />
             </LazyComponent>
         }
         case ElementType.card:
             return <LazyComponent>
-                <CardRenderer setState={setState} element={resolvedElement as CardElement} runEventHandler={runEventHandler} state={state} t={t} />
+                <CardRenderer setState={setState} element={element as CardElement} runEventHandler={runEventHandler} state={state} t={t} />
             </LazyComponent>
         case ElementType.carousel:
-            const carousel = resolvedElement as CarouselElement;
+            const carousel = element as CarouselElement;
             return <LazyComponent>
                 <CarouselRenderer setState={setState} element={carousel} runEventHandler={runEventHandler} state={state} t={t} />
             </LazyComponent>
         case ElementType.chat:
             return (
                 <LazyComponent>
-                    <ChatRenderer element={resolvedElement as ChatElement} runEventHandler={runEventHandler} state={state} t={t} />
+                    <ChatRenderer element={element as ChatElement} runEventHandler={runEventHandler} state={state} t={t} />
                 </LazyComponent>
             );
 
         case ElementType.chart: {
-            const chart = resolvedElement as ChartElement
+            const chart = element as ChartElement
             return <LazyComponent>
                 <Chart element={chart} state={state} t={t} />
             </LazyComponent>
         }
-        case ElementType.code: {
+        case ElementType.code as any: {
             return <LazyComponent>
-                <CodeInput value={resolveBinding((resolvedElement as BaseElement).value, state, t)} />
+                <CodeInput value={resolveBinding((element as BaseElement).value, state, t)} />
             </LazyComponent>
         }
         case ElementType.collapsible:
             return <LazyComponent>
                 <CollapsibleRenderer
-                    element={resolvedElement as CollapsibleElement}
+                    element={element as CollapsibleElement}
                     setState={setState}
                     state={state}
                     t={t}
@@ -300,23 +290,23 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     setState={setState}
                     state={state}
                     t={t}
-                    element={resolvedElement as CommandElement} runEventHandler={runEventHandler} />
+                    element={element as CommandElement} runEventHandler={runEventHandler} />
             </LazyComponent>
         case ElementType.comments:
             return (
                 <LazyComponent>
-                    <CommentsRenderer element={resolvedElement as CommentsElement} runEventHandler={runEventHandler} state={state} t={t} />
+                    <CommentsRenderer element={element as CommentsElement} runEventHandler={runEventHandler} state={state} t={t} />
                 </LazyComponent>
             );
 
         case ElementType.container:
-            const container = resolvedElement as ContainerElement;
+            const container = element as ContainerElement;
             return <ContainerRenderer
                 setState={setState}
                 state={state}
                 t={t} element={container} runEventHandler={runEventHandler} />
         case ElementType.context_menu:
-            const contextMenu = resolvedElement as ContextMenuElement;
+            const contextMenu = element as ContextMenuElement;
             return (
                 <LazyComponent>
                     <ContextMenuRenderer setState={setState} element={contextMenu} state={state} t={t} runEventHandler={runEventHandler} />
@@ -326,7 +316,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         case ElementType.custom: {
             return (
                 <LazyComponent>
-                    <CustomComponentRender element={resolvedElement as CustomElement} setState={setState} state={state} t={t} runEventHandler={runEventHandler} />
+                    <CustomComponentRender element={element as CustomElement} setState={setState} state={state} t={t} runEventHandler={runEventHandler} />
                 </LazyComponent>
             )
         }
@@ -334,7 +324,12 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         case ElementType.datagrid:
             return (
                 <LazyComponent>
-                    <DataGrid element={resolvedElement as DataGridElement} state={state} setState={setState} t={t} runEventHandler={runEventHandler} />
+                    <DataGrid
+                        element={element as DataGridElement}
+                        state={state}
+                        setState={setState}
+                        t={t}
+                        runEventHandler={runEventHandler} />
                 </LazyComponent>
             );
 
@@ -344,17 +339,17 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     state={state}
                     setState={setState}
                     t={t}
-                    element={resolvedElement as DrawerElement} runEventHandler={runEventHandler} />
+                    element={element as DrawerElement} runEventHandler={runEventHandler} />
             </LazyComponent>
 
         case ElementType.dropdown:
-            const dropdown = resolvedElement as DropdownElement;
+            const dropdown = element as DropdownElement;
             return <LazyComponent>
                 <DropdownRenderer setState={setState} dropdown={dropdown} runEventHandler={runEventHandler} state={state} t={t} />
             </LazyComponent>
 
         case ElementType.editor: {
-            const editor = resolvedElement as EditorElement
+            const editor = element as EditorElement
             const content = resolveBinding(editor.content, state, t) || ""
             const placeholder = resolveBinding(editor.placeholder, state, t)
 
@@ -369,7 +364,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             </LazyComponent>
         }
         case ElementType.file_upload: {
-            const el = resolvedElement as FileUploadElement
+            const el = element as FileUploadElement
             return (
                 <LazyComponent>
                     <FileUploadRenderer
@@ -382,38 +377,38 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             )
         }
         case ElementType.footer:
-            const footer = resolvedElement as FooterElement;
+            const footer = element as FooterElement;
             return <footer className={cn(`text-${footer.alignment || 'left'}`, className)}>
                 {footer.children && <RenderChildren children={footer.children} state={state} setState={setState} t={t} runEventHandler={runEventHandler} />}
             </footer>
 
         case ElementType.form:
             return <LazyComponent>
-                <FormResolver element={resolvedElement as FormElement} state={state} t={t} runEventHandler={runEventHandler} />
+                <FormResolver element={element as FormElement} state={state} t={t} runEventHandler={runEventHandler} />
             </LazyComponent>
         case ElementType.header:
-            const header = resolvedElement as HeaderElement;
+            const header = element as HeaderElement;
             return <LazyComponent>
-                <header className={cn(className, `text-${(resolvedElement as HeaderElement).alignment || "left"}`)} {...accessibilityProps}>
-                    {resolvedElement.children && <RenderChildren state={state} setState={setState} t={t} children={resolvedElement.children} runEventHandler={runEventHandler} />}
+                <header className={cn(className, `text-${(element as HeaderElement).alignment || "left"}`)} {...accessibilityProps}>
+                    {element.children && <RenderChildren state={state} setState={setState} t={t} children={element.children} runEventHandler={runEventHandler} />}
                 </header>
             </LazyComponent>
 
         case ElementType.icon:
-            const icon = resolvedElement as IconElement;
+            const icon = element as IconElement;
             return <LazyComponent>
                 <DynamicIcon name={icon.name} size={icon.size} aria-label={resolveBinding(icon.label, state, t)} />
             </LazyComponent>
 
         case ElementType.image: {
-            const image = resolvedElement as ImageElement;
+            const image = element as ImageElement;
             const accessibilityProps = getAccessibilityProps(image.accessibility, state, t);
             if (!image.src)
                 return null
 
             return (
                 <img
-                    src={image.src}
+                    src={resolveBinding(image.src, state, t)}
                     alt={resolveBinding(image.alt, state, t)}
                     width={image.width}
                     height={image.height}
@@ -428,7 +423,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     <ListRenderer
                         state={state}
                         setState={setState}
-                        t={t} element={resolvedElement as ListElement}
+                        t={t} element={element as ListElement}
                         runEventHandler={runEventHandler} />
                 </LazyComponent>
             );
@@ -439,7 +434,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                         state={state}
                         t={t}
                         setState={setState}
-                        element={resolvedElement as ListItemElement}
+                        element={element as ListItemElement}
                         runEventHandler={runEventHandler} />
                 </LazyComponent>
             );
@@ -450,16 +445,16 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     <LottieRenderer
                         state={state}
                         t={t}
-                        element={resolvedElement as LottieElement} />
+                        element={element as LottieElement} />
                 </LazyComponent>
             );
 
         case ElementType.map:
             return <LazyComponent>
-                <MapRenderer element={resolvedElement} state={state} t={t} />
+                <MapRenderer element={element} state={state} t={t} />
             </LazyComponent>
         case ElementType.menu:
-            const menubar = resolvedElement as MenuElement;
+            const menubar = element as MenuElement;
             return (
                 <LazyComponent>
                     <MenuRenderer element={menubar} runEventHandler={runEventHandler} state={state} t={t} setState={setState} />
@@ -467,7 +462,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             )
 
         case ElementType.modal:
-            const modal = resolvedElement as ModalElement;
+            const modal = element as ModalElement;
             return (
                 <LazyComponent>
                     <ModalRenderer
@@ -481,33 +476,33 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         case ElementType.pagination:
             return (
                 <LazyComponent>
-                    <PageRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
+                    <PageRenderer element={element} runEventHandler={runEventHandler} state={state} t={t} />
                 </LazyComponent>
             )
 
         case ElementType.payment:
             return <LazyComponent>
                 <PaymentFormRenderer
-                    element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t}
+                    element={element} runEventHandler={runEventHandler} state={state} t={t}
                 />
             </LazyComponent>
 
         case ElementType.popover:
             return (
                 <LazyComponent>
-                    <PopoverRenderer setState={setState} element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
+                    <PopoverRenderer setState={setState} element={element} runEventHandler={runEventHandler} state={state} t={t} />
                 </LazyComponent>
             )
 
         case ElementType.progress:
             return (
                 <LazyComponent>
-                    <ProgressRenderer element={resolvedElement} state={state} t={t} />
+                    <ProgressRenderer element={element} state={state} t={t} />
                 </LazyComponent>
             )
 
         case ElementType.qr_reader:
-            const qr = resolvedElement as QRReaderElement;
+            const qr = element as QRReaderElement;
             return <LazyComponent>
                 <QRCodeRenderer element={qr} state={state} t={t} runEventHandler={runEventHandler} />
             </LazyComponent>
@@ -515,11 +510,11 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         case ElementType.radio_group:
             return (
                 <LazyComponent>
-                    <RadioGroupRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
+                    <RadioGroupRenderer element={element} runEventHandler={runEventHandler} state={state} t={t} />
                 </LazyComponent>
             )
         case ElementType.rating: {
-            const el = resolvedElement as RatingElement;
+            const el = element as RatingElement;
             const value = resolveBinding(el.value, state, t) || 0;
             return (
                 <LazyComponent>
@@ -534,7 +529,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         case ElementType.resizable:
             return (
                 <LazyComponent>
-                    <ResizableRenderer setState={setState} element={resolvedElement} state={state} t={t} />
+                    <ResizableRenderer setState={setState} element={element} state={state} t={t} />
                 </LazyComponent>
             )
 
@@ -544,17 +539,17 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     <ScrollAreaRenderer
                         state={state}
                         setState={setState}
-                        t={t} element={resolvedElement} />
+                        t={t} element={element} />
                 </LazyComponent>
             )
         case ElementType.search:
             return (
                 <LazyComponent>
-                    <SearchRenderer element={resolvedElement as SearchElement} runEventHandler={runEventHandler} state={state} t={t} />
+                    <SearchRenderer element={element as SearchElement} runEventHandler={runEventHandler} state={state} t={t} />
                 </LazyComponent>
             );
 
-        case ElementType.separator:
+        case ElementType.separator as any:
             return <LazyComponent>
                 <Separator />
             </LazyComponent>
@@ -562,14 +557,14 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         case ElementType.sheet:
             return (
                 <LazyComponent>
-                    <SheetRenderer setState={setState} element={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
+                    <SheetRenderer setState={setState} element={element} runEventHandler={runEventHandler} state={state} t={t} />
                 </LazyComponent>
             )
 
         case ElementType.sidebar:
             return (
                 <LazyComponent>
-                    <SidebarRenderer element={resolvedElement} runEventHandler={runEventHandler} state={state} setState={setState} t={t} />
+                    <SidebarRenderer element={element} runEventHandler={runEventHandler} state={state} setState={setState} t={t} />
                 </LazyComponent>
             )
         case ElementType.signature_pad:
@@ -578,7 +573,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     <SignaturePadRenderer
                         state={state}
                         t={t}
-                        element={resolvedElement as SignaturePadElement} runEventHandler={runEventHandler} />
+                        element={element as SignaturePadElement} runEventHandler={runEventHandler} />
                 </LazyComponent>
             );
 
@@ -594,12 +589,12 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                         state={state}
                         setState={setState}
                         t={t}
-                        element={resolvedElement} runEventHandler={runEventHandler} />
+                        element={element} runEventHandler={runEventHandler} />
                 </LazyComponent>
             )
 
-        case ElementType.switch:
-            const switchEl = resolvedElement as InputElement;
+        case ElementType.switch as any:
+            const switchEl = element as InputElement;
             return <LazyComponent>
                 <Switch
                     checked={resolveBinding(switchEl.value, state, t)}
@@ -608,7 +603,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             </LazyComponent>
 
         case ElementType.table:
-            const table = resolvedElement as TableElement;
+            const table = element as TableElement;
             const headers = resolveBinding(table.headers, state, t) || [];
             const rows = resolveBinding(table.rows, state, t) || [];
             return <LazyComponent>
@@ -633,7 +628,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             </LazyComponent>
 
         case ElementType.tabs:
-            const tabs = resolvedElement as TabsElement;
+            const tabs = element as TabsElement;
             return <LazyComponent>
                 <Tabs
                     value={tabs.activeTab}
@@ -658,9 +653,10 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             </LazyComponent>
 
         case ElementType.text: {
-            const text = resolvedElement as TextElement;
+            const text = element as TextElement;
             const Tag = (text.tag as React.ElementType) || "div";
-            const resolvedContent = resolveBinding(text.content, state, t);
+            const resolvedContent = deepResolveBindings(text.content, state, t);
+            if (!resolvedContent || resolvedContent == 'undefined') return null;
             return (
                 <Tag
                     id={text.id}
@@ -674,7 +670,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         case ElementType.three_d_model:
             return (
                 <LazyComponent>
-                    <ThreeDRenderer threeElement={resolvedElement} runEventHandler={runEventHandler} state={state} t={t} />
+                    <ThreeDRenderer threeElement={element} runEventHandler={runEventHandler} state={state} t={t} />
                 </LazyComponent>
             )
         case ElementType.timeline:
@@ -683,7 +679,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     <TimelineRenderer
                         state={state}
                         t={t}
-                        element={resolvedElement as TimelineElement} />
+                        element={element as TimelineElement} />
                 </LazyComponent>
             );
         case ElementType.tree:
@@ -692,12 +688,12 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     <TreeRenderer
                         state={state}
                         t={t}
-                        element={resolvedElement as TreeElement} runEventHandler={runEventHandler} />
+                        element={element as TreeElement} runEventHandler={runEventHandler} />
                 </LazyComponent>
             );
 
         case ElementType.toggle: {
-            const toggle = resolvedElement as ToggleElement
+            const toggle = element as ToggleElement
             return <LazyComponent>
                 <Toggle
                     variant={toggle.variant}
@@ -714,7 +710,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         }
 
         case ElementType.toggle_group: {
-            const toggleGroup = resolvedElement as ToggleGroupElement
+            const toggleGroup = element as ToggleGroupElement
             return <LazyComponent>
                 <ToggleGroup
                     type={toggleGroup.multiple ? "multiple" : "single"}
@@ -740,7 +736,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         }
 
         case ElementType.tooltip:
-            const tooltip = resolvedElement as TooltipElement;
+            const tooltip = element as TooltipElement;
             return <LazyComponent>
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -759,7 +755,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             </LazyComponent>
 
         case ElementType.video:
-            const video = resolvedElement as VideoElement;
+            const video = element as VideoElement;
             if (!video)
                 return null
             return <LazyComponent>
@@ -767,7 +763,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             </LazyComponent>
 
         case ElementType.voice:
-            const voice = resolvedElement as VoiceElement;
+            const voice = element as VoiceElement;
             return (
                 <LazyComponent>
                     <VoiceRenderer element={voice} state={state} t={t} runEventHandler={runEventHandler} />
@@ -775,14 +771,14 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             )
 
         case ElementType.wallet:
-            const wallet = resolvedElement as WalletElement;
+            const wallet = element as WalletElement;
             return <LazyComponent>
                 <WalletRenderer element={wallet} state={state} t={t} runEventHandler={runEventHandler} />
             </LazyComponent>
 
         default:
             if (CustomElementResolver) {
-                const maybeNode = CustomElementResolver(resolvedElement, {
+                const maybeNode = CustomElementResolver(element, {
                     state,
                     t,
                     runEventHandler,
@@ -791,7 +787,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             }
             return (
                 <div>
-                    Unsupported element type: {resolvedElement.type}
+                    Unsupported element type: {(element as any).type}
                 </div>
             );
     }
