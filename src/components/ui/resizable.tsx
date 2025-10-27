@@ -1,13 +1,14 @@
 "use client";
-import * as React from "react"
-import { GripVerticalIcon } from "lucide-react"
-import * as ResizablePrimitive from "react-resizable-panels"
+import * as React from "react";
+import { GripVerticalIcon } from "lucide-react";
+import * as ResizablePrimitive from "react-resizable-panels";
 
-import { cn, resolveBinding } from "../../lib/utils"
-import { RenderChildren } from "../../schema/RenderChildren"
-import { AnyObj, ResizableElement } from "../../types"
-import wrapWithMotion from "./wrapWithMotion"
+import { cn, resolveBinding } from "../../lib/utils";
+import { RenderChildren } from "../../schema/RenderChildren";
+import { AnyObj, ResizableElement } from "../../types";
+import wrapWithMotion from "./wrapWithMotion";
 
+/* ---------- Panel Group ---------- */
 function ResizablePanelGroup({
   className,
   ...props
@@ -21,21 +22,23 @@ function ResizablePanelGroup({
       )}
       {...props}
     />
-  )
+  );
 }
 
+/* ---------- Individual Panel ---------- */
 function ResizablePanel({
   ...props
 }: React.ComponentProps<typeof ResizablePrimitive.Panel>) {
-  return <ResizablePrimitive.Panel data-slot="resizable-panel" {...props} />
+  return <ResizablePrimitive.Panel data-slot="resizable-panel" {...props} />;
 }
 
+/* ---------- Resize Handle ---------- */
 function ResizableHandle({
   withHandle,
   className,
   ...props
 }: React.ComponentProps<typeof ResizablePrimitive.PanelResizeHandle> & {
-  withHandle?: boolean
+  withHandle?: boolean;
 }) {
   return (
     <ResizablePrimitive.PanelResizeHandle
@@ -52,28 +55,41 @@ function ResizableHandle({
         </div>
       )}
     </ResizablePrimitive.PanelResizeHandle>
-  )
+  );
 }
+
+/* ---------- Renderer ---------- */
 function ResizableRenderer({
   element,
   state,
   setState,
   t,
 }: {
-  element: ResizableElement
+  element: ResizableElement;
   state: AnyObj;
   setState: (path: string, value: any) => void;
-  t: (key: string) => string
+  t: (key: string) => string;
 }) {
-  const direction = element.direction || "horizontal"
+  const direction = element.direction || "horizontal";
+
+  // Helper to safely parse size values
+  const parsePanelSize = (v: any) => {
+    if (v == null) return undefined;
+    if (typeof v === "string") {
+      if (v.endsWith("%")) return parseFloat(v);
+      return parseFloat(v);
+    }
+    if (typeof v === "number") return v;
+    return undefined;
+  };
 
   return wrapWithMotion(
     element,
     <ResizablePanelGroup direction={direction} className="h-full w-full">
-      {element.panels.map((panel, i) => {
-        const defaultSize = resolveBinding(panel.defaultSize, state, t)
-        const minSize = resolveBinding(panel.minSize, state, t)
-        const maxSize = resolveBinding(panel.maxSize, state, t)
+      {element.panels?.map((panel, i) => {
+        const defaultSize = parsePanelSize(resolveBinding(panel.defaultSize, state, t));
+        const minSize = parsePanelSize(resolveBinding(panel.minSize, state, t));
+        const maxSize = parsePanelSize(resolveBinding(panel.maxSize, state, t));
 
         return (
           <React.Fragment key={panel.id}>
@@ -83,17 +99,22 @@ function ResizableRenderer({
               maxSize={maxSize}
               collapsible={panel.collapsible}
             >
-              <RenderChildren children={panel.content} state={state} t={t} setState={setState} />
+              <RenderChildren
+                children={panel.content}
+                state={state}
+                t={t}
+                setState={setState}
+              />
             </ResizablePanel>
 
-            {/* Insert handle between panels */}
             {i < element.panels.length - 1 && (
               <ResizableHandle withHandle={element.withHandle} />
             )}
           </React.Fragment>
-        )
+        );
       })}
     </ResizablePanelGroup>
-  )
+  );
 }
-export { ResizableRenderer, ResizablePanelGroup, ResizablePanel, ResizableHandle }
+
+export { ResizableRenderer, ResizablePanelGroup, ResizablePanel, ResizableHandle };

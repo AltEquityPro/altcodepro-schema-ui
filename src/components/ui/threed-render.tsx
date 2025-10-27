@@ -390,7 +390,7 @@ export function ThreeDRenderer({
                     )
                 )}
 
-                {(element.portals || []).map((p, i) => (
+                {(element.portals || [])?.map((p, i) => (
                     <a-entity
                         key={i}
                         geometry="primitive: ring; radiusInner: 0.85; radiusOuter: 1"

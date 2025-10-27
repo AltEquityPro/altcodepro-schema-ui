@@ -52,21 +52,9 @@ export const PaymentFormRenderer = React.memo(function PaymentFormRenderer({
     const handleCheckout = async () => {
         try {
             if (checkoutUrl) {
-                // Direct URL redirect
                 window.location.href = checkoutUrl
                 return
             }
-
-            if (sessionId && stripePromise) {
-                const stripe = await stripePromise
-                if (!stripe) throw new Error("Stripe failed to initialize")
-                const { error } = await stripe.redirectToCheckout({ sessionId })
-                if (error && element.onError) {
-                    await runEventHandler?.(element.onError, { error })
-                }
-                return
-            }
-
             throw new Error("No checkoutUrl or sessionId provided")
         } catch (err: any) {
             if (element.onError) {

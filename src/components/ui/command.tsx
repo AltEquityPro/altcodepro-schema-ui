@@ -270,14 +270,14 @@ function CommandRenderer({
                 {emptyMessage}
               </CommandPrimitive.Empty>
 
-              {groups.map((group, i) => (
+              {groups?.map((group, i) => (
                 <CommandPrimitive.Group
                   key={i}
                   heading={group.heading}
                   data-slot="command-group"
                   className="text-foreground overflow-hidden p-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium"
                 >
-                  {group.items?.map(item => (
+                  {group?.items?.map(item => (
                     <CommandPrimitive.Item
                       key={item.id}
                       disabled={item.disabled}

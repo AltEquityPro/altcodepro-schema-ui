@@ -206,3 +206,159 @@ export async function getJSONLD(
         return {};
     }
 }
+export function applyPageMetadata(meta: any) {
+    if (!meta) return;
+
+    /* -----------------------------
+       🧭 Basic document title + desc
+    ----------------------------- */
+    if (meta.title) document.title = meta.title;
+    else if (!document.title) document.title = "AltCodePro";
+
+    const setMeta = (name: string, content?: string) => {
+        if (!content) return;
+        let el = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+        if (!el) {
+            el = document.createElement("meta");
+            el.setAttribute("name", name);
+            document.head.appendChild(el);
+        }
+        el.setAttribute("content", content);
+    };
+
+    setMeta("description", meta.description || "");
+    setMeta("keywords", Array.isArray(meta.keywords) ? meta.keywords.join(", ") : meta.keywords || "");
+
+    /* -----------------------------
+       🏷️ Open Graph tags
+    ----------------------------- */
+    const og = meta.openGraph || {};
+    const ogTags: Record<string, string | string[] | undefined> = {
+        "og:title": og.title || meta.title,
+        "og:description": og.description || meta.description,
+        "og:url": og.url || meta.alternates?.canonical,
+        "og:site_name": og.siteName || meta.applicationName,
+    };
+
+    // Handle multiple OG images (use first as fallback)
+    const ogImages: string[] = Array.isArray(og.images) ? og.images : (og.images ? [og.images] : []);
+    if (ogImages.length > 0) {
+        ogTags["og:image"] = ogImages[0];
+        // Optional multiple images
+        document.querySelectorAll('meta[property^="og:image"]').forEach(el => el.remove());
+        ogImages.forEach((imgUrl: string) => {
+            const el = document.createElement("meta");
+            el.setAttribute("property", "og:image");
+            el.setAttribute("content", imgUrl);
+            document.head.appendChild(el);
+        });
+    }
+
+    Object.entries(ogTags).forEach(([property, content]) => {
+        if (!content) return;
+        let el = document.querySelector(`meta[property="${property}"]`);
+        if (!el) {
+            el = document.createElement("meta");
+            el.setAttribute("property", property);
+            document.head.appendChild(el);
+        }
+        el.setAttribute("content", String(content));
+    });
+
+    /* -----------------------------
+       🐦 Twitter card tags
+    ----------------------------- */
+    const twitter = meta.twitter || {};
+    const twitterTags: Record<string, string | undefined> = {
+        "twitter:card": "summary_large_image",
+        "twitter:site": twitter.site || "@AltCodePro",
+        "twitter:title": twitter.title || meta.title,
+        "twitter:description": twitter.description || meta.description,
+        "twitter:image": twitter.images || (Array.isArray(twitter.image) ? twitter.image[0] : twitter.image),
+    };
+    Object.entries(twitterTags).forEach(([name, content]) => setMeta(name, content));
+
+    /* -----------------------------
+       🔗 Canonical link
+    ----------------------------- */
+    const canonicalUrl = meta.alternates?.canonical || og.url || "";
+    if (canonicalUrl) {
+        let linkEl = document.querySelector("link[rel='canonical']");
+        if (!linkEl) {
+            linkEl = document.createElement("link");
+            linkEl.setAttribute("rel", "canonical");
+            document.head.appendChild(linkEl);
+        }
+        linkEl.setAttribute("href", canonicalUrl);
+    }
+
+    /* -----------------------------
+       🧩 Icons & favicon
+    ----------------------------- */
+    const iconUrl =
+        meta.icons?.icon ||
+        meta.icons?.apple ||
+        meta.icons?.shortcut ||
+        "/favicon.ico";
+
+    if (iconUrl) {
+        // Clean up existing favicons
+        document.querySelectorAll("link[rel~='icon'], link[rel='apple-touch-icon']").forEach(el => el.remove());
+
+        const iconRelSet = [
+            { rel: "icon", href: iconUrl },
+            { rel: "apple-touch-icon", href: iconUrl },
+            { rel: "shortcut icon", href: iconUrl },
+        ];
+        iconRelSet.forEach(({ rel, href }) => {
+            const el = document.createElement("link");
+            el.setAttribute("rel", rel);
+            el.setAttribute("href", href);
+            document.head.appendChild(el);
+        });
+    }
+
+    /* -----------------------------
+       🍎 Apple web app metadata
+    ----------------------------- */
+    const apple = meta.appleWebApp || {};
+    if (apple.capable) {
+        setMeta("apple-mobile-web-app-capable", "yes");
+        setMeta("apple-mobile-web-app-title", apple.title || meta.title);
+        setMeta("apple-mobile-web-app-status-bar-style", apple.statusBarStyle || "default");
+    }
+
+    /* -----------------------------
+       💬 JSON-LD Structured Data
+    ----------------------------- */
+    if (meta.jsonLd || meta.jsonld || meta.jsonLD) {
+        const jsonLd = meta.jsonLd || meta.jsonld || meta.jsonLD;
+        let jsonLdTag: any = document.getElementById("jsonld");
+        if (!jsonLdTag) {
+            jsonLdTag = document.createElement("script");
+            jsonLdTag.type = "application/ld+json";
+            jsonLdTag.id = "jsonld";
+            document.head.appendChild(jsonLdTag);
+        }
+        jsonLdTag.textContent = JSON.stringify(jsonLd, null, 2);
+    }
+
+    /* -----------------------------
+       🕓 Misc Metadata (publisher, author, etc.)
+    ----------------------------- */
+    if (meta.publisher) setMeta("publisher", meta.publisher);
+    if (meta.creator) setMeta("creator", meta.creator);
+    if (meta.applicationName) setMeta("application-name", meta.applicationName);
+
+    // Optional viewport / theme-color
+    if (meta.viewport) setMeta("viewport", meta.viewport);
+    if (meta.themeColor) {
+        let themeTag = document.querySelector("meta[name='theme-color']");
+        if (!themeTag) {
+            themeTag = document.createElement("meta");
+            themeTag.setAttribute("name", "theme-color");
+            document.head.appendChild(themeTag);
+        }
+        themeTag.setAttribute("content", meta.themeColor);
+    }
+}

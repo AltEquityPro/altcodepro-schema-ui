@@ -45,7 +45,12 @@ function DropdownMenuContent({
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         className={cn(
-          "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md",
+          "z-[9999] min-w-[10rem] overflow-hidden rounded-lg bg-[var(--acp-background)] text-[var(--acp-foreground)]",
+          "shadow-lg ring-1 ring-[var(--acp-border)] ring-opacity-20",
+          "data-[state=open]:animate-in data-[state=closed]:animate-out",
+          "data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+          "data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2",
+          "max-h-[var(--radix-dropdown-menu-content-available-height)] origin-[var(--radix-dropdown-menu-content-transform-origin)] overflow-y-auto p-1",
           className
         )}
         {...props}
@@ -227,16 +232,25 @@ function DropdownMenuSubTrigger({
 
 function DropdownMenuSubContent({
   className,
+  sideOffset = 6,
+  alignOffset = -4,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
   return (
     <DropdownMenuPrimitive.SubContent
+      {...props}
       data-slot="dropdown-menu-sub-content"
+      sideOffset={sideOffset}
+      alignOffset={alignOffset}
       className={cn(
-        "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-md border p-1 shadow-lg",
+        "z-[9999] min-w-[10rem] rounded-lg bg-[var(--acp-background)] text-[var(--acp-foreground)]",
+        "shadow-lg ring-1 ring-[var(--acp-border)] ring-opacity-20 backdrop-blur-sm",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+        "data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2",
+        "origin-[var(--radix-dropdown-menu-content-transform-origin)] overflow-hidden p-1",
         className
       )}
-      {...props}
     />
   )
 }
@@ -247,7 +261,7 @@ function renderDropdownItems(
   t: (key: string) => string,
   runEventHandler?: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>,
 ): React.ReactNode {
-  const groups = items.reduce<Record<string, DropdownItem[]>>((acc, item) => {
+  const groups = items?.reduce<Record<string, DropdownItem[]>>((acc, item) => {
     if (item.type === "radio" && item.group) {
       acc[item.group] = acc[item.group] || []
       acc[item.group].push(item)
@@ -316,7 +330,7 @@ function renderDropdownItems(
               if (selected?.onSelect) runEventHandler?.(selected.onSelect)
             }}
           >
-            {groups[item.group].map((radio) => (
+            {groups[item.group]?.map((radio) => (
               <DropdownMenuRadioItem
                 key={radio.id}
                 value={radio.value || ""}
@@ -388,7 +402,18 @@ function DropdownRenderer({
   return wrapWithMotion(dropdown,
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <RenderChildren children={[dropdown.trigger]} state={state} t={t} setState={setState} />
+        <button
+          type="button"
+          aria-label="Open menu"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent"
+        >
+          <RenderChildren
+            children={[dropdown.trigger]}
+            state={state}
+            t={t}
+            setState={setState}
+          />
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         {renderDropdownItems(dropdown.items, state, t, runEventHandler)}

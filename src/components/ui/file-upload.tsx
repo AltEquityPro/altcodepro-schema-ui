@@ -150,7 +150,7 @@ export function FileUpload({
     disabled = false,
 }: FileUploadProps) {
     const [queue, setQueue] = React.useState<FileState[]>(() =>
-        initial.map((it) => ({
+        initial?.map((it) => ({
             id: idOf(it),
             name: it.name,
             size: it.size ?? 0,
@@ -186,8 +186,8 @@ export function FileUpload({
             notifyQueue(next)
             if (onFiles) {
                 const currentFiles = next
-                    .filter(f => f.file && !f.readOnly)
-                    .map(f => f.file!)               // return raw File[]
+                    ?.filter(f => f.file && !f.readOnly)
+                    ?.map(f => f.file!)               // return raw File[]
                 onFiles(currentFiles)
             }
             return next
@@ -203,7 +203,7 @@ export function FileUpload({
                 accepted = accepted.slice(0, Math.max(0, maxFiles - queue.length))
             }
 
-            const incoming = accepted.map<FileState>((file) => ({
+            const incoming = accepted?.map<FileState>((file) => ({
                 id: idOf(file),
                 file,
                 name: file.name,
@@ -230,7 +230,7 @@ export function FileUpload({
         multiple,
         maxSize,
         accept: accept
-            ? Object.fromEntries(accept.split(",").map((t) => [t.trim(), []]))
+            ? Object.fromEntries(accept.split(",")?.map((t) => [t.trim(), []]))
             : undefined,
         onDrop,
         disabled,
@@ -252,7 +252,7 @@ export function FileUpload({
             const controller = new AbortController()
             setActiveCount((c) => c + 1)
             setQueueSafe((prev) =>
-                prev.map((f) => (f.id === next.id ? { ...f, status: "uploading", controller } : f))
+                prev?.map((f) => (f.id === next.id ? { ...f, status: "uploading", controller } : f))
             )
             if (next.file) onStart?.(next.file)
 
@@ -272,7 +272,7 @@ export function FileUpload({
                             if (!mountedRef.current) return
                             onProgress?.(next.file!, pct)
                             setQueueSafe((prev) =>
-                                prev.map((f) => (f.id === next.id ? { ...f, progress: pct } : f))
+                                prev?.map((f) => (f.id === next.id ? { ...f, progress: pct } : f))
                             )
                         },
                         signal: controller.signal,
@@ -286,7 +286,7 @@ export function FileUpload({
                             if (!mountedRef.current) return
                             onProgress?.(next.file!, pct)
                             setQueueSafe((prev) =>
-                                prev.map((f) => (f.id === next.id ? { ...f, progress: pct } : f))
+                                prev?.map((f) => (f.id === next.id ? { ...f, progress: pct } : f))
                             )
                         },
                     })
@@ -295,7 +295,7 @@ export function FileUpload({
                 const meta = result.meta
 
                 setQueueSafe((prev) =>
-                    prev.map((f) =>
+                    prev?.map((f) =>
                         f.id === next.id
                             ? { ...f, status: "success", progress: 100, remoteUrl: finalUrl, meta }
                             : f
@@ -306,7 +306,7 @@ export function FileUpload({
                 const message = err?.message || "Upload failed"
                 if (next.file) onError?.(next.file, message)
                 setQueueSafe((prev) =>
-                    prev.map((f) => (f.id === next.id ? { ...f, status: err?.name === "AbortError" ? "canceled" : "error", error: message } : f))
+                    prev?.map((f) => (f.id === next.id ? { ...f, status: err?.name === "AbortError" ? "canceled" : "error", error: message } : f))
                 )
             } finally {
                 setActiveCount((c) => Math.max(0, c - 1))
@@ -330,14 +330,14 @@ export function FileUpload({
         prevUploadingRef.current = anyUploading || anyQueued
 
         if (justFinished && onComplete) {
-            const successes = queue.filter((f) => f.status === "success" && f.remoteUrl).map((f) => ({
+            const successes = queue.filter((f) => f.status === "success" && f.remoteUrl)?.map((f) => ({
                 file: f.file!,
                 url: f.remoteUrl!,
                 meta: f.meta,
             }))
             const failures = queue
-                .filter((f) => f.status === "error")
-                .map((f) => ({ file: f.file!, error: f.error || "Upload error" }))
+                ?.filter((f) => f.status === "error")
+                ?.map((f) => ({ file: f.file!, error: f.error || "Upload error" }))
             onComplete({ successes, failures })
         }
     }, [queue, onComplete])
@@ -353,19 +353,19 @@ export function FileUpload({
     }
     const retryItem = (id: string) =>
         setQueueSafe((prev) =>
-            prev.map((f) => (f.id === id && f.status === "error" ? { ...f, status: "queued", progress: 0, error: undefined } : f))
+            prev?.map((f) => (f.id === id && f.status === "error" ? { ...f, status: "queued", progress: 0, error: undefined } : f))
         )
     const cancelItem = (id: string) => {
         setQueueSafe((prev) => {
             const item = prev.find((f) => f.id === id)
             item?.controller?.abort()
-            return prev.map((f) => (f.id === id ? { ...f, status: "canceled" } : f))
+            return prev?.map((f) => (f.id === id ? { ...f, status: "canceled" } : f))
         })
     }
     const cancelAll = () =>
         setQueueSafe((prev) => {
             prev.forEach((f) => f.controller?.abort())
-            return prev.map((f) =>
+            return prev?.map((f) =>
                 f.status === "uploading" || f.status === "queued" ? { ...f, status: "canceled" } : f
             )
         })
@@ -406,9 +406,9 @@ export function FileUpload({
             {/* Validation errors from dropzone */}
             {fileRejections.length > 0 && (
                 <div className="text-destructive text-xs space-y-1" role="alert">
-                    {fileRejections.map((rej, i) => (
+                    {fileRejections?.map((rej, i) => (
                         <div key={i}>
-                            {rej.file.name}: {rej.errors.map((e: any) => e.message).join(", ")}
+                            {rej.file.name}: {rej.errors?.map((e: any) => e.message).join(", ")}
                         </div>
                     ))}
                 </div>

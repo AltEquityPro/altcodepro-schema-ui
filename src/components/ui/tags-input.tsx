@@ -28,7 +28,7 @@ export function TagsInput({ value, onChange }: TagsInputProps) {
     return (
         <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
-                {value && Array.isArray(value) && value.map((tag) => (
+                {value && Array.isArray(value) && value?.map((tag) => (
                     <span
                         key={tag}
                         className="bg-accent text-sm px-2 py-1 rounded-full flex items-center gap-1"

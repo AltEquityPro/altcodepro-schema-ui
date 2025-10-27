@@ -185,7 +185,7 @@ function PageRenderer({
         </PaginationItem>
 
         {/* Pages */}
-        {pagination.pages.map((page, i) => (
+        {pagination.pages?.map((page, i) => (
           <PaginationItem key={i}>
             <PaginationLink
               role="link"

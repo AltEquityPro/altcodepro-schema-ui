@@ -24,7 +24,7 @@ const StateNode: React.FC<{
             const entries = Object.entries(value);
             return (
                 <div className="ml-4 border-l border-[var(--acp-border)] pl-2">
-                    {entries.map(([k, v]) => (
+                    {entries?.map(([k, v]) => (
                         <StateNode
                             key={k}
                             name={k}
@@ -87,55 +87,64 @@ const StateNode: React.FC<{
     );
 };
 
+const extractBindingsFromScreen = (obj: any): Set<string> => {
+    const bindings = new Set<string>();
+    const regex = /{{(.*?)}}/g;
+    const walk = (node: any) => {
+        if (typeof node === 'string') {
+            let match;
+            while ((match = regex.exec(node))) bindings.add(match[1].trim());
+        } else if (Array.isArray(node)) node.forEach(walk);
+        else if (node && typeof node === 'object')
+            Object.values(node).forEach(walk);
+    };
+    walk(obj);
+    return bindings;
+};
+
+const getResolvedBinding = (
+    screenBindings: Set<string>,
+    state: Record<string, any>,
+    t: (key: string, defaultLabel?: string | undefined) => string) => {
+    const results: { expr: string; resolved: any; error?: string }[] = [];
+    Array.from(screenBindings).forEach((expr) => {
+        try {
+            const resolved = deepResolveBindings(`{{${expr}}}`, state, t);
+            results.push({ expr, resolved });
+        } catch (err) {
+            results.push({ expr, resolved: null, error: String(err) });
+        }
+    });
+    results.sort((a, b) => a.expr.localeCompare(b.expr));
+    return results;
+};
+
 const BindingsViewer: React.FC<{
     state: Record<string, any>;
     screenDef: UIDefinition;
-}> = ({ state, screenDef }) => {
-    const { t } = useAppState();
+    t: (key: string, defaultLabel?: string | undefined) => string
+}> = ({ state, screenDef, t }) => {
     const [bindings, setBindings] = useState<
         { expr: string; resolved: any; error?: string }[]
     >([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState('');
 
-    const extractBindingsFromScreen = useCallback((obj: any): Set<string> => {
-        const bindings = new Set<string>();
-        const regex = /{{(.*?)}}/g;
-        const walk = (node: any) => {
-            if (typeof node === 'string') {
-                let match;
-                while ((match = regex.exec(node))) bindings.add(match[1].trim());
-            } else if (Array.isArray(node)) node.forEach(walk);
-            else if (node && typeof node === 'object')
-                Object.values(node).forEach(walk);
-        };
-        walk(obj);
-        return bindings;
-    }, []);
-
     const screenBindings = useMemo(
         () => extractBindingsFromScreen(screenDef),
-        [screenDef, extractBindingsFromScreen]
+        [screenDef]
     );
 
     const resolveAllBindings = useCallback(() => {
         setLoading(true);
-        const results: { expr: string; resolved: any; error?: string }[] = [];
-        Array.from(screenBindings).forEach((expr) => {
-            try {
-                const resolved = deepResolveBindings(`{{${expr}}}`, state, t);
-                results.push({ expr, resolved });
-            } catch (err) {
-                results.push({ expr, resolved: null, error: String(err) });
-            }
-        });
+        const results = getResolvedBinding(screenBindings, state, t);
         setBindings(results);
         setLoading(false);
     }, [screenBindings, state, t]);
 
     useEffect(() => {
         resolveAllBindings();
-    }, []); // resolve once initially
+    }, []); 
 
     const filtered = useMemo(() => {
         if (!search) return bindings;
@@ -177,7 +186,7 @@ const BindingsViewer: React.FC<{
                     No bindings detected.
                 </div>
             ) : (
-                filtered.map(({ expr, resolved, error }, i) => (
+                filtered?.map(({ expr, resolved, error }, i) => (
                     <div
                         key={i}
                         className={cn(
@@ -217,6 +226,7 @@ export const StateTreeViewer: React.FC<{
     const [copySuccess, setCopySuccess] = useState('');
     const startX = useRef(0);
     const startW = useRef(width);
+    const { t } = useAppState();
 
     /** Resize logic */
     const onMouseDown = (e: React.MouseEvent) => {
@@ -246,7 +256,7 @@ export const StateTreeViewer: React.FC<{
         try {
             const dataToCopy =
                 activeTab === 'bindings'
-                    ? 'Use Copy inside Bindings tab'
+                    ? getResolvedBinding(extractBindingsFromScreen(screenDef), state, t)
                     : state;
             const json = JSON.stringify(dataToCopy, null, 2);
             await navigator.clipboard.writeText(json);
@@ -315,9 +325,9 @@ export const StateTreeViewer: React.FC<{
                 {/* Content */}
                 <div className="flex-1 overflow-auto p-3 text-xs font-mono leading-tight">
                     {activeTab === 'bindings' ? (
-                        <BindingsViewer state={state} screenDef={screenDef} />
+                        <BindingsViewer state={state} screenDef={screenDef} t={t} />
                     ) : (
-                        Object.entries(state).map(([k, v], index) => (
+                        Object.entries(state)?.map(([k, v], index) => (
                             <StateNode
                                 key={`${k}_${index}`}
                                 name={k}
@@ -329,7 +339,6 @@ export const StateTreeViewer: React.FC<{
                     )}
                 </div>
 
-                {/* Resize handle */}
                 <div
                     onMouseDown={onMouseDown}
                     className="absolute left-0 top-0 h-full w-1 cursor-col-resize hover:bg-[var(--acp-primary)]/30"

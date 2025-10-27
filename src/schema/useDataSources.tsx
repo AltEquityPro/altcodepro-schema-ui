@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from "react";
-import { DataSource, AnyObj, UIProject, DataMapping, UIScreenDef } from "../types";
+import { DataSource, AnyObj, UIProject, DataMapping } from "../types";
 import { resolveDataSource, joinUrl } from "../lib/utils";
 import { useAuth } from "./useAuth";
 
@@ -73,7 +73,7 @@ function applyDataMappings(
 const defaultFetcher: Fetcher = async (ds, state, signal, formData) => {
     const baseUrl = ds.baseUrl || '';
     const path = ds.path || '';
-    let url = joinUrl(baseUrl, path);
+    let url = path ? joinUrl(baseUrl, path) : baseUrl;
     const headers: Record<string, string> = ds.headers || {};
 
     if (ds.auth && ds.auth.value) {
@@ -123,7 +123,7 @@ const defaultFetcher: Fetcher = async (ds, state, signal, formData) => {
     }
 
     const queryParams = ds.queryParams
-        ? new URLSearchParams(Object.entries(ds.queryParams).map(([k, v]) => [k, String(v)]))
+        ? new URLSearchParams(Object.entries(ds.queryParams)?.map(([k, v]) => [k, String(v)]))
         : null;
     if (queryParams) url += (url.includes('?') ? '&' : '?') + queryParams.toString();
 
@@ -231,22 +231,6 @@ function setupGraphQLSubscription(
         protocol
     );
 }
-function extractBindings(obj: any): string[] {
-    if (!obj) return [];
-    const str = JSON.stringify(obj);
-    const matches = str.match(/{{\s*([^}]+)\s*}}/g) || [];
-    return matches.map(m => m.replace(/{{\s*|\s*}}/g, ""));
-}
-
-function isResolvable(path: string, state: AnyObj): boolean {
-    const parts = path.split(".");
-    let cur: any = state;
-    for (const p of parts) {
-        if (cur == null || !(p in cur)) return false;
-        cur = cur[p];
-    }
-    return true;
-}
 
 export function useDataSources({
     dataSources = [],
@@ -258,7 +242,7 @@ export function useDataSources({
 }: {
     dataSources?: DataSource[];
     globalConfig?: UIProject['globalConfig'];
-    screen?: UIScreenDef;
+    screen?: any;
     state: AnyObj;
     setState: (path: string, value: any) => void;
     fetcher?: Fetcher;
@@ -271,8 +255,8 @@ export function useDataSources({
 
     const resolved = useMemo(() => {
         return dataSources
-            .filter(ds => ds.method !== "POST")
-            .map((ds) => {
+            ?.filter(ds => ds.method !== "POST")
+            ?.map((ds) => {
                 const rds = resolveDataSource(ds, globalConfig, state);
                 // Inject token dynamically
                 if (token && rds.auth?.type === 'bearer') {
@@ -320,17 +304,7 @@ export function useDataSources({
                         if (mounted) setData((prev) => ({ ...prev, [ds.id]: mapped }));
                     } catch (e: any) {
                         if (e.name === "AbortError") return;
-                        const errorObj = {
-                            ok: false,
-                            error: String(e.message || e),
-                            status: e.message?.includes("HTTP")
-                                ? parseInt(e.message.match(/HTTP (\d+)/)?.[1] || "0", 10)
-                                : undefined,
-                        };
-                        if (mounted) setData((prev) => ({ ...prev, [ds.id]: errorObj }));
-                        if (ds.errorKey) {
-                            setState(ds.errorKey, errorObj);
-                        }
+                        console.log('Error fetching data source', ds.id, e);
                     }
                 };
 

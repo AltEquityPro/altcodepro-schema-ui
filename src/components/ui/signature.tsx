@@ -202,7 +202,7 @@ export function SignaturePadRenderer({
             {/* Participants */}
             {multiSignatures && participants.length > 0 && (
                 <div className="flex gap-2 mb-2 flex-wrap">
-                    {participants.map((p) => (
+                    {participants?.map((p) => (
                         <Button
                             key={p.id}
                             size="sm"

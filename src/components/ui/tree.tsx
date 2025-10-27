@@ -12,9 +12,6 @@ import { cn, resolveBinding } from "../../lib/utils";
 import type { AnyObj, EventHandler, TreeElement, TreeNodeElement } from "../../types";
 import { DynamicIcon } from "./dynamic-icon";
 
-/* -------------------------------------------------------------------------- */
-/*                                   Utils                                    */
-/* -------------------------------------------------------------------------- */
 
 type TreeNodeResolved = Omit<
     TreeNodeElement,
@@ -101,10 +98,6 @@ function filterTree(nodes: TreeNodeResolved[], query: string): TreeNodeResolved[
     return out;
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                TreeRenderer                                */
-/* -------------------------------------------------------------------------- */
-
 interface TreeRendererProps {
     element: TreeElement;
     state: AnyObj;
@@ -132,7 +125,7 @@ export function TreeRenderer({ element, runEventHandler, state, t }: TreeRendere
     );
 
     const resolvedNodes = useMemo<TreeNodeResolved[]>(
-        () => rawNodes.map((n) => resolveNode(n, state, t)),
+        () => rawNodes?.map((n) => resolveNode(n, state, t)),
         [rawNodes, state, t]
     );
 
@@ -185,19 +178,18 @@ export function TreeRenderer({ element, runEventHandler, state, t }: TreeRendere
         ]);
     };
 
-    /* -------------------------------- Render -------------------------------- */
     return (
         <div
-            className={cn("rounded-md border bg-card shadow-sm text-sm", element.styles?.className)}
+            className={cn("rounded-md  bg-card shadow-sm text-sm", element.styles?.className)}
             role="tree"
             tabIndex={0}
         >
             {/* Search bar */}
             {searchable && (
-                <div className="p-2 border-b">
+                <div className="p-2 ">
                     <input
                         type="text"
-                        className="w-full rounded-md border bg-background text-foreground px-3 py-2"
+                        className="w-full rounded-md  bg-background text-foreground px-3 py-2"
                         placeholder={searchPlaceholder}
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
@@ -212,7 +204,7 @@ export function TreeRenderer({ element, runEventHandler, state, t }: TreeRendere
                     <Empty label={emptyLabel} />
                 ) : (
                     <ul className="space-y-1">
-                        {viewNodes.map((n) => (
+                        {viewNodes?.map((n) => (
                             <TreeRow
                                 key={n.id}
                                 node={n}

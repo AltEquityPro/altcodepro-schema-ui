@@ -52,7 +52,7 @@ export function Multiselect({
                     >
                         <div className="flex min-h-5 w-0 flex-1 flex-wrap items-center gap-1 overflow-hidden">
                             {value.length > 0 ? (
-                                value.map((v) => {
+                                value?.map((v) => {
                                     const opt = options.find((o) => o.value === v);
                                     return (
                                         <span
@@ -90,7 +90,7 @@ export function Multiselect({
                         "shadow-lg backdrop-blur-sm animate-in fade-in-80 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2"
                     )}
                 >
-                    {options.map((opt) => {
+                    {options?.map((opt) => {
                         const checked = value.includes(opt.value);
                         return (
                             <DropdownMenuCheckboxItem

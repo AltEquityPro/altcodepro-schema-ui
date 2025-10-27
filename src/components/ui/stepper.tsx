@@ -16,7 +16,7 @@ import { ElementResolver } from "@/schema/ElementResolver";
 export function normalizeWizardToForm(schema: { elements: StepWizardElement[] }): any {
     if (!schema?.elements) return schema;
 
-    schema.elements = schema.elements.map((element) => {
+    schema.elements = schema.elements?.map((element) => {
         if (element?.type !== "step_wizard" || !Array.isArray(element.steps)) return element;
 
         const stepsMeta: any[] = [];
@@ -58,7 +58,7 @@ export function normalizeWizardToForm(schema: { elements: StepWizardElement[] })
             }
 
             // 🔥 Attach stepId to every form field
-            formFields = formFields.map((f) => ({
+            formFields = formFields?.map((f) => ({
                 ...f,
                 stepId,
                 meta: { ...(f.meta || {}), stepId },
@@ -199,7 +199,7 @@ export default function StepWizardRenderer({
 
             {/* Step Indicators */}
             <div className="flex justify-between text-sm font-medium overflow-x-auto pb-2">
-                {visibleSteps.map((s: any, idx: number) => (
+                {visibleSteps?.map((s: any, idx: number) => (
                     <button
                         key={s.id || `step-${idx}`}
                         onClick={() => setCurrentStep(idx)}

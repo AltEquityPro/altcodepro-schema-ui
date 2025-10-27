@@ -55,7 +55,7 @@ export function WalletRenderer({
                     // ethers passes args + event object; pop the last one
                     const eventObj = args[args.length - 1];
                     const payload = {
-                        args: args.slice(0, -1).map((a: any) => a?.toString?.() ?? a),
+                        args: args.slice(0, -1)?.map((a: any) => a?.toString?.() ?? a),
                         event: evt.name,
                         txHash: eventObj?.transactionHash,
                         blockNumber: eventObj?.blockNumber,
@@ -174,7 +174,7 @@ export function WalletRenderer({
                 contract.on(evt.name, async (...args) => {
                     const eventObj = args[args.length - 1];
                     const payload = {
-                        args: args.slice(0, -1).map((a: any) => a?.toString?.() ?? a),
+                        args: args.slice(0, -1)?.map((a: any) => a?.toString?.() ?? a),
                         event: evt.name,
                         txHash: eventObj?.transactionHash,
                         blockNumber: eventObj?.blockNumber,
@@ -265,7 +265,7 @@ export function WalletRenderer({
         fnKey: string,
         inputs: { name: string; type: string }[]
     ) =>
-        inputs.map((inp) => {
+        inputs?.map((inp) => {
             let raw = formValues[fnKey]?.[inp.name];
 
             if (inp.type.startsWith("uint") || inp.type.startsWith("int")) {
@@ -302,18 +302,18 @@ export function WalletRenderer({
                     </Button>
 
                     {element.mode !== "button" &&
-                        (element.contracts ?? []).map((c, i) => (
+                        (element.contracts ?? [])?.map((c, i) => (
                             <div
                                 key={i}
                                 className="w-full flex flex-col gap-3 border p-3 rounded"
                             >
-                                {c.functions.map((fn, j) => {
+                                {c.functions?.map((fn, j) => {
                                     const fnKey = `${c.address}-${fn.name}-${j}`;
                                     const inputs = fn.inputs || [];
                                     return (
                                         <div key={fnKey} className="flex flex-col gap-2">
                                             <div className="font-semibold">{fn.label || fn.name}</div>
-                                            {inputs.map((inp) => renderInput(fnKey, inp))}
+                                            {inputs?.map((inp) => renderInput(fnKey, inp))}
                                             <Button
                                                 variant="secondary"
                                                 onClick={async () => {

@@ -69,7 +69,7 @@ function AccordionRenderer({
 
             <AccordionPrimitive.Content className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden text-sm">
               <div className="pt-0 pb-4">
-                {item.content.map((child: UIElement) => (
+                {item.content?.map((child: UIElement) => (
                   <ElementResolver state={state} setState={setState} t={t} key={child.id} element={child} runEventHandler={runEventHandler} />
                 ))}
               </div>

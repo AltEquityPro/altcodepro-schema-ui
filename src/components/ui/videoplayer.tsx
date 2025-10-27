@@ -333,7 +333,7 @@ export function VideoRenderer({
     // Ads Handling
     React.useEffect(() => {
         if (element.is360 || !element.ads) return; // Skip ads for 360 videos
-        const pre = (element.ads.preRoll || []).map((b) => resolveBinding(b, state, t) as string);
+        const pre = (element.ads.preRoll || [])?.map((b) => resolveBinding(b, state, t) as string);
         setAdQueue(pre);
     }, [element.ads, state, t, element.is360]);
 
@@ -354,7 +354,7 @@ export function VideoRenderer({
         };
         const onEnded = () => {
             if (!postRoll || showAd) return;
-            const list = postRoll.map((b) => resolveBinding(b, state, t) as string);
+            const list = postRoll?.map((b) => resolveBinding(b, state, t) as string);
             if (list.length) setAdQueue((q) => [...q, ...list]);
         };
         v.addEventListener("timeupdate", onTime);
@@ -610,7 +610,7 @@ export function VideoRenderer({
                                 />
                                 {element.chapters && element.chapters.length > 0 && (
                                     <div className="absolute inset-x-0 -bottom-1 h-1 pointer-events-none">
-                                        {element.chapters.map((c, i) => (
+                                        {element.chapters?.map((c, i) => (
                                             <div
                                                 key={i}
                                                 title={c.title}
@@ -681,7 +681,7 @@ export function VideoRenderer({
                                             title="Quality"
                                         >
                                             <option value={-1}>Auto</option>
-                                            {levels.map((lv, i) => (
+                                            {levels?.map((lv, i) => (
                                                 <option key={i} value={i}>{`${lv.height || lv.width || ""}${lv.bitrate ? ` (${Math.round(lv.bitrate / 1000)}kbps)` : ""
                                                     }`}</option>
                                             ))}
@@ -694,7 +694,7 @@ export function VideoRenderer({
                                             onChange={(e) => changeRate(parseFloat(e.target.value))}
                                             title="Playback speed"
                                         >
-                                            {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((r) => (
+                                            {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]?.map((r) => (
                                                 <option key={r} value={r}>{r}x</option>
                                             ))}
                                         </select>
@@ -707,7 +707,7 @@ export function VideoRenderer({
                                             title="Subtitles"
                                         >
                                             <option value={-1}>Captions off</option>
-                                            {Array.from({ length: textTracks.length }).map((_, i) => (
+                                            {Array.from({ length: textTracks.length })?.map((_, i) => (
                                                 <option key={i} value={i}>{textTracks[i].label || textTracks[i].language || `Track ${i + 1}`}</option>
                                             ))}
                                         </select>

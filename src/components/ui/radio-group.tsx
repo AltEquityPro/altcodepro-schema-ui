@@ -71,7 +71,7 @@ function RadioGroupRenderer({
       }
       className={element.styles?.className}
     >
-      {options.map((opt: any) => {
+      {options?.map((opt: any) => {
         const id = `${element.id}-${opt.value}`
         return (
           <div key={opt.value} className="flex items-center space-x-2">

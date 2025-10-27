@@ -21,7 +21,7 @@ export default function CustomComponentRender({ element, runEventHandler, state,
             ? resolveBinding(element.props, state, t)
             : {};
 
-    const children = componentNames.map((name: any, idx: any) => {
+    const children = componentNames?.map((name: any, idx: any) => {
         const Comp =
             element?.component?.[name] ??
             (() => (

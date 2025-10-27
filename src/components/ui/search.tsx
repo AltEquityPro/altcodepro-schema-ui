@@ -52,7 +52,7 @@ export function SearchRenderer({
         if (!element.suggestionsDataSourceId) return;
         const v = state[element.suggestionsDataSourceId];
         if (Array.isArray(v)) {
-            const arr = v.map((s: any) =>
+            const arr = v?.map((s: any) =>
                 typeof s === "string" ? s : s.text || ""
             );
             setSuggestions(arr.slice(0, maxSuggestions));
@@ -64,7 +64,7 @@ export function SearchRenderer({
         if (!element.historyDataSourceId) return;
         const v = state[element.historyDataSourceId];
         if (Array.isArray(v)) {
-            const arr = v.map((s: any) =>
+            const arr = v?.map((s: any) =>
                 typeof s === "string" ? s : s.text || ""
             );
             setHistory(arr.slice(0, maxSuggestions));
@@ -232,7 +232,7 @@ export function SearchRenderer({
             {/* Suggestions */}
             {suggestions.length > 0 && (
                 <div className="border-t bg-popover text-sm max-h-48 overflow-y-auto">
-                    {suggestions.map((s, i) => (
+                    {suggestions?.map((s, i) => (
                         <button
                             key={i}
                             className="block w-full text-left px-3 py-2 hover:bg-accent"
@@ -251,7 +251,7 @@ export function SearchRenderer({
                         {t("recent_searches") || "Recent"}
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        {history.map((h, i) => (
+                        {history?.map((h, i) => (
                             <button
                                 key={i}
                                 className="px-2 py-1 rounded bg-muted hover:bg-accent"

@@ -9,7 +9,7 @@ import { clearAuthToken } from "./useActionHandler";
  🔑 Auth Context Type
 -------------------------------------------------- */
 interface AuthContextType {
-    token: string | null;
+    token?: string ;
     refreshToken: string | null;
     expiresAt: number | null;
     user: any;
@@ -39,7 +39,7 @@ export function AuthProvider({
     setState?: (path: string, value: any) => void;
     nav?: NavigationAPI;
 }) {
-    const [token, setToken] = useState<string | null>(null);
+    const [token, setToken] = useState<string | undefined>(undefined);
     const [refreshToken, setRefreshToken] = useState<string | null>(null);
     const [expiresAt, setExpiresAt] = useState<number | null>(null);
     const [user, setUser] = useState<any>(null);
@@ -59,7 +59,7 @@ export function AuthProvider({
 
     const logout = useCallback(() => {
         clearAuthToken(globalConfig);
-        setToken(null);
+        setToken(undefined);
         setRefreshToken(null);
         setExpiresAt(null);
         setUser(null);

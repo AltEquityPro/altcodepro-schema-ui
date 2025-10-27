@@ -4,7 +4,7 @@ import {
     isVisible,
     getAccessibilityProps,
 } from "../../lib/utils";
-import { ContainerElement, AnyObj, ActionRuntime, EventHandler } from "../../types";
+import { ContainerElement, AnyObj, EventHandler } from "../../types";
 import { RenderChildren } from "../../schema/RenderChildren";
 import clsx from "clsx";
 

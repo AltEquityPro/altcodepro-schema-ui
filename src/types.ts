@@ -27,27 +27,6 @@ export enum ActionType {
     toast = 'toast',
     websocket_call = 'websocket_call',
 }
-export type ResolveScope = {
-    state?: AnyObj;
-    form?: AnyObj;
-    props?: AnyObj;
-    config?: AnyObj;
-    data?: AnyObj;
-    auth?: AnyObj;
-    user?: AnyObj;
-
-    router?: AnyObj;
-    params?: AnyObj;
-    query?: AnyObj;
-    headers?: AnyObj;
-    request?: AnyObj;
-    url?: AnyObj;
-    location?: AnyObj;
-    cookies?: AnyObj;
-    session?: AnyObj;
-
-    [k: string]: any;
-};
 export interface ActionRuntime {
     /** Navigation & layout */
     openModal?: (id: string) => void;
@@ -583,20 +562,23 @@ export interface CarouselElement extends BaseElement {
 
 export interface ChatElement extends BaseElement {
     type: ElementType.chat;
-
+    headers?: Record<string, string | Binding>;
+    richResponses?: boolean; // predifned types for responses (cards, images, buttons, etc.)
     // AI/LLM
-    model?: string;
     placeholder?: string | Binding;
     historyDataSourceId?: string;
     onSend?: EventHandler;
     onReceive?: EventHandler;
     streaming?: boolean;
-    onTyping?: EventHandler;
+    streamMode?: "append" | "replace";
+
+    onStreamChunk?: EventHandler;
 
     // Suggestions
     suggestionsDataSourceId?: string;
 
     // Uploads
+    onTyping?: EventHandler;
     accept?: string;
     maxSizeBytes?: number;
     multiple?: boolean;
@@ -605,9 +587,10 @@ export interface ChatElement extends BaseElement {
     onUpload?: EventHandler;
 
     // Actions / buttons
-    quickActions?: { id: string; label: string; payload?: AnyObj }[];
+    quickActions?: ButtonElement[];
     onMessageAction?: EventHandler;
-
+    leftDrawer?: DropdownElement;
+    rightDrawer?: DropdownElement;
     // Message utilities
     onDeleteMessage?: EventHandler;
     onCopyMessage?: EventHandler;
@@ -617,6 +600,32 @@ export interface ChatElement extends BaseElement {
     showStatusIcons?: boolean;       // hide/show ✓✓ ticks
     showAvatars?: boolean;           // render user/assistant avatars
     typingIndicator?: boolean;       // force typing indicator on/off
+
+    chatMode?: "ai" | "direct" | 'group';
+    roleClasses?: "user" | "assistant" | "system" | "other";
+    messageClassName?: string;
+    showThreadHeaders?: boolean;
+    inputMode?: "input" | "textarea" | "richtext" | "markdown";
+    allowVoice?: boolean;
+    voiceLanguage?: string;
+
+    participantsDataSourceId?: string;
+    showPresence?: boolean;
+    onPresenceChange?: EventHandler;
+    currentUserId?: Binding;
+    commandSuggestions?: { id: string; label: string }[];
+    moderationRules?: { regex: string; action: "block" | "flag" | "warn" }[];
+    ttsUrl?: string;
+    notificationSound?: string;
+    maxMessages?: number;
+    persistence?: { type: "local" | "remote"; dbName?: string; endpoint?: string };
+    http?: { sendUrl: string; method?: "POST" | "PUT"; fetchInit?: RequestInit };
+    sse?: { url: string };
+    ws?: {
+        url: string;
+        protocol?: "graphql-ws" | "subscriptions-transport-ws" | "graphql-transport-ws";
+        heartbeat?: { interval: number; message: any };
+    };
 }
 
 export interface ChartElement extends BaseElement {
@@ -1069,16 +1078,13 @@ export interface MapElement extends BaseElement {
 export interface ListElement extends BaseElement {
     type: ElementType.list;
     ordered?: boolean;
-    items: ListItemElement[];
+    items: UIElement[];
+    virtualHeight: number;
+    showDividers?: boolean;
+    density?: "comfortable" | "compact";
+    virtualizeAfter?: number;//60
 }
 
-export interface ListItemElement extends BaseElement {
-    type: ElementType.list_item;
-    icon?: IconElement;
-    text: Binding;
-    description?: Binding;
-    onClick?: EventHandler;
-}
 export interface LottieElement extends BaseElement {
     type: ElementType.lottie;
     src: Binding;                           // URL or inline JSON via binding
@@ -1774,7 +1780,6 @@ export type UIElement =
     | IconElement
     | ImageElement
     | ListElement
-    | ListItemElement
     | LottieElement
     | MapElement
     | MenuElement
@@ -2048,28 +2053,26 @@ export interface TransitionSpec {
     statePatches?: Array<{ key: string; value: any | Binding }>;
 }
 
-export interface UIScreenDef {
-    dataMappings?: DataMapping[];
-    dataSources?: DataSource[];
-    elements: UIElement[];
-    id: string;
-    layoutType: LayoutType;
-    lifecycle?: {
-        onEnter?: EventHandler;
-        onLeave?: EventHandler;
-    };
-    metadata: Record<string, string | number | boolean | Record<string, any>>;
-    name: Binding;
-    styles?: StyleProps;
-    transition?: { type: string; direction?: string; duration: number };
-    version: string;
-}
-
 export interface UIDefinition {
     id: string;
     initialData?: Record<string, any>;
     guard?: GuardRule;
-    screens: UIScreenDef[];
+    screens: Array<{
+        dataMappings?: DataMapping[];
+        dataSources?: DataSource[];
+        elements: UIElement[];
+        id: string;
+        layoutType: LayoutType;
+        lifecycle?: {
+            onEnter?: EventHandler;
+            onLeave?: EventHandler;
+        };
+        metadata: Record<string, string | number | boolean | Record<string, any>>;
+        name: Binding;
+        styles?: StyleProps;
+        transition?: { type: string; direction?: string; duration: number };
+        version: string;
+    }>;
     href: string;
     route: string;
     state?: {
@@ -2109,6 +2112,12 @@ export interface EventHandler {
     aiPrompt?: string;
     dataSourceId?: string;
     errorAction?: EventHandler;
+    streamHandler?: {
+        /** Callback event name used by WebSocket/SSE messages */
+        eventKey?: string;
+        /** JSONPath or regex to extract token from message */
+        tokenPath?: string;
+    };
     errorTransition?: TransitionSpec;
     exportConfig?: ExportConfig;
     params?: Record<string, any | Binding>;
@@ -2348,3 +2357,26 @@ export interface NavigationAPI {
     reload?: () => void;
     currentPath?: () => string;
 }
+
+
+export type ResolveScope = {
+    state?: AnyObj;
+    form?: AnyObj;
+    props?: AnyObj;
+    config?: AnyObj;
+    data?: AnyObj;
+    auth?: AnyObj;
+    user?: AnyObj;
+
+    router?: AnyObj;
+    params?: AnyObj;
+    query?: AnyObj;
+    headers?: AnyObj;
+    request?: AnyObj;
+    url?: AnyObj;
+    location?: AnyObj;
+    cookies?: AnyObj;
+    session?: AnyObj;
+
+    [k: string]: any;
+};

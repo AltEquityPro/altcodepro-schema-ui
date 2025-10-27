@@ -64,7 +64,7 @@ export function TimelineRenderer({
     }, [el.dataSourceId, el.items, state]);
 
     const items = useMemo(() => {
-        const mapped = rawItems.map((it: any, idx: number) => {
+        const mapped = rawItems?.map((it: any, idx: number) => {
             const title = resolveBinding(it.title, state, t);
             const description = resolveBinding(it.description, state, t);
             const tsRaw = resolveBinding(it.timestamp, state, t);
@@ -108,7 +108,7 @@ export function TimelineRenderer({
             if (!map.has(key)) map.set(key, []);
             map.get(key)!.push(it);
         });
-        return Array.from(map.entries()).map(([key, list]) => ({ key, items: list }));
+        return Array.from(map.entries())?.map(([key, list]) => ({ key, items: list }));
     }, [items, groupBy, t]);
 
     /* ------------------------ Accessibility + Nav ------------------------ */
@@ -177,7 +177,7 @@ export function TimelineRenderer({
             )}
 
             {/* Groups */}
-            {grouped.map((group, gi) => (
+            {grouped?.map((group, gi) => (
                 <div
                     key={`grp-${gi}-${group.key}`}
                     className={cn("flex w-full", isVertical ? "flex-col" : "flex-row items-stretch")}
@@ -186,9 +186,9 @@ export function TimelineRenderer({
                         <GroupHeader label={group.key} orientation={orientation} compact={compact} />
                     )}
                     <div className={cn("flex", isVertical ? "flex-col" : "flex-row", baseGap)}>
-                        {group.items.map((it, idxInGroup) => {
+                        {group.items?.map((it, idxInGroup) => {
                             const globalIndex =
-                                grouped.slice(0, gi).reduce((acc, g) => acc + g.items.length, 0) + idxInGroup;
+                                grouped.slice(0, gi)?.reduce((acc, g) => acc + g.items.length, 0) + idxInGroup;
                             const side =
                                 !isVertical
                                     ? "center"

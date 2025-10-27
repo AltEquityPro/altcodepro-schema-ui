@@ -40,21 +40,22 @@ export function ScreenRenderer({
     showDebug?: boolean;
     CustomElementResolver?: any;
 }) {
-    const { state, t, setState, setScreenTranslations } = useAppState();
 
-    // 🔹 Auth check at project level
     useAuth({ requiresAuth, nav });
     const analytics = useAnalytics();
 
-    // 🔹 Sync project-level translations
     useEffect(() => {
-        setScreenTranslations(uiDef.translations || {});
+        setTranslations(uiDef.translations || {});
     }, [uiDef.translations]);
+    const { state, t, setState, setTranslations } = useAppState();
 
     const screenDataSources = useMemo(() => {
         const all: any[] = [];
         for (const s of uiDef.screens) {
-            if (s.dataSources) all.push(...s.dataSources.filter((ds) => ds.method !== "POST"));
+            if (s.dataSources) all.push(...s.dataSources);
+        }
+        if ((uiDef as any).dataSources) {
+            all.push(...(uiDef as any).dataSources);
         }
         return all;
     }, [uiDef.screens]);
@@ -69,7 +70,6 @@ export function ScreenRenderer({
         },
         patchState
     }), [runtime, nav, patchState]);
-
     const { runEventHandler } = useActionHandler({
         globalConfig: project.globalConfig,
         dataSources: screenDataSources,
@@ -115,7 +115,7 @@ export function ScreenRenderer({
                     }}
                 />
             )}
-            {uiDef.screens.map((screen) => (
+            {uiDef.screens?.map((screen) => (
                 <ScreenView
                     key={screen.id}
                     screen={screen}

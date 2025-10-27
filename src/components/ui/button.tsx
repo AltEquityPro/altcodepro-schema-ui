@@ -117,7 +117,7 @@ export function Button({
   return (
     <button
       className={clsx(
-        "inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none",
+        "inline-flex cursor-pointer items-center justify-center rounded-md font-medium transition-colors focus:outline-none",
         variantClass,
         sizeClass,
         className
@@ -164,7 +164,7 @@ export function ButtonRenderer({
   return (
     <button
       className={clsx(
-        "inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none",
+        "inline-flex items-center cursor-pointer justify-center rounded-md font-medium transition-colors focus:outline-none",
         variantClass,
         sizeClass,
         styles,

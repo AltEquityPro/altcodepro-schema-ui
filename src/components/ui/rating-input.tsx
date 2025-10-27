@@ -108,7 +108,7 @@ export function RatingInput({
             aria-label="Rating"
             aria-readonly={readonly}
         >
-            {Array.from({ length: max }).map((_, i) => {
+            {Array.from({ length: max })?.map((_, i) => {
                 const fullVal = i + 1;
                 const halfVal = i + 0.5;
 

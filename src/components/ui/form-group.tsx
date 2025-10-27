@@ -157,16 +157,16 @@ export function TabGroup({
     // Prefer explicit group.tabs; otherwise derive from fields' tabId
     const derivedTabIds = unique(
         group.formFields
-            .map((f) => getFieldGroupId(f as FormFieldUnion, "tab"))
-            .filter(Boolean) as string[]
+            ?.map((f) => getFieldGroupId(f as FormFieldUnion, "tab"))
+            ?.filter(Boolean) as string[]
     );
     const tabs =
         (group as any).tabs?.length
-            ? (group as any).tabs.map((tb: any) => ({
+            ? (group as any).tabs?.map((tb: any) => ({
                 id: tb.id,
                 label: resolveBinding(tb.label ?? tb.id, state, t),
             }))
-            : derivedTabIds.map((id) => ({ id, label: id }));
+            : derivedTabIds?.map((id) => ({ id, label: id }));
 
     const [activeId, setActiveId] = useState<string>(tabs[0]?.id || "tab0");
 
@@ -212,12 +212,12 @@ export function WizardGroup({
     );
     const steps =
         (group as any).steps?.length
-            ? (group as any).steps.map((s: any, i: number) => ({
+            ? (group as any)?.steps?.map((s: any, i: number) => ({
                 id: s.id ?? `step-${i}`,
                 title: resolveBinding(s.title ?? s.id ?? `Step ${i + 1}`, state, t),
                 description: resolveBinding(s.description, state, t),
             }))
-            : derivedStepIds.map((id, i) => ({ id, title: `Step ${i + 1}` }));
+            : derivedStepIds?.map((id, i) => ({ id, title: `Step ${i + 1}` }));
 
     const [current, setCurrent] = useState(0);
     const goNext = async () => {
@@ -232,8 +232,8 @@ export function WizardGroup({
             <FormStepper steps={steps} currentIndex={current} />
             <div className="space-y-4">
                 {group.formFields
-                    .filter((f) => getFieldGroupId(f as FormFieldUnion, "step") === steps[current]?.id)
-                    .map((f) => (
+                    ?.filter((f) => getFieldGroupId(f as FormFieldUnion, "step") === steps[current]?.id)
+                    ?.map((f) => (
                         <div key={f.id}>{renderField(f)}</div>
                     ))}
             </div>

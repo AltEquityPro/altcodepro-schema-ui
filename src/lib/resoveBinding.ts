@@ -75,7 +75,7 @@ function getFromScope(path: string, scope: AnyObj): any {
 function getPath(obj: AnyObj, path: string): any {
     if (!obj || !path) return undefined;
     try {
-        return path.split(".").reduce((acc, k) => {
+        return path?.split(".")?.reduce((acc, k) => {
             if (acc == null) return acc;
             if (Array.isArray(acc)) {
                 const idx = Number(k);
@@ -438,7 +438,7 @@ export function deepResolveBindingsDepth(value: any, state: AnyObj, t: (k: strin
 
         // Array
         if (Array.isArray(value)) {
-            return value.map((v) => deepResolveBindingsDepth(v, state, t));
+            return value?.map((v) => deepResolveBindingsDepth(v, state, t));
         }
 
         // Object

@@ -186,7 +186,7 @@ function CollapsibleNavItem({
 
             {hasChildren && isOpen && (
                 <div className="space-y-1 ml-2 animate__animated animate__fadeInDown animate__faster">
-                    {route.nested!.map((child) => (
+                    {route.nested?.map((child) => (
                         <CollapsibleNavItem
                             key={child.href}
                             route={child}
@@ -273,7 +273,7 @@ function DesktopNavItem({
                     role="menu"
                 >
                     <div className="py-2">
-                        {route.nested!.map((child) => (
+                        {route.nested?.map((child) => (
                             <a
                                 key={child.href}
                                 href={child.href}
@@ -322,7 +322,7 @@ function DesktopNav({
             role="navigation"
             aria-label="Main navigation"
         >
-            {routes.filter((r) => r.showInNavigation).map((r) => (
+            {routes.filter((r) => r.showInNavigation)?.map((r) => (
                 <DesktopNavItem
                     key={r.href}
                     route={r}
@@ -435,7 +435,7 @@ function MobileBurger({
                 </div>
 
                 <nav className="flex-1 space-y-1 overflow-y-auto" role="navigation">
-                    {routes.filter((r) => r.showInNavigation).map((route) => (
+                    {routes.filter((r) => r.showInNavigation)?.map((route) => (
                         <CollapsibleNavItem
                             key={route.href}
                             route={route}
@@ -525,7 +525,7 @@ function Sidebar({
             )}
 
             <nav className="flex-1 space-y-1" role="navigation">
-                {routes.filter((r) => r.showInNavigation).map((route) => (
+                {routes.filter((r) => r.showInNavigation)?.map((route) => (
                     <CollapsibleNavItem
                         key={route.href}
                         route={route}
@@ -542,7 +542,7 @@ function Sidebar({
 
             {cfg.customActions?.length ? (
                 <div className="mt-6 border-t border-border/40 pt-3 space-y-2">
-                    {cfg.customActions.map((a) => (
+                    {cfg.customActions?.map((a) => (
                         <button
                             key={a.id}
                             onClick={() => {
@@ -618,7 +618,7 @@ function BottomNav({
             aria-label="Bottom navigation"
         >
             <div className="flex justify-around px-2 py-2">
-                {routes.filter((r) => r.showInBottomBar).map((route) => {
+                {routes.filter((r) => r.showInBottomBar)?.map((route) => {
                     const active = isRouteActive(route, pathname);
                     return (
                         <NavLink

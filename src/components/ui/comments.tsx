@@ -153,10 +153,10 @@ export function CommentsRenderer({
 
             {/* List */}
             <div className="space-y-3">
-                {filteredComments.length === 0 ? (
+                {filteredComments?.length === 0 ? (
                     <EmptyState label={t("no_comments") || "No comments yet."} />
                 ) : (
-                    filteredComments.map((c) => (
+                    filteredComments?.map((c) => (
                         <CommentNode
                             key={c.id}
                             comment={c}
@@ -494,9 +494,9 @@ function CommentNode({
             )}
 
             {/* Replies */}
-            {Array.isArray(comment.replies) && comment.replies.length > 0 && (
+            {Array.isArray(comment.replies) && comment.replies?.length > 0 && (
                 <div className="mt-3 space-y-3">
-                    {comment.replies.map((r) => (
+                    {comment.replies?.map((r) => (
                         <CommentNode
                             key={r.id}
                             comment={r}

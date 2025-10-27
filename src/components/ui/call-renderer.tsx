@@ -537,7 +537,7 @@ export function CallRenderer({
                     muted
                     showName={showNames}
                 />
-                {remoteEntries.map(([id, stream]) => (
+                {remoteEntries?.map(([id, stream]) => (
                     <div key={id}>
                         <RemoteTile element={element} name={id.slice(0, 6)} stream={stream} showName={showNames} />
                     </div>
@@ -587,14 +587,14 @@ export function CallRenderer({
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="center" className="min-w-[280px]">
                                 <DropdownMenuLabel>{t("Microphone")}</DropdownMenuLabel>
-                                {devices.filter(d => d.kind === "audioinput").map(d => (
+                                {devices.filter(d => d.kind === "audioinput")?.map(d => (
                                     <DropdownMenuItem key={d.deviceId} onSelect={() => applyDevices({ ...choice, micId: d.deviceId })}>
                                         <Volume2Icon className="mr-2 h-4 w-4" /> {d.label || d.deviceId}
                                     </DropdownMenuItem>
                                 ))}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuLabel>{t("Camera")}</DropdownMenuLabel>
-                                {devices.filter(d => d.kind === "videoinput").map(d => (
+                                {devices.filter(d => d.kind === "videoinput")?.map(d => (
                                     <DropdownMenuItem key={d.deviceId} onSelect={() => applyDevices({ ...choice, camId: d.deviceId })}>
                                         <CameraIcon className="mr-2 h-4 w-4" /> {d.label || d.deviceId}
                                     </DropdownMenuItem>

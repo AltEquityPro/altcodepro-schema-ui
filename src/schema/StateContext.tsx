@@ -1,9 +1,13 @@
 'use client';
 import {
-    createContext, useContext, useEffect, useRef, useState,
-    ReactNode, useCallback,
-    SetStateAction,
-    Dispatch
+    createContext,
+    useContext,
+    useEffect,
+    useRef,
+    useState,
+    useLayoutEffect,
+    ReactNode,
+    useCallback,
 } from "react";
 import { AnyObj, UIProject } from "../types";
 import { resolveBinding } from "../lib/utils";
@@ -11,29 +15,90 @@ import { useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
+const globalTranslations: Record<string, Record<string, string>> = {};
+
+export function t(key: string, defaultLabel?: string): string {
+    if (!key) return "";
+    try {
+        const locale =
+            (typeof window !== "undefined" && localStorage.getItem("locale")) ||
+            "en";
+        const translations = globalTranslations[locale] || {};
+        return (
+            translations[key] ||
+            defaultLabel ||
+            key
+        );
+    } catch {
+        return defaultLabel || key;
+    }
+}
+export function setTranslations(translations: Record<string, Record<string, string>>) {
+    for (const [locale, map] of Object.entries(translations)) {
+        globalTranslations[locale] = {
+            ...(globalTranslations[locale] || {}),
+            ...map,
+        };
+    }
+    try {
+        localStorage.setItem("translations", JSON.stringify(globalTranslations));
+    } catch {
+        /* ignore */
+    }
+}
+
 interface AppStateContextType {
     state: AnyObj;
     setState: (path: string, value: any) => void;
     t: (key: string, defaultLabel?: string) => string;
     form: UseFormReturn<AnyObj>;
-    /** 🔹 Set per-screen translations dynamically */
-    setScreenTranslations: Dispatch<SetStateAction<Record<string, Record<string, string>>>>
+    setTranslations: (
+        translations: Record<string, Record<string, string>>
+    ) => void;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
 
+/* -------------------------------------------------------------------------- */
+/* Provider                                                                   */
+/* -------------------------------------------------------------------------- */
 export function StateProvider({
     project,
     children,
     initialState = {},
-    defaultLocale = "en",
 }: {
     project: UIProject;
     children: ReactNode;
     initialState?: AnyObj;
-    defaultLocale?: string;
 }) {
-    /* ---------- App State ---------- */
+    const wsRef = useRef<WebSocket | null>(null);
+    const wsCleanupRef = useRef<(() => void) | null>(null);
+
+    useLayoutEffect(() => {
+        try {
+            // Load previously saved translations (if any)
+            const saved = localStorage.getItem("translations");
+            if (saved) Object.assign(globalTranslations, JSON.parse(saved));
+
+            // Merge in current project's translations (no overwrite, per locale)
+            if (project?.translations) {
+                for (const [locale, map] of Object.entries(project.translations)) {
+                    globalTranslations[locale] = {
+                        ...(globalTranslations[locale] || {}),
+                        ...map,
+                    };
+                }
+
+                localStorage.setItem(
+                    "translations",
+                    JSON.stringify(globalTranslations)
+                );
+            }
+        } catch (e) {
+            console.warn("Translation preload failed", e);
+        }
+    }, [project]);
+
     const [state, setStateRaw] = useState<AnyObj>(() => {
         const initial = { ...initialState };
         if (project.state?.keys) {
@@ -44,57 +109,70 @@ export function StateProvider({
         return initial;
     });
 
-    /* ---------- Dynamic Screen Translations ---------- */
-    const [screenTranslations, setScreenTranslations] = useState<Record<string, Record<string, string>>>({});
-
-    /* ---------- WebSocket Refs ---------- */
-    const wsRef = useRef<WebSocket | null>(null);
-    const wsCleanupRef = useRef<(() => void) | null>(null);
-
-    /* ---------- setState wrapper ---------- */
     const setState = useCallback((path: string, value: any) => {
-        setStateRaw((prev) => {
+        if (!path || typeof path !== "string") return;
+        setStateRaw(prev => {
             const updated = structuredClone(prev);
-            path = path.replace(/^\{\{\s*|\s*\}\}$/g, '').trim().replace(/^state\./, '');
-            updated[path] = value;
+            let cleanPath = path
+                .replace(/^\s*\{\{\s*|\s*\}\}\s*$/g, "") // full {{ }} pairs
+                .replace(/^\s*\{+\s*|\s*\}+\s*$/g, "") // leftover single braces
+                .replace(/^state\.|^this\.state\./, "") // "state." prefix
+                .trim()
+                .replace(/\.+$/, ""); // trailing dots
+
+            if (!cleanPath) {
+                console.warn("⚠️ Ignored invalid state path:", path);
+                return prev;
+            }
+
+            // --- Support nested paths like 'profile.user.name' ---
+            const keys = cleanPath.split(".");
+            let target = updated;
+            for (let i = 0; i < keys.length - 1; i++) {
+                const k = keys[i];
+                if (!target[k] || typeof target[k] !== "object") target[k] = {};
+                target = target[k];
+            }
+            const lastKey = keys[keys.length - 1];
+            if (value === undefined || !lastKey || lastKey == '{' || lastKey == '}') {
+                return updated
+            }
+            target[lastKey] = value;
             return updated;
         });
     }, []);
 
-    /* ---------- Translations ---------- */
-    const t = useCallback(
-        (key: string, defaultLabel?: string) => {
-            const locale = state.locale || defaultLocale;
-            const screenT = screenTranslations?.[locale] || {};
-            const projectT = project.translations?.[locale] || {};
-            return screenT[key] || projectT[key] || defaultLabel || '';
-        },
-        [state.locale, defaultLocale, screenTranslations, project.translations]
-    );
-
-    /* ---------- Form Schema (Zod-based) ---------- */
     const formSchema: any = z.object(
-        Object.entries(project.state?.keys || {}).reduce((schema, [key, config]) => {
+        Object.entries(project.state?.keys || {})?.reduce((schema, [key, config]) => {
             let validator: z.ZodTypeAny = z.any();
             switch (config.dataType) {
                 case "string": {
                     let v = z.string();
                     if (config.validation?.required) v = v.min(1);
-                    if (config.validation?.regex) v = v.regex(new RegExp(config.validation.regex));
-                    if (config.validation?.minLength) v = v.min(config.validation.minLength);
-                    if (config.validation?.maxLength) v = v.max(config.validation.maxLength);
+                    if (config.validation?.regex)
+                        v = v.regex(new RegExp(config.validation.regex));
+                    if (config.validation?.minLength)
+                        v = v.min(config.validation.minLength);
+                    if (config.validation?.maxLength)
+                        v = v.max(config.validation.maxLength);
                     return { ...schema, [key]: v };
                 }
                 case "number": {
                     let v = z.number();
-                    if (config.validation?.min !== undefined) v = v.min(config.validation.min);
-                    if (config.validation?.max !== undefined) v = v.max(config.validation.max);
+                    if (config.validation?.min !== undefined)
+                        v = v.min(config.validation.min);
+                    if (config.validation?.max !== undefined)
+                        v = v.max(config.validation.max);
                     return { ...schema, [key]: v };
                 }
-                case "boolean": return { ...schema, [key]: z.boolean() };
-                case "object": return { ...schema, [key]: z.object({}) };
-                case "array": return { ...schema, [key]: z.array(z.any()) };
-                default: return { ...schema, [key]: validator };
+                case "boolean":
+                    return { ...schema, [key]: z.boolean() };
+                case "object":
+                    return { ...schema, [key]: z.object({}) };
+                case "array":
+                    return { ...schema, [key]: z.array(z.any()) };
+                default:
+                    return { ...schema, [key]: validator };
             }
         }, {})
     );
@@ -104,64 +182,104 @@ export function StateProvider({
         defaultValues: state,
     });
 
-    /* ---------- Sync form with state ---------- */
     useEffect(() => {
         form.reset(state);
     }, [form, state]);
 
-    /* ---------- Persist state ---------- */
+    /* --------------------------- State Persistence --------------------------- */
     useEffect(() => {
         if (project.state?.persist && project.state.persistStorage) {
-            const storage = project.state.persistStorage === 'localStorage' ? localStorage : sessionStorage;
-            storage.setItem('appState', JSON.stringify(state));
+            const storage =
+                project.state.persistStorage === "localStorage"
+                    ? localStorage
+                    : sessionStorage;
+            const payload = JSON.stringify(state);
+            try {
+                (window as any)?.requestIdleCallback
+                    ? requestIdleCallback(() => storage.setItem("appState", payload))
+                    : storage.setItem("appState", payload);
+            } catch (e) {
+                console.warn("Persist state failed", e);
+            }
         }
     }, [state, project.state?.persist, project.state?.persistStorage]);
 
     useEffect(() => {
         if (project.state?.persist && project.state.persistStorage) {
-            const storage = project.state.persistStorage === 'localStorage' ? localStorage : sessionStorage;
-            const savedState = storage.getItem('appState');
+            const storage =
+                project.state.persistStorage === "localStorage"
+                    ? localStorage
+                    : sessionStorage;
+            const savedState = storage.getItem("appState");
             if (savedState) {
-                setStateRaw((prev) => ({ ...prev, ...JSON.parse(savedState) }));
+                try {
+                    setStateRaw((prev) => ({
+                        ...prev,
+                        ...JSON.parse(savedState),
+                    }));
+                } catch {
+                    /* ignore */
+                }
             }
         }
     }, [project.state?.persist, project.state?.persistStorage]);
 
-    /* ---------- WebSocket connections ---------- */
+    /* ----------------------------- WebSocket Sync ---------------------------- */
     useEffect(() => {
         if (project.state?.webSocketEndpoint && project.state.webSocketKeys?.length) {
-            const wsUrl = resolveBinding(project.state.webSocketEndpoint.url, state, t) as string;
-            const protocol = project.state.webSocketEndpoint.protocol || 'graphql-ws';
+            const wsUrl = resolveBinding(
+                project.state.webSocketEndpoint.url,
+                state,
+                t
+            ) as string;
+            const protocol = project.state.webSocketEndpoint.protocol || "graphql-ws";
             const auth = project.state.webSocketEndpoint.auth;
             let authValue: string | null = null;
-            if (auth) authValue = resolveBinding(auth.value, state, t) as string;
+            if (auth)
+                authValue = resolveBinding(auth.value, state, t) as string;
 
             wsRef.current = new WebSocket(wsUrl, protocol);
 
             wsRef.current.onopen = () => {
-                if (protocol === 'graphql-ws' || protocol === 'graphql-transport-ws') {
-                    const initPayload = authValue && auth?.type === 'bearer'
-                        ? { Authorization: `Bearer ${authValue}` }
-                        : {};
-                    wsRef.current?.send(JSON.stringify({ type: 'connection_init', payload: initPayload }));
+                if (protocol === "graphql-ws" || protocol === "graphql-transport-ws") {
+                    const initPayload =
+                        authValue && auth?.type === "bearer"
+                            ? { Authorization: `Bearer ${authValue}` }
+                            : {};
+                    wsRef.current?.send(
+                        JSON.stringify({ type: "connection_init", payload: initPayload })
+                    );
                 }
             };
 
             wsRef.current.onmessage = (event) => {
                 let data;
-                try { data = JSON.parse(event.data); } catch { data = event.data; }
-                if ((protocol === 'graphql-ws' || protocol === 'graphql-transport-ws') && data.type === 'connection_ack') {
-                    project.state?.webSocketKeys?.forEach(key => {
-                        wsRef.current?.send(JSON.stringify({
-                            type: protocol === 'graphql-ws' ? 'subscribe' : 'start',
-                            id: key,
-                            payload: { query: `subscription { stateUpdate(key: "${key}") }` },
-                        }));
+                try {
+                    data = JSON.parse(event.data);
+                } catch {
+                    data = event.data;
+                }
+                if (
+                    (protocol === "graphql-ws" ||
+                        protocol === "graphql-transport-ws") &&
+                    data.type === "connection_ack"
+                ) {
+                    project.state?.webSocketKeys?.forEach((key) => {
+                        wsRef.current?.send(
+                            JSON.stringify({
+                                type: protocol === "graphql-ws" ? "subscribe" : "start",
+                                id: key,
+                                payload: {
+                                    query: `subscription { stateUpdate(key: "${key}") }`,
+                                },
+                            })
+                        );
                     });
-                } else if (data.type === 'data' || data.type === 'next') {
+                } else if (data.type === "data" || data.type === "next") {
                     const key = data.payload?.data?.stateUpdate?.key;
                     const value = data.payload?.data?.stateUpdate?.value;
-                    if (key && project.state?.webSocketKeys?.includes(key)) setState(key, value);
+                    if (key && project.state?.webSocketKeys?.includes(key))
+                        setState(key, value);
                 }
             };
 
@@ -171,7 +289,7 @@ export function StateProvider({
             };
 
             wsRef.current.onerror = (error) => {
-                console.error('WebSocket error', error);
+                console.error("WebSocket error", error);
                 wsRef.current?.close();
             };
 
@@ -184,15 +302,15 @@ export function StateProvider({
             wsCleanupRef.current?.();
             wsRef.current = null;
         };
-    }, [project.state?.webSocketEndpoint, project.state?.webSocketKeys, state, t]);
+    }, [project.state?.webSocketEndpoint, project.state?.webSocketKeys, state]);
 
-    /* ---------- Context Value ---------- */
+    /* ---------------------------- Provide Context ---------------------------- */
     const contextValue: AppStateContextType = {
         state,
         setState,
         t,
         form,
-        setScreenTranslations
+        setTranslations,
     };
 
     return (
@@ -202,6 +320,9 @@ export function StateProvider({
     );
 }
 
+/* -------------------------------------------------------------------------- */
+/* Hook                                                                       */
+/* -------------------------------------------------------------------------- */
 export function useAppState() {
     const context = useContext(AppStateContext);
     if (!context) {

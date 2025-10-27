@@ -243,7 +243,7 @@ function CalendarRenderer({
   }
 
   const events = React.useMemo(() => {
-    return (element.events || []).map((evt: any) => {
+    return (element.events || [])?.map((evt: any) => {
       const start = parseDate(evt.start)
       const end = parseDate(evt.end)
       return {

@@ -1030,7 +1030,7 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
         if (element.formFields) {
             return (
                 <div className="space-y-6">
-                    {element.formFields.map(renderField)}
+                    {element.formFields?.map(renderField)}
                 </div>
             );
         }
@@ -1054,7 +1054,7 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
                     )}
                     {element.actions?.length ? (
                         <div className="flex flex-wrap justify-center gap-3 pt-2">
-                            {element.actions.map((act, index) => (
+                            {element.actions?.map((act, index) => (
                                 <ButtonRenderer
                                     key={`${act.id}_${index}`} element={act}
                                     runEventHandler={runEventHandler}

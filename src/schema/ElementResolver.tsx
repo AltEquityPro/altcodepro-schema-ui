@@ -11,6 +11,7 @@ import {
 } from "../lib/utils";
 // Lazy load shadcn components
 import { AccordionRenderer } from "../components/ui/accordion";
+import { Input } from "../components/ui/input";
 import { AlertDialogRenderer } from "../components/ui/alert-dialog";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { AvatarRenderer } from "../components/ui/avatar";
@@ -45,7 +46,6 @@ import CustomComponentRender from "../components/ui/custom-component";
 import { MenuRenderer } from "../components/ui/menu-render";
 import StepWizardRenderer from "../components/ui/stepper";
 import { ListRenderer } from "../components/ui/list";
-import { ListItemRenderer } from "../components/ui/list_item";
 import { RatingInput } from "../components/ui/rating-input";
 import { SearchRenderer } from "../components/ui/search";
 import { FormResolver } from "../components/ui/form-resolver";
@@ -124,7 +124,6 @@ import {
     ChatElement,
     CommentsElement,
     ListElement,
-    ListItemElement,
     LottieElement,
     RatingElement,
     SearchElement,
@@ -158,6 +157,7 @@ interface ElementResolverProps {
 }
 
 export function ElementResolver({ element, state, setState, t, runEventHandler, CustomElementResolver }: ElementResolverProps) {
+    if (!element) return null;
     if (!isVisible(element.visibility, state, t)) return null;
 
     const LazyComponent = ({ children }: { children: React.ReactNode }) => (
@@ -259,7 +259,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
         case ElementType.chat:
             return (
                 <LazyComponent>
-                    <ChatRenderer element={element as ChatElement} runEventHandler={runEventHandler} state={state} t={t} />
+                    <ChatRenderer element={element as ChatElement} setState={setState} runEventHandler={runEventHandler} state={state} t={t} />
                 </LazyComponent>
             );
 
@@ -269,6 +269,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                 <Chart element={chart} state={state} t={t} />
             </LazyComponent>
         }
+
         case ElementType.code as any: {
             return <LazyComponent>
                 <CodeInput value={resolveBinding((element as BaseElement).value, state, t)} />
@@ -342,11 +343,14 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     element={element as DrawerElement} runEventHandler={runEventHandler} />
             </LazyComponent>
 
+        case (ElementType as any).select:
         case ElementType.dropdown:
-            const dropdown = element as DropdownElement;
-            return <LazyComponent>
-                <DropdownRenderer setState={setState} dropdown={dropdown} runEventHandler={runEventHandler} state={state} t={t} />
-            </LazyComponent>
+            return <DropdownRenderer
+                setState={setState}
+                dropdown={element as DropdownElement}
+                runEventHandler={runEventHandler}
+                state={state}
+                t={t} />
 
         case ElementType.editor: {
             const editor = element as EditorElement
@@ -386,6 +390,9 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             return <LazyComponent>
                 <FormResolver element={element as FormElement} state={state} t={t} runEventHandler={runEventHandler} />
             </LazyComponent>
+        case (ElementType as any).input:
+            return <Input  {...element as any} value={state[element.id]} onChange={(e) => setState(element.id, e.target.value)} />
+
         case ElementType.header:
             const header = element as HeaderElement;
             return <LazyComponent>
@@ -424,17 +431,6 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                         state={state}
                         setState={setState}
                         t={t} element={element as ListElement}
-                        runEventHandler={runEventHandler} />
-                </LazyComponent>
-            );
-        case ElementType.list_item:
-            return (
-                <LazyComponent>
-                    <ListItemRenderer
-                        state={state}
-                        t={t}
-                        setState={setState}
-                        element={element as ListItemElement}
                         runEventHandler={runEventHandler} />
                 </LazyComponent>
             );
@@ -593,7 +589,8 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                 </LazyComponent>
             )
 
-        case ElementType.switch as any:
+        case (ElementType as any).checkbox:
+        case (ElementType as any).switch:
             const switchEl = element as InputElement;
             return <LazyComponent>
                 <Switch
@@ -611,15 +608,15 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     <TableHeader>
                         <TableRow>
                             {headers?.map((header: string, i: number) => (
-                                <TableHead key={i}>{header}</TableHead>
+                                <TableHead key={`header_${i}_${header}`}>{header}</TableHead>
                             ))}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {rows.map((row: any, i: number) => (
-                            <TableRow key={i}>
-                                {(row.cells || []).map((cell: any, j: number) => (
-                                    <TableCell key={j}>{resolveBinding(cell, state, t)}</TableCell>
+                        {rows?.map((row: any, i: number) => (
+                            <TableRow key={`row_${i}`}>
+                                {(row.cells || [])?.map((cell: any, j: number) => (
+                                    <TableCell key={`row_cell_${i}_${j}`}>{resolveBinding(cell, state, t)}</TableCell>
                                 ))}
                             </TableRow>
                         ))}
@@ -635,13 +632,13 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     onValueChange={(v) => runEventHandler?.(tabs.onChange, { value: v })}
                 >
                     <TabsList>
-                        {tabs.tabs.map((tab) => (
+                        {tabs.tabs?.map((tab) => (
                             <TabsTrigger key={tab.id} value={tab.id}>
                                 {tab.label}
                             </TabsTrigger>
                         ))}
                     </TabsList>
-                    {tabs.tabs.map((tab) => (
+                    {tabs.tabs?.map((tab) => (
                         <TabsContent key={tab.id} value={tab.id}>
                             <RenderChildren
                                 state={state}
@@ -719,7 +716,7 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                         runEventHandler?.(toggleGroup.onChange, { value })
                     }
                 >
-                    {toggleGroup.options.map((opt) => (
+                    {toggleGroup.options?.map((opt) => (
                         <Toggle
                             key={opt.id}
                             variant={opt.variant}

@@ -100,7 +100,7 @@ export function CreateSelect({
                     <SelectValue placeholder={placeholder} />
                 </SelectTrigger>
                 <SelectContent>
-                    {localOptions.map((opt) => (
+                    {localOptions?.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
                             {value === opt.value ? <CheckIcon className="ml-2 size-3.5 opacity-60" /> : null}

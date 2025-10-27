@@ -42,7 +42,7 @@ class ScriptRegistry {
 
     /** Optional: inspectable, e.g. for dev tools */
     list(): Array<{ name: string; kind: Entry["kind"]; meta?: RegisterOptions }> {
-        return Array.from(this.entries.entries()).map(([name, e]) => ({ name, kind: e.kind, meta: e.meta }));
+        return Array.from(this.entries.entries())?.map(([name, e]) => ({ name, kind: e.kind, meta: e.meta }));
     }
 
     has(name: string) {

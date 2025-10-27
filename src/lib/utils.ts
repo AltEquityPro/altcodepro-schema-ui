@@ -8,10 +8,7 @@ import {
     VisibilityControl
 } from "../types";
 
-
-
 import { clsx, type ClassValue } from "clsx"
-// import { twMerge } from "tailwind-merge"
 import { cva } from 'class-variance-authority';
 import { deepResolveBindingsDepth, resolveBindingWithDepth } from './resoveBinding';
 
@@ -20,7 +17,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 export function getPath(obj: AnyObj, path: string) {
     if (!obj || !path) return undefined;
-    return path.split('.').reduce((acc, k) => (acc == null ? acc : acc[k]), obj);
+    return path?.split('.')?.reduce((acc, k) => (acc == null ? acc : acc[k]), obj);
 }
 export function resolveAnimation(animation?: any) {
     if (!animation) return {};
@@ -61,7 +58,7 @@ export function resolveAnimation(animation?: any) {
             // Map directly to inline styles
             return {
                 style: {
-                    transition: transition ? Object.entries(transition).map(([k, v]) => `${k} ${v}`).join(", ") : undefined,
+                    transition: transition ? Object.entries(transition)?.map(([k, v]) => `${k} ${v}`).join(", ") : undefined,
                     animationDelay: delay ? `${delay}ms` : undefined,
                     animationDuration: duration ? `${duration}ms` : undefined,
                     animationIterationCount: repeat,
@@ -322,12 +319,12 @@ export function resolveDataSource(
         query: ds.query ? resolveDataSourceValue(ds.query, state, extra) : undefined,
         headers: ds.headers
             ? Object.fromEntries(
-                Object.entries(ds.headers).map(([k, v]) => [k, resolveDataSourceValue(v, state, extra)])
+                Object.entries(ds.headers)?.map(([k, v]) => [k, resolveDataSourceValue(v, state, extra)])
             )
             : undefined,
         queryParams: ds.queryParams
             ? Object.fromEntries(
-                Object.entries(ds.queryParams).map(([k, v]) => [k, resolveDataSourceValue(v, state, extra)])
+                Object.entries(ds.queryParams)?.map(([k, v]) => [k, resolveDataSourceValue(v, state, extra)])
             )
             : undefined,
         body: ds.body && Object.values(ds.body).some(v => typeof v === 'string' && v.includes('{form.')) ? ds.body : deepResolveDataSource(ds.body, state, extra),
@@ -353,7 +350,7 @@ export function deepResolveDataSource(input: any, state: AnyObj, extra?: AnyObj)
 
     // Handle arrays
     if (Array.isArray(input)) {
-        return input.map(v => deepResolveDataSource(v, state, extra));
+        return input?.map(v => deepResolveDataSource(v, state, extra));
     }
 
     // Handle plain objects
@@ -426,8 +423,8 @@ function stableStringify(v: any): string {
         if (obj && typeof obj === "object") {
             if (seen.has(obj)) return null;
             seen.add(obj);
-            if (Array.isArray(obj)) return obj.map(stringify);
-            return Object.keys(obj).sort().reduce((acc: any, k) => {
+            if (Array.isArray(obj)) return obj?.map(stringify);
+            return Object.keys(obj)?.sort()?.reduce((acc: any, k) => {
                 acc[k] = stringify(obj[k]);
                 return acc;
             }, {});
@@ -465,4 +462,5 @@ export function deepResolveBindings(val: any,
     t: (k: string) => string): any {
     return deepResolveBindingsDepth(val, state, t);
 }
+
 

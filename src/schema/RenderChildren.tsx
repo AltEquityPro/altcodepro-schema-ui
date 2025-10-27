@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import type { AnyObj, EventHandler, UIElement } from "../types";
 import { ElementResolver } from "./ElementResolver";
 
@@ -16,7 +15,7 @@ export function RenderChildren({
     runEventHandler,
 }: {
     children: UIElement[] | undefined;
-    t: (key: string) => string;
+    t: (key: string, defaultLabel?: string) => string;
     state: AnyObj;
     setState: (path: string, value: any) => void;
     runEventHandler?: (
@@ -30,7 +29,7 @@ export function RenderChildren({
         <>
             {children.map((child, idx) => (
                 <ElementResolver
-                    key={child.id || `child-${idx}`}
+                    key={`child-${child?.id || 'chat'}-${idx}`}
                     element={child}
                     t={t}
                     state={state}

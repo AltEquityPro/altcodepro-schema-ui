@@ -243,7 +243,7 @@ function renderContextMenuItems(
   runEventHandler?: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 ): React.ReactNode {
   // group radios by group name
-  const groupedRadios = items.filter(i => i.type === "radio").reduce<Record<string, ContextMenuItemType[]>>((acc, item: any) => {
+  const groupedRadios = items.filter(i => i.type === "radio")?.reduce<Record<string, ContextMenuItemType[]>>((acc, item: any) => {
     acc[item.group] = acc[item.group] || []
     acc[item.group].push(item)
     return acc
@@ -287,7 +287,7 @@ function renderContextMenuItems(
               if (selected?.onSelect) runEventHandler?.(selected.onSelect)
             }}
           >
-            {groupedRadios[item.group].map((radio: any) => (
+            {groupedRadios[item.group]?.map((radio: any) => (
               <ContextMenuRadioItem key={radio.id} value={radio.value}>
                 {resolveBinding(radio.label, state, t)}
               </ContextMenuRadioItem>

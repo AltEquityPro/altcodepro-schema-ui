@@ -150,7 +150,7 @@ export function useActionHandler({
 
                 if (evt.queryParams) {
                     const params = new URLSearchParams(
-                        Object.entries(evt.queryParams).map(([k, v]) => [k, resolveDataSourceValue(v, state, evt.body)])
+                        Object.entries(evt.queryParams)?.map(([k, v]) => [k, resolveDataSourceValue(v, state, evt.body)])
                     );
                     url += (url.includes('?') ? '&' : '?') + params.toString();
                 }
@@ -342,8 +342,6 @@ export function useActionHandler({
             const baseUrl = resolved.baseUrl || '';
             const path = resolved.path || '';
             let url = baseUrl ? new URL(path, baseUrl).toString() : path;
-            console.log('Resolved URL:', url);
-            console.log("state", state)
             url = resolveDataSourceValue(url, state, bodyOverride);
             const headers: Record<string, string> = { ...(resolved.headers || {}) };
             const storedAuth = getStoredAuthToken(globalConfig);
@@ -356,7 +354,7 @@ export function useActionHandler({
             const queryParams = h.params?.queryParams || resolved.queryParams;
             if (queryParams) {
                 const params = new URLSearchParams(
-                    Object.entries(queryParams).map(([k, v]) => [k, resolveDataSourceValue(v, state, bodyOverride)])
+                    Object.entries(queryParams)?.map(([k, v]) => [k, resolveDataSourceValue(v, state, bodyOverride)])
                 );
                 url += (url.includes('?') ? '&' : '?') + params.toString();
             }

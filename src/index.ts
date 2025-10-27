@@ -49,7 +49,16 @@ import { CalendarEventRenderer } from "./components/ui/calendar_event_render";
 import { CallRenderer } from "./components/ui/call-renderer";
 
 // components/ui/card
-import { Card, CardHeader, CardTitle, CardAction, CardContent, CardDescription, CardFooter, CardRenderer } from "./components/ui/card";
+import {
+    Card,
+    CardHeader,
+    CardTitle,
+    CardAction,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardRenderer
+} from "./components/ui/card";
 
 // components/ui/carousel
 import { Carousel } from "./components/ui/carousel";
@@ -64,10 +73,26 @@ import { ChatRenderer } from "./components/ui/chat";
 import { CodeInput } from "./components/ui/code-input";
 
 // components/ui/collapsible
-import { Collapsible, CollapsibleTrigger, CollapsibleContent, CollapsibleRenderer } from "./components/ui/collapsible";
+import {
+    Collapsible,
+    CollapsibleTrigger,
+    CollapsibleContent,
+    CollapsibleRenderer
+} from "./components/ui/collapsible";
 
 // components/ui/command
-import { Command, CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandShortcut, CommandSeparator, CommandRenderer } from "./components/ui/command";
+import {
+    Command,
+    CommandDialog,
+    CommandInput,
+    CommandList,
+    CommandEmpty,
+    CommandGroup,
+    CommandItem,
+    CommandShortcut,
+    CommandSeparator,
+    CommandRenderer
+} from "./components/ui/command";
 
 // components/ui/comments
 import { CommentsRenderer } from "./components/ui/comments";
@@ -76,7 +101,24 @@ import { CommentsRenderer } from "./components/ui/comments";
 import { ContainerRenderer } from "./components/ui/container";
 
 // components/ui/context-menu
-import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuCheckboxItem, ContextMenuRadioItem, ContextMenuLabel, ContextMenuSeparator, ContextMenuShortcut, ContextMenuGroup, ContextMenuPortal, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuRadioGroup, ContextMenuRenderer } from "./components/ui/context-menu";
+import {
+    ContextMenu,
+    ContextMenuTrigger,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuCheckboxItem,
+    ContextMenuRadioItem,
+    ContextMenuLabel,
+    ContextMenuSeparator,
+    ContextMenuShortcut,
+    ContextMenuGroup,
+    ContextMenuPortal,
+    ContextMenuSub,
+    ContextMenuSubContent,
+    ContextMenuSubTrigger,
+    ContextMenuRadioGroup,
+    ContextMenuRenderer
+} from "./components/ui/context-menu";
 
 // components/ui/cookie_render
 import { CookieBannerRenderer } from "./components/ui/cookie_render";
@@ -113,7 +155,24 @@ import {
 import { ModalRenderer } from "./components/ui/dialog";
 
 // components/ui/dropdown-menu
-import { DropdownMenu, DropdownMenuPortal, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownRenderer } from "./components/ui/dropdown-menu";
+import {
+    DropdownMenu,
+    DropdownMenuPortal,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuLabel,
+    DropdownMenuItem,
+    DropdownMenuCheckboxItem,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
+    DropdownMenuShortcut,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent,
+    DropdownRenderer
+} from "./components/ui/dropdown-menu";
 
 // components/ui/dynamic-icon
 import { DynamicIcon } from "./components/ui/dynamic-icon";
@@ -122,10 +181,24 @@ import { DynamicIcon } from "./components/ui/dynamic-icon";
 import { FileUpload, FileUploadRenderer } from "./components/ui/file-upload";
 
 // components/ui/form
-import { useFormField, Form, FormItem, FormLabel, FormControl, FormDescription, FormMessage, FormField } from "./components/ui/form";
+import {
+    useFormField,
+    Form,
+    FormItem,
+    FormLabel,
+    FormControl,
+    FormDescription,
+    FormMessage,
+    FormField
+} from "./components/ui/form";
 
 // components/ui/form-group
-import { TabsBar, FormStepper, TabGroup, WizardGroup } from "./components/ui/form-group";
+import {
+    TabsBar,
+    FormStepper,
+    TabGroup,
+    WizardGroup
+} from "./components/ui/form-group";
 
 // components/ui/form-resolver
 import { FormResolver } from "./components/ui/form-resolver";
@@ -145,9 +218,6 @@ import { Label } from "./components/ui/label";
 // components/ui/list
 import { ListRenderer } from "./components/ui/list";
 
-// components/ui/list_item
-import { ListItemRenderer } from "./components/ui/list_item";
-
 // components/ui/lottie
 import { LottieRenderer } from "./components/ui/lottie";
 
@@ -161,7 +231,24 @@ import { MarkdownInput } from "./components/ui/markdown-input";
 import { MenuRenderer } from "./components/ui/menu-render";
 
 // components/ui/menubar
-import { Menubar, MenubarPortal, MenubarMenu, MenubarTrigger, MenubarContent, MenubarGroup, MenubarSeparator, MenubarLabel, MenubarItem, MenubarShortcut, MenubarCheckboxItem, MenubarRadioGroup, MenubarRadioItem, MenubarSub, MenubarSubTrigger, MenubarSubContent } from "./components/ui/menubar";
+import {
+    Menubar,
+    MenubarPortal,
+    MenubarMenu,
+    MenubarTrigger,
+    MenubarContent,
+    MenubarGroup,
+    MenubarSeparator,
+    MenubarLabel,
+    MenubarItem,
+    MenubarShortcut,
+    MenubarCheckboxItem,
+    MenubarRadioGroup,
+    MenubarRadioItem,
+    MenubarSub,
+    MenubarSubTrigger,
+    MenubarSubContent
+} from "./components/ui/menubar";
 // components/ui/multiselect
 import { Multiselect } from "./components/ui/multiselect";
 
@@ -169,13 +256,28 @@ import { Multiselect } from "./components/ui/multiselect";
 import { NavRenderer } from "./components/ui/nav-renderer";
 
 // components/ui/pagination
-import { Pagination, PaginationContent, PaginationLink, PaginationItem, PaginationPrevious, PaginationNext, PaginationEllipsis, PageRenderer } from "./components/ui/pagination";
+import {
+    Pagination,
+    PaginationContent,
+    PaginationLink,
+    PaginationItem,
+    PaginationPrevious,
+    PaginationNext,
+    PaginationEllipsis,
+    PageRenderer
+} from "./components/ui/pagination";
 
 // components/ui/payment-renderer
 import { PaymentFormRenderer } from "./components/ui/payment-renderer";
 
 // components/ui/popover
-import { Popover, PopoverTrigger, PopoverContent, PopoverAnchor, PopoverRenderer } from "./components/ui/popover";
+import {
+    Popover,
+    PopoverTrigger,
+    PopoverContent,
+    PopoverAnchor,
+    PopoverRenderer
+} from "./components/ui/popover";
 
 // components/ui/progress
 import { Progress, ProgressRenderer } from "./components/ui/progress";
@@ -190,7 +292,12 @@ import { RadioGroup, RadioGroupItem, RadioGroupRenderer } from "./components/ui/
 import { RatingInput } from "./components/ui/rating-input";
 
 // components/ui/resizable
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle, ResizableRenderer } from "./components/ui/resizable";
+import {
+    ResizablePanelGroup,
+    ResizablePanel,
+    ResizableHandle,
+    ResizableRenderer
+} from "./components/ui/resizable";
 
 // components/ui/richtext-input
 import { RichTextEditor } from "./components/ui/richtext-input";
@@ -211,7 +318,7 @@ import { Separator } from "./components/ui/separator";
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetFooter, SheetTitle, SheetDescription, SheetRenderer } from "./components/ui/sheet";
 
 // components/ui/sidebar
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupAction, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInput, SidebarInset, SidebarMenu, SidebarMenuAction, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarMenuSkeleton, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarProvider, SidebarRail, SidebarSeparator, SidebarTrigger, useSidebar, SidebarRenderer } from "./components/ui/sidebar";
+import { SidebarRenderer } from "./components/ui/sidebar";
 
 // components/ui/signature
 import { SignaturePadRenderer } from "./components/ui/signature";
@@ -283,8 +390,10 @@ import { Toolbar, ToolbarButton, ToolbarToggleGroup, ToolbarSeparator } from "@r
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 import { NavLink } from "./components/ui/navLink";
-import { getJSONLD, getMetaData } from "./lib/meta";
+import { getJSONLD, getMetaData, applyPageMetadata } from "./lib/meta";
 import { ProjectLayout } from "./schema/ProjectLayout";
+import { HybridCache } from "./lib/hybridCache";
+import Loader from "./components/ui/loader";
 export {
     AccessibleIcon,
     Accordion,
@@ -297,6 +406,7 @@ export {
     AlertDescription,
     AlertTitle,
     AlertDialogRenderer,
+    applyPageMetadata,
     AspectRatio,
     AudioRenderer,
     Avatar,
@@ -411,6 +521,7 @@ export {
     FormResolver,
     GlobalThemeProvider,
     HoverCard,
+    HybridCache,
     HoverCardTrigger,
     HoverCardContent,
     Input,
@@ -419,7 +530,7 @@ export {
     InputOTPSlot,
     InputOTPSeparator,
     Label,
-    ListItemRenderer,
+    Loader,
     ListRenderer,
     LottieRenderer,
     MapRenderer,
@@ -501,31 +612,7 @@ export {
     SheetTitle,
     SheetDescription,
     SheetRenderer,
-    Sidebar,
-    SidebarContent,
-    SidebarFooter,
-    SidebarGroup,
-    SidebarGroupAction,
-    SidebarGroupContent,
-    SidebarGroupLabel,
-    SidebarHeader,
-    SidebarInput,
-    SidebarInset,
-    SidebarMenu,
-    SidebarMenuAction,
-    SidebarMenuBadge,
-    SidebarMenuButton,
-    SidebarMenuItem,
-    SidebarMenuSkeleton,
-    SidebarMenuSub,
-    SidebarMenuSubButton,
-    SidebarMenuSubItem,
-    SidebarProvider,
-    SidebarRail,
-    SidebarSeparator,
-    SidebarTrigger,
     SidebarRenderer,
-    useSidebar,
     SignaturePadRenderer,
     SignatureInput,
     Skeleton,

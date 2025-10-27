@@ -1,124 +1,130 @@
 "use client";
-import * as React from "react"
-import { useMemo, useState, useEffect } from "react"
+import * as React from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import {
-    ColumnDef, SortingState, ColumnFiltersState, VisibilityState, RowSelectionState,
-    PaginationState, Row, flexRender, getCoreRowModel, getExpandedRowModel, getFilteredRowModel,
-    getPaginationRowModel, getSortedRowModel, useReactTable
-} from "@tanstack/react-table"
-import { useVirtualizer } from "@tanstack/react-virtual"
-import { ArrowUpDown, MoreHorizontal, ChevronDown } from "lucide-react"
-import { Calendar } from "../../components/ui/calendar"
-import { DataGridElement, DataGridCol, ElementType, InputType, DataSource, EventHandler, AnyObj } from "../../types"
-import { deepResolveBindings, cn, resolveBinding } from "../../lib/utils"
-import { useDataSources } from "../../schema/useDataSources"
-import { Checkbox } from "../../components/ui/checkbox"
-import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog"
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuCheckboxItem } from "../../components/ui/dropdown-menu"
-import { Popover, PopoverTrigger, PopoverContent } from "../../components/ui/popover"
-import { Progress } from "../../components/ui/progress"
-import { SelectTrigger, SelectValue, SelectContent, SelectItem, Select } from "../../components/ui/select"
-import { Switch } from "../../components/ui/switch"
-import { Label } from "recharts"
-import { Chart } from "./chart"
-import { DialogHeader } from "./dialog"
-import { FormResolver } from "./form-resolver"
-import { Input } from "./input"
-import { Skeleton } from "./skeleton"
-import { TableHeader, TableRow, TableHead, TableBody, TableCell, Table } from "./table"
-import { Button } from "./button"
-import { Badge } from "./badge"
-import { DynamicIcon } from "./dynamic-icon";
-
+    ColumnDef,
+    SortingState,
+    ColumnFiltersState,
+    VisibilityState,
+    RowSelectionState,
+    PaginationState,
+    Row,
+    flexRender,
+    getCoreRowModel,
+    getExpandedRowModel,
+    getFilteredRowModel,
+    getPaginationRowModel,
+    getSortedRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { ArrowUpDown, MoreHorizontal, ChevronDown } from "lucide-react";
+import { Calendar } from "../../components/ui/calendar";
+import { DataGridElement, DataGridCol, ElementType, InputType, DataSource, EventHandler, AnyObj } from "../../types";
+import { deepResolveBindings, cn, resolveBinding } from "../../lib/utils";
+import { Checkbox } from "../../components/ui/checkbox";
+import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuCheckboxItem } from "../../components/ui/dropdown-menu";
+import { Popover, PopoverTrigger, PopoverContent } from "../../components/ui/popover";
+import { Progress } from "../../components/ui/progress";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../../components/ui/select";
+import { Switch } from "../../components/ui/switch";
+import { Input } from "../../components/ui/input";
+import { Skeleton } from "../../components/ui/skeleton";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "../../components/ui/table";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
+import { DynamicIcon } from "../../components/ui/dynamic-icon";
+import { FormResolver } from "../../components/ui/form-resolver";
+import { DialogHeader } from "../../components/ui/dialog";
+import { Chart } from "./chart";
 
 interface DataGridProps {
-    element: DataGridElement
+    element: DataGridElement;
     dataSources?: DataSource[];
     state: AnyObj;
     t: (key: string) => string;
     setState: (path: string, value: any) => void;
-    runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj) => Promise<void>
+    runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj) => Promise<void>;
 }
 
 const getFilterFn = (type?: string) => {
     switch (type) {
-        case 'number':
-        case 'range':
-            return 'inNumberRange'
-        case 'date':
-        case 'datetime':
-        case 'time':
-            return 'equals'
-        case 'bool':
-            return 'equals'
+        case "number":
+        case "range":
+            return "inNumberRange";
+        case "date":
+        case "datetime":
+        case "time":
+            return "equals";
+        case "bool":
+            return "equals";
         default:
-            return 'includesString'
+            return "includesStringSensitive";
     }
-}
+};
 
-export function DataGrid({ element, dataSources, setState, state, t, runEventHandler }: DataGridProps) {
-    const [sorting, setSorting] = useState<SortingState>(deepResolveBindings(element.sorting, state, t) || [])
-    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(deepResolveBindings(element.filters, state, t) || [])
-    const [globalFilter, setGlobalFilter] = useState<string>(deepResolveBindings(element.globalFilter, state, t) || "")
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(deepResolveBindings(element.columnVisibility, state, t) || {})
-    const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+export function DataGrid({ element, state, t, runEventHandler }: DataGridProps) {
+    const [sorting, setSorting] = useState<SortingState>(deepResolveBindings(element.sorting, state, t) || []);
+    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(deepResolveBindings(element.filters, state, t) || []);
+    const [globalFilter, setGlobalFilter] = useState<string>(deepResolveBindings(element.globalFilter, state, t) || "");
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(deepResolveBindings(element.columnVisibility, state, t) || {});
+    const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
     const [pagination, setPagination] = useState<PaginationState>({
         pageIndex: deepResolveBindings(element.currentPage, state, t) ?? 0,
         pageSize: element.pageSize ?? 10,
-    })
-    const [editingRowId, setEditingRowId] = useState<string | null>(null)
-    const [editingCell, setEditingCell] = useState<{ rowId: string; colKey: string } | null>(null)
-    const [modalOpen, setModalOpen] = useState(false)
-    const [currentEditData, setCurrentEditData] = useState<any>(null)
-
-    const resolvedDataSources = useDataSources({ dataSources, state, setState })
+    });
+    const [editingRowId, setEditingRowId] = useState<string | null>(null);
+    const [editingCell, setEditingCell] = useState<{ rowId: string; colKey: string } | null>(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [currentEditData, setCurrentEditData] = useState<any>(null);
 
     const data = useMemo(() => {
-        let raw = [];
-
-        if (element.serverSide && element.dataSourceId) {
-            raw = resolvedDataSources?.data[element.dataSourceId] ?? [];
-        } else {
-            raw = resolveBinding(element.rows, state, t) || [];
+        let raw = element.dataSourceId ? state?.[element.dataSourceId] ?? [] : resolveBinding(element.rows, state, t) || [];
+        if (!raw) return [];
+        if (typeof raw === "string") {
+            return [];
         }
-        // 🔹 Normalize rows if they come in "cells" format
-        if (Array.isArray(raw) && raw.length > 0 && raw[0]?.cells) {
-            return raw.map((r: any) => {
+        if (raw && Array.isArray(raw) && raw.length > 0 && raw[0]?.cells) {
+            return raw?.map((r: any, i: any) => {
                 const obj: AnyObj = {};
                 element.columns.forEach((col, i) => {
                     obj[col.key] = r.cells[i];
                 });
-                return obj;
+                return { ...obj, id: r.id || `${i}` };
             });
         }
+        return raw?.map((item: any, index: number) => ({ ...item, id: item.id || `${index}` }));
+    }, [element.dataSourceId, element.rows, state, t, element.columns]);
 
-        return raw;
-    }, [element, resolvedDataSources, state, t]);
+    const totalCount = deepResolveBindings(element.totalCount, state, t) ?? data.length;
 
-    const totalCount = deepResolveBindings(element.totalCount, state, t) ?? data.length
+    // Memoized column definitions
+    const columns = useMemo<ColumnDef<any>[]>(() => {
+        const cols: ColumnDef<any>[] = [];
 
-    const columns: ColumnDef<any>[] = useMemo(() => {
-        const cols: ColumnDef<any>[] = []
-
+        // Expander column
         if (element.subRowsKey) {
             cols.push({
                 id: "expander",
                 header: () => null,
-                cell: ({ row }) => (
+                cell: ({ row }) =>
                     row.getCanExpand() ? (
                         <Button
                             variant="ghost"
+                            size="icon"
                             onClick={row.getToggleExpandedHandler()}
-                            className="h-8 w-8 p-0"
                         >
-                            {row.getIsExpanded() ? <ChevronDown className="h-4 w-4" /> : <ChevronDown className="h-4 w-4 rotate-[-90deg]" />}
+                            <ChevronDown className={cn("h-4 w-4", row.getIsExpanded() ? "" : "rotate-[-90deg]")} />
                         </Button>
-                    ) : null
-                ),
+                    ) : null,
                 size: 40,
-            })
+                enableHiding: false,
+                enableResizing: false,
+            });
         }
 
+        // Select column
         if (element.selectable) {
             cols.push({
                 id: "select",
@@ -139,40 +145,43 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                 enableSorting: false,
                 enableHiding: false,
                 size: 40,
-            })
+            });
         }
 
+        // Data columns
         element.columns.forEach((col: DataGridCol) => {
-            const resolvedCol = deepResolveBindings(col, state, t) as DataGridCol
+            const resolvedCol = deepResolveBindings(col, state, t);
+            const colId = resolvedCol.key || resolvedCol.id || `${col.header}-${Math.random().toString(36).slice(2)}`;
+
             cols.push({
-                accessorKey: resolvedCol.key,
-                header: ({ column }) => {
-                    return resolvedCol.sortable ? (
+                accessorKey: colId,
+                id: colId,
+                header: ({ column }) => (
+                    resolvedCol.sortable ? (
                         <Button
                             variant="ghost"
                             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                            className="flex items-center gap-2"
                         >
-                            {deepResolveBindings(resolvedCol.header, state, t)}
-                            <ArrowUpDown className="ml-2 h-4 w-4" />
+                            {deepResolveBindings(resolvedCol.header, state, t) || colId}
+                            <ArrowUpDown className="h-4 w-4" />
                         </Button>
                     ) : (
-                        resolvedCol.header
+                        deepResolveBindings(resolvedCol.header, state, t) || colId
                     )
-                },
+                ),
                 cell: ({ row, getValue }) => {
-                    const value = getValue()
-                    const isEditing = (element.editingMode === 'cell' && editingCell?.rowId === row.id && editingCell?.colKey === resolvedCol.key) ||
-                        (element.editingMode === 'row' && editingRowId === row.id)
+                    const value = getValue();
+                    const isEditing =
+                        (element.editingMode === "cell" && editingCell?.rowId === row.id && editingCell?.colKey === colId) ||
+                        (element.editingMode === "row" && editingRowId === row.id);
 
-                    if (isEditing && resolvedCol.editable) {
-                        return renderEditor(resolvedCol, value, row.original, resolvedCol.key)
-                    }
-
-                    return renderCell(resolvedCol, value, row.original)
+                    return isEditing && resolvedCol.editable
+                        ? renderEditor(resolvedCol, value, row.original, colId)
+                        : renderCell(resolvedCol, value, row.original);
                 },
-                filterFn: getFilterFn(resolvedCol.filterType),
-                size: Number(resolvedCol.width) || undefined,
-                minSize: Number(resolvedCol.minWidth) || undefined,
+                size: Number(resolvedCol.width) || 150,
+                minSize: Number(resolvedCol.minWidth) || 100,
                 maxSize: Number(resolvedCol.maxWidth) || undefined,
                 meta: {
                     align: resolvedCol.align,
@@ -182,84 +191,61 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                 },
                 enableHiding: !resolvedCol.hidden,
                 enableResizing: resolvedCol.resizable,
+                enableSorting: resolvedCol.sortable,
                 enablePinning: !!resolvedCol.pinned,
-                id: resolvedCol.key || col.key || col.header?.toString(),
-            })
-        })
+                filterFn: resolvedCol.filterType ? getFilterFn(resolvedCol.filterType) : undefined,
+            });
+        });
 
+        // Actions column
         if (element.rowActions?.length) {
             cols.push({
                 id: "actions",
+                header: () => "Actions",
                 cell: ({ row }) => {
-                    const actions = deepResolveBindings(element.rowActions, state, t) as Array<any>
+                    const actions = deepResolveBindings(element.rowActions, state, t) as Array<any>;
                     return (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Open menu</span>
+                                <Button variant="ghost" size="icon">
                                     <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Open menu</span>
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                {actions.map((action) => {
-                                    const show = action.condition ? deepResolveBindings(action.condition, { ...state, row: row.original }, t) : true
-                                    if (!show) return null
+                                {actions?.map((action) => {
+                                    const show = action.condition
+                                        ? deepResolveBindings(action.condition, { ...state, row: row.original }, t)
+                                        : true;
+                                    if (!show) return null;
                                     return (
                                         <DropdownMenuItem
                                             key={action.id}
                                             onClick={() => runEventHandler?.(action.onClick, { row: row.original })}
                                         >
-                                            {action.icon && <span className="mr-2">{action.icon}</span>}
-                                            {action.label}
+                                            {action.icon && <DynamicIcon className="mr-2 h-4 w-4" name={action.icon} />}
+                                            {deepResolveBindings(action.label, state, t)}
                                         </DropdownMenuItem>
-                                    )
+                                    );
                                 })}
                             </DropdownMenuContent>
                         </DropdownMenu>
-                    )
+                    );
                 },
                 size: 60,
-            })
+                enableSorting: false,
+                enableHiding: false,
+            });
         }
 
-        return cols
-    }, [element, state, t, editingCell, editingRowId])
+        return cols;
+    }, [element, state, t, editingCell, editingRowId, runEventHandler]);
 
+    // Table instance
     const table = useReactTable({
         data,
         columns,
-        onSortingChange: (updater) => {
-            const newSorting = typeof updater === 'function' ? updater(sorting) : updater
-            setSorting(newSorting)
-            if (element.onSortChange) runEventHandler?.(element.onSortChange, { sorting: newSorting })
-        },
-        onColumnFiltersChange: (updater) => {
-            const newFilters = typeof updater === 'function' ? updater(columnFilters) : updater
-            setColumnFilters(newFilters)
-            if (element.onFilterChange) runEventHandler?.(element.onFilterChange, { filters: newFilters })
-        },
-        onGlobalFilterChange: setGlobalFilter,
-        globalFilterFn: "includesString",
-        getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getPaginationRowModel: element.infinite ? undefined : getPaginationRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        onColumnVisibilityChange: (updater) => {
-            const newVisibility = typeof updater === 'function' ? updater(columnVisibility) : updater
-            setColumnVisibility(newVisibility)
-            if (element.onColumnVisibilityChange) runEventHandler?.(element.onColumnVisibilityChange, { visibility: newVisibility })
-        },
-        onRowSelectionChange: (updater) => {
-            const newSelection = typeof updater === 'function' ? updater(rowSelection) : updater
-            setRowSelection(newSelection)
-            if (element.onSelectionChange) runEventHandler?.(element.onSelectionChange, { selection: newSelection })
-        },
-        getExpandedRowModel: getExpandedRowModel(),
-        onPaginationChange: setPagination,
-        getSubRows: element.subRowsKey
-            ? (row) => element.subRowsKey !== undefined ? row[element.subRowsKey as keyof typeof row] : undefined
-            : undefined,
         state: {
             sorting,
             columnFilters,
@@ -268,6 +254,49 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
             rowSelection,
             pagination,
         },
+        onSortingChange: useCallback(
+            (updater: any) => {
+                const newSorting = typeof updater === "function" ? updater(sorting) : updater;
+                setSorting(newSorting);
+                runEventHandler?.(element.onSortChange, { sorting: newSorting });
+            },
+            [sorting, element.onSortChange, runEventHandler]
+        ),
+        onColumnFiltersChange: useCallback(
+            (updater: any) => {
+                const newFilters = typeof updater === "function" ? updater(columnFilters) : updater;
+                setColumnFilters(newFilters);
+                runEventHandler?.(element.onFilterChange, { filters: newFilters });
+            },
+            [columnFilters, element.onFilterChange, runEventHandler]
+        ),
+        onGlobalFilterChange: setGlobalFilter,
+        globalFilterFn: "includesStringSensitive",
+        onColumnVisibilityChange: useCallback(
+            (updater: any) => {
+                const newVisibility = typeof updater === "function" ? updater(columnVisibility) : updater;
+                setColumnVisibility(newVisibility);
+                runEventHandler?.(element.onColumnVisibilityChange, { visibility: newVisibility });
+            },
+            [columnVisibility, element.onColumnVisibilityChange, runEventHandler]
+        ),
+        onRowSelectionChange: useCallback(
+            (updater: any) => {
+                const newSelection = typeof updater === "function" ? updater(rowSelection) : updater;
+                setRowSelection(newSelection);
+                runEventHandler?.(element.onSelectionChange, { selection: newSelection });
+            },
+            [rowSelection, element.onSelectionChange, runEventHandler]
+        ),
+        onPaginationChange: setPagination,
+        getCoreRowModel: getCoreRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getPaginationRowModel: element.infinite ? undefined : getPaginationRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getExpandedRowModel: getExpandedRowModel(),
+        getSubRows: element.subRowsKey
+            ? (row) => row[element.subRowsKey as keyof typeof row]
+            : undefined,
         enableColumnResizing: element.resizableColumns,
         enablePinning: true,
         manualPagination: element.serverSide,
@@ -275,302 +304,380 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
         manualFiltering: element.serverSide,
         rowCount: totalCount,
         pageCount: element.serverSide ? Math.ceil(totalCount / pagination.pageSize) : undefined,
-    })
+    });
 
-    const { rows } = table.getRowModel()
+    const { rows } = table.getRowModel();
+    const tableContainerRef = useRef<HTMLDivElement>(null);
+
+    // Virtualization
     const rowVirtualizer = useVirtualizer({
-        count: element.infinite ? rows.length + 1 : rows.length, // +1 for loading row in infinite
+        count: element.infinite ? rows.length + 1 : rows.length,
         getScrollElement: () => tableContainerRef.current,
         estimateSize: () => element.virtualRowHeight ?? 48,
-        overscan: 20,
-    })
+        overscan: 10,
+    });
 
-    const tableContainerRef = React.useRef<HTMLDivElement>(null)
-
+    // Infinite scroll handling
     useEffect(() => {
         if (element.infinite && rowVirtualizer.getVirtualItems().length > 0) {
-            const lastItem = rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1]
+            const lastItem = rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1];
             if (lastItem && lastItem.index >= rows.length - 1 && element.onLoadMore) {
-                runEventHandler?.(element.onLoadMore)
+                runEventHandler?.(element.onLoadMore);
             }
         }
-    }, [rowVirtualizer.getVirtualItems()])
+    }, [rowVirtualizer.getVirtualItems(), rows.length, element.infinite, element.onLoadMore, runEventHandler]);
 
-    const handleCellEdit = (rowId: string, colKey: string, value: any) => {
-        // Update data
-        if (element.onCellEdit) {
-            runEventHandler?.(element.onCellEdit, { rowId, colKey, value })
-        }
-        setEditingCell(null)
-    }
+    // Cell editing
+    const handleCellEdit = useCallback(
+        (rowId: string, colKey: string, value: any) => {
+            runEventHandler?.(element.onCellEdit, { rowId, colKey, value });
+            setEditingCell(null);
+        },
+        [element.onCellEdit, runEventHandler]
+    );
 
-    const startEditing = (row: Row<any>, col?: DataGridCol) => {
-        if (element.editingMode === 'modal' && element.editForm) {
-            setCurrentEditData(row.original)
-            setModalOpen(true)
-        } else if (element.editingMode === 'row') {
-            setEditingRowId(row.id)
-        } else if (element.editingMode === 'cell' && col) {
-            setEditingCell({ rowId: row.id, colKey: col.key })
-        }
-    }
+    // Start editing
+    const startEditing = useCallback(
+        (row: Row<any>, col?: DataGridCol) => {
+            if (element.editingMode === "modal" && element.editForm) {
+                setCurrentEditData(row.original);
+                setModalOpen(true);
+            } else if (element.editingMode === "row") {
+                setEditingRowId(row.id);
+            } else if (element.editingMode === "cell" && col) {
+                setEditingCell({ rowId: row.id, colKey: col.key });
+            }
+        },
+        [element.editingMode, element.editForm]
+    );
 
-    const handleModalSubmit = (data: any) => {
-        if (element.onCellEdit) { // Reuse onCellEdit for row edit
-            runEventHandler?.(element.onCellEdit, { rowId: currentEditData.id, data })
-        }
-        setModalOpen(false)
-    }
+    // Modal submit
+    const handleModalSubmit = useCallback(
+        (data: any) => {
+            runEventHandler?.(element.onCellEdit, { rowId: currentEditData?.id, data });
+            setModalOpen(false);
+        },
+        [currentEditData, element.onCellEdit, runEventHandler]
+    );
 
-    const renderCell = (col: DataGridCol, value: any, rowData: any) => {
-        const cellClass = typeof col.cellClass === 'function' ? col.cellClass(rowData) :
-            Array.isArray(col.cellClass) ? col.cellClass.find((c: { condition: any }) => deepResolveBindings(c.condition, { ...state, row: rowData }, t))?.class :
-                deepResolveBindings(col.cellClass, { ...state, row: rowData }, t)
+    // Render cell
+    const renderCell = useCallback(
+        (col: DataGridCol, value: any, rowData: any) => {
+            const cellClass = typeof col.cellClass === "function"
+                ? col.cellClass(rowData)
+                : Array.isArray(col.cellClass)
+                    ? col.cellClass.find((c: { condition: any }) => deepResolveBindings(c.condition, { ...state, row: rowData }, t))?.class
+                    : deepResolveBindings(col.cellClass, { ...state, row: rowData }, t);
 
-        switch (col.renderer) {
-            case 'image':
-                return <img src={value} alt="" className="h-8 w-8 object-cover" />
-            case 'link':
-                return <a href={value} className="text-blue-600 hover:underline">{value}</a>
-            case 'badge':
-                return <Badge variant="outline">{value}</Badge>
-            case 'progress':
-                return <Progress value={Number(value)} className="w-[60%]" />
-            case 'chart':
-                return <Chart
-                    state={state}
-                    t={t}
-                    element={{
-                        type: ElementType.chart,
-                        id: `${col.key}_chart`,
-                        name: `${col.key}_chart`,
-                        chartType: (col.chartConfig?.type || 'bar') as any,
-                        data: rowData[col.chartConfig?.dataKey || ''],
-                        options: col.chartConfig?.options
-                    }} />
-            case 'checkbox':
-                return <Checkbox checked={!!value} disabled />
-            default:
-                return value
-        }
-    }
+            switch (col.renderer) {
+                case "image":
+                    return <img src={value} alt="" className="h-8 w-8 object-cover rounded" />;
+                case "link":
+                    return <a href={value} className="text-blue-600 hover:underline">{value}</a>;
+                case "badge":
+                    return <Badge variant="outline">{value}</Badge>;
+                case "progress":
+                    return <Progress value={Number(value)} className="w-[60%]" />;
+                case "chart":
+                    return (
+                        <Chart
+                            state={state}
+                            t={t}
+                            element={{
+                                type: ElementType.chart,
+                                id: `${col.key}_chart`,
+                                name: `${col.key}_chart`,
+                                chartType: (col.chartConfig?.type || "bar") as any,
+                                data: rowData[col.chartConfig?.dataKey || ""],
+                                options: col.chartConfig?.options,
+                            }}
+                        />
+                    );
+                case "checkbox":
+                    return <Checkbox checked={!!value} disabled />;
+                default:
+                    return value ?? "";
+            }
+        },
+        [state, t]
+    );
 
-    const renderEditor = (col: DataGridCol, value: any, rowData: any, colKey: string) => {
-        const handleChange = (newValue: any) => handleCellEdit(rowData.id, colKey, newValue)
+    // Render editor
+    const renderEditor = useCallback(
+        (col: DataGridCol, value: any, rowData: any, colKey: string) => {
+            const handleChange = (newValue: any) => handleCellEdit(rowData.id, colKey, newValue);
 
-        switch (col.editorType || col.filterType || 'text') {
-            case InputType.text:
-            case InputType.email:
-            case InputType.password:
-            case InputType.number:
-            case InputType.textarea:
-                return <Input type={col.editorType} defaultValue={value} onBlur={(e) => handleChange(e.target.value)} autoFocus />
-            case InputType.select:
-            case InputType.multiselect:
-                return (
-                    <Select defaultValue={value} onValueChange={handleChange}>
-                        <SelectTrigger>
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {Array.isArray(col.options)
-                                ? col.options.map((opt: { value: string; label: any }) =>
-                                    <SelectItem key={opt.value}
-                                        value={opt.value}>{deepResolveBindings(opt.label, state, t)}
-                                    </SelectItem>)
-                                : null}
-                        </SelectContent>
-                    </Select>
-                )
-            case InputType.date:
-            case InputType.datetime_local:
-                return <Input type={col.editorType} defaultValue={value} onChange={(e) => handleChange(e.target.value)} />
-            case InputType.checkbox:
-            case InputType.switch:
-                return <Switch checked={value} onCheckedChange={handleChange} />
-            case InputType.color:
-                return <Input type="color" defaultValue={value} onChange={(e) => handleChange(e.target.value)} />
-            // Add more as needed
-            default:
-                return <Input defaultValue={value} onBlur={(e) => handleChange(e.target.value)} autoFocus />
-        }
-    }
+            switch (col.editorType || col.filterType || "text") {
+                case InputType.text:
+                case InputType.email:
+                case InputType.password:
+                case InputType.number:
+                case InputType.textarea:
+                    return (
+                        <Input
+                            type={col.editorType}
+                            defaultValue={value}
+                            onBlur={(e) => handleChange(e.target.value)}
+                            autoFocus
+                            className="w-full"
+                        />
+                    );
+                case InputType.select:
+                case InputType.multiselect:
+                    return (
+                        <Select defaultValue={String(value)} onValueChange={handleChange}>
+                            <SelectTrigger className="w-full">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Array.isArray(col.options) &&
+                                    col.options?.map((opt: { value: string; label: any }) => (
+                                        <SelectItem key={opt.value} value={String(opt.value)}>
+                                            {deepResolveBindings(opt.label, state, t)}
+                                        </SelectItem>
+                                    ))}
+                            </SelectContent>
+                        </Select>
+                    );
+                case InputType.date:
+                case InputType.datetime_local:
+                    return (
+                        <Input
+                            type={col.editorType}
+                            defaultValue={value}
+                            onChange={(e) => handleChange(e.target.value)}
+                            className="w-full"
+                        />
+                    );
+                case InputType.checkbox:
+                case InputType.switch:
+                    return <Switch checked={value} onCheckedChange={handleChange} />;
+                case InputType.color:
+                    return (
+                        <Input
+                            type="color"
+                            defaultValue={value}
+                            onChange={(e) => handleChange(e.target.value)}
+                            className="w-full"
+                        />
+                    );
+                default:
+                    return (
+                        <Input
+                            defaultValue={value}
+                            onBlur={(e) => handleChange(e.target.value)}
+                            autoFocus
+                            className="w-full"
+                        />
+                    );
+            }
+        },
+        [state, t, handleCellEdit]
+    );
 
-    const renderFilter = (column: any, colDef: DataGridCol) => {
-        const filterValue = column.getFilterValue()
+    // Render filter
+    const renderFilter = useCallback(
+        (column: any, colDef: DataGridCol) => {
+            if (!colDef?.filterable) return null;
+            const filterValue = column.getFilterValue();
+            switch (colDef?.filterType) {
+                case "text":
+                    return (
+                        <Input
+                            placeholder={`Filter ${deepResolveBindings(colDef.header, state, t)}...`}
+                            value={filterValue ?? ""}
+                            onChange={(e) => column.setFilterValue(e.target.value)}
+                            className="mt-2"
+                        />
+                    );
+                case "select":
+                case "multi-select":
+                    return (
+                        <Select value={String(filterValue)} onValueChange={(v) => column.setFilterValue(v)}>
+                            <SelectTrigger className="mt-2">
+                                <SelectValue placeholder={`Filter ${deepResolveBindings(colDef.header, state, t)}`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Array.isArray(colDef.options) &&
+                                    colDef.options?.map((opt: { value: string; label: any }) => (
+                                        <SelectItem key={opt.value} value={String(opt.value)}>
+                                            {deepResolveBindings(opt.label, state, t)}
+                                        </SelectItem>
+                                    ))}
+                            </SelectContent>
+                        </Select>
+                    );
+                case "date":
+                    return (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="mt-2">
+                                    {filterValue ? new Date(filterValue).toLocaleDateString() : `Filter ${deepResolveBindings(colDef.header, state, t)}`}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent>
+                                <Calendar
+                                    selected={filterValue ? new Date(filterValue) : undefined}
+                                    onSelect={(date: any) => column.setFilterValue(date?.toISOString())}
+                                    mode="single"
+                                    required
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    );
+                case "bool":
+                    return (
+                        <div className="flex items-center space-x-2 mt-2">
+                            <Switch checked={filterValue} onCheckedChange={(v) => column.setFilterValue(v)} />
+                            <span>{deepResolveBindings(colDef.header, state, t)}</span>
+                        </div>
+                    );
+                case "number":
+                case "range":
+                    return (
+                        <Input
+                            type="number"
+                            placeholder={`Filter ${deepResolveBindings(colDef.header, state, t)}...`}
+                            value={filterValue ?? ""}
+                            onChange={(e) => column.setFilterValue(Number(e.target.value))}
+                            className="mt-2"
+                        />
+                    );
+                default:
+                    return null;
+            }
+        },
+        [state, t]
+    );
 
-        switch (colDef.filterType) {
-            case 'text':
-                return <Input placeholder={`Filter ${colDef.header}...`} value={filterValue ?? ''} onChange={e => column.setFilterValue(e.target.value)} />
-            case 'select':
-            case 'multi-select':
-                return (
-                    <Select value={filterValue} onValueChange={v => column.setFilterValue(v)}>
-                        <SelectTrigger>
-                            <SelectValue placeholder={`Filter ${colDef.header}`} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {Array.isArray(colDef.options)
-                                ? colDef.options.map((opt: { value: string; label: any }) => <SelectItem key={opt.value}
-                                    value={opt.value}>{deepResolveBindings(opt.label, state, t)}</SelectItem>)
-                                : null}
-                        </SelectContent>
-                    </Select>
-                )
-            case 'date':
-                return (
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline">{filterValue ? filterValue.toString() : `Filter ${colDef.header}`}</Button>
-                        </PopoverTrigger>
-                        <PopoverContent>
-                            <Calendar
-                                selected={filterValue}
-                                onSelect={(date: any) => column.setFilterValue(date)}
-                                mode="single"
-                                required
-                            />
-                        </PopoverContent>
-                    </Popover>
-                )
-            case 'bool':
-                return (
-                    <div className="flex items-center space-x-2">
-                        <Switch checked={filterValue} onCheckedChange={v => column.setFilterValue(v)} />
-                        <Label>{deepResolveBindings(colDef.header, state, t)}</Label>
-                    </div>
-                )
-            case 'number':
-            case 'range':
-                return <Input type="number" placeholder={`Filter ${colDef.header}...`} value={filterValue ?? ''} onChange={e => column.setFilterValue(e.target.value)} />
-            default:
-                return null
-        }
-    }
+    // Row class
+    const rowClass = useCallback(
+        (row: Row<any>) => {
+            if (typeof element.rowClass === "function") return element.rowClass(row.original);
+            if (Array.isArray(element.rowClass)) return element.rowClass.find((c) => deepResolveBindings(c.condition, { ...state, row: row.original }, t))?.class;
+            return deepResolveBindings(element.rowClass, { ...state, row: row.original }, t);
+        },
+        [element.rowClass, state, t]
+    );
 
-    const rowClass = (row: Row<any>) => {
-        if (typeof element.rowClass === 'function') return element.rowClass(row.original)
-        if (Array.isArray(element.rowClass)) return element.rowClass.find(c => deepResolveBindings(c.condition, { ...state, row: row.original }, t))?.class
-        return deepResolveBindings(element.rowClass, { ...state, row: row.original }, t)
-    }
-
-    const loading = deepResolveBindings(element.loading, state, t) ?? false
-    const emptyMessage = deepResolveBindings(element.emptyMessage, state, t) ?? "No data available"
+    const loading = deepResolveBindings(element.loading, state, t) ?? false;
+    const emptyMessage = deepResolveBindings(element.emptyMessage, state, t) ?? "No data available";
 
     return (
         <div
             ref={tableContainerRef}
             className={cn("rounded-md border overflow-auto", element.styles?.className)}
-            style={{ height: element.height ? `${element.height}px` : element.autoHeight ? 'auto' : '400px' }}
+            style={{ height: element.height ? `${element.height}px` : element.autoHeight ? "auto" : "400px" }}
         >
+            {/* Toolbar */}
             <div className="flex items-center py-4 px-4 space-x-4">
                 <Input
                     placeholder="Search..."
                     value={globalFilter ?? ""}
                     onChange={(event) => {
-                        setGlobalFilter(event.target.value)
-                        if (element.onGlobalFilterChange) runEventHandler?.(element.onGlobalFilterChange, { globalFilter: event.target.value })
+                        setGlobalFilter(event.target.value);
+                        runEventHandler?.(element.onGlobalFilterChange, { globalFilter: event.target.value });
                     }}
                     className="max-w-sm"
                 />
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="ml-auto">
-                            Columns
-                        </Button>
+                        <Button variant="outline">Columns</Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        {table
-                            .getAllColumns()
-                            .filter((column) => column.getCanHide())
-                            .map((column) => (
-                                <DropdownMenuCheckboxItem
-                                    key={column.id}
-                                    className="capitalize"
-                                    checked={column.getIsVisible()}
-                                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                                >
-                                    {column.columnDef.header as string}
-                                </DropdownMenuCheckboxItem>
-                            ))}
+                        {table.getAllColumns()?.filter((column) => column.getCanHide())?.map((column) => (
+                            <DropdownMenuCheckboxItem
+                                key={column.id}
+                                checked={column.getIsVisible()}
+                                onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                            >
+                                {deepResolveBindings(
+                                    element.columns.find((col: any) => (col.key || col.id) === column.id)?.header,
+                                    state,
+                                    t
+                                ) || column.id}
+                            </DropdownMenuCheckboxItem>
+                        ))}
                     </DropdownMenuContent>
                 </DropdownMenu>
-                {element.groupActions?.map(action => (
+                {element.groupActions?.map((action) => (
                     <Button
                         key={action.id}
-                        variant={action.variant as any || 'default'}
-                        onClick={() => runEventHandler?.(action.onClick, { selectedRows: table.getSelectedRowModel().rows.map(r => r.original) })}
+                        variant={action.variant || "default"}
+                        onClick={() => runEventHandler?.(action.onClick, { selectedRows: table.getSelectedRowModel().rows?.map((r) => r.original) })}
                     >
-                        {action.icon && <DynamicIcon className="mr-2" name={action.icon} />}
-                        {deepResolveBindings(action.label, state, t) || null}
+                        {action.icon && <DynamicIcon className="mr-2 h-4 w-4" name={action.icon} />}
+                        {deepResolveBindings(action.label, state, t)}
                     </Button>
                 ))}
             </div>
+
+            {/* Table */}
             <Table>
                 <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup, hi) => (
-                        <TableRow key={`${headerGroup.id}_${hi}`}>
-                            {headerGroup.headers?.map((header, hdi) => {
-                                const meta = header.column.columnDef.meta as any
+                    {table.getHeaderGroups()?.map((headerGroup, hi) => (
+                        <TableRow key={`header_group_${hi}_${headerGroup.id}`}>
+                            {headerGroup.headers?.map((header, gi) => {
+                                const meta = header.column.columnDef.meta as any;
                                 return (
                                     <TableHead
-                                        key={`${header.id}_${headerGroup.id}_${hi}_${hdi}`}
+                                        key={`header_${header.id}_${hi}_${gi}`}
                                         colSpan={header.colSpan}
                                         style={{ width: header.getSize(), textAlign: meta?.align }}
                                         className={cn(meta?.headerClass)}
                                     >
                                         {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                                        {header.column.getCanFilter() ? (
+                                        {header.column.getCanFilter() && (
                                             <div className="mt-2">
-                                                {renderFilter(header.column, element.columns.find(c => c.key === header.id) as DataGridCol)}
+                                                {renderFilter(header.column, element.columns.find((c: any) => (c.key || c.id) === header.column.id) as DataGridCol)}
                                             </div>
-                                        ) : null}
+                                        )}
                                     </TableHead>
-                                )
+                                );
                             })}
                         </TableRow>
                     ))}
                 </TableHeader>
                 <TableBody>
                     {loading ? (
-                        Array.from({ length: pagination.pageSize }).map((_, i) => (
-                            <TableRow key={`tr_${i}_${_}`}>
-                                {table.getVisibleLeafColumns().map((col, j) => (
-                                    <TableCell key={`${col.id}_${i}_${j}`}><Skeleton className="h-4 w-full" /></TableCell>
+                        Array.from({ length: pagination.pageSize })?.map((_, i) => (
+                            <TableRow key={`loading_${i}`}>
+                                {table.getVisibleLeafColumns()?.map((col) => (
+                                    <TableCell key={`skeleton_${col.id}_${i}`}>
+                                        <Skeleton className="h-4 w-full" />
+                                    </TableCell>
                                 ))}
                             </TableRow>
                         ))
                     ) : rows.length ? (
-                        rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                            const row = rows[virtualRow.index]
-                            if (!row) return null
+                        rowVirtualizer.getVirtualItems()?.map((virtualRow) => {
+                            const row = rows[virtualRow.index];
+                            if (!row) return null;
                             return (
                                 <TableRow
                                     key={row.id}
                                     data-state={row.getIsSelected() && "selected"}
                                     className={cn(rowClass(row))}
-                                    onClick={() => {
-                                        if (element.onRowClick) runEventHandler?.(element.onRowClick, { row: row.original })
-                                    }}
+                                    onClick={() => runEventHandler?.(element.onRowClick, { row: row.original })}
                                 >
-                                    {row.getVisibleCells().map((cell, index) => {
-                                        const meta = cell.column.columnDef.meta as any
+                                    {row.getVisibleCells()?.map((cell, ind) => {
+                                        const meta = cell.column.columnDef.meta as any;
                                         return (
                                             <TableCell
-                                                key={`get-visible${cell.id}-${index}`}
+                                                key={`{cell_${virtualRow.index}_${cell.column.id}_${ind}}`}
                                                 style={{ textAlign: meta?.align }}
-                                                className={cn(typeof meta?.cellClass === 'function' ? meta.cellClass(row.original) : meta?.cellClass)}
+                                                className={cn(typeof meta?.cellClass === "function" ? meta.cellClass(row.original) : meta?.cellClass)}
                                                 onDoubleClick={() => {
-                                                    const colDef = element.columns.find(c => c.key === cell.column.id)
-                                                    if (colDef?.editable) startEditing(row, colDef)
+                                                    const colDef = element.columns.find((c: any) => (c.key || c.id) === cell.column.id);
+                                                    if (colDef?.editable) startEditing(row, colDef);
                                                 }}
                                             >
                                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                             </TableCell>
-                                        )
+                                        );
                                     })}
                                 </TableRow>
-                            )
+                            );
                         })
                     ) : (
                         <TableRow>
@@ -588,6 +695,8 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                     )}
                 </TableBody>
             </Table>
+
+            {/* Pagination */}
             {!element.infinite && (
                 <div className="flex items-center justify-end space-x-2 py-4 px-4">
                     <Button
@@ -608,7 +717,9 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                     </Button>
                 </div>
             )}
-            {element.editingMode === 'modal' && element.editForm && (
+
+            {/* Edit Modal */}
+            {element.editingMode === "modal" && element.editForm && (
                 <Dialog open={modalOpen} onOpenChange={setModalOpen}>
                     <DialogContent>
                         <DialogHeader>
@@ -616,7 +727,7 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                         </DialogHeader>
                         <FormResolver
                             element={element.editForm}
-                            state={state}
+                            state={{ ...state, row: currentEditData }}
                             t={t}
                             onFormSubmit={handleModalSubmit}
                             runEventHandler={runEventHandler}
@@ -625,5 +736,5 @@ export function DataGrid({ element, dataSources, setState, state, t, runEventHan
                 </Dialog>
             )}
         </div>
-    )
+    );
 }

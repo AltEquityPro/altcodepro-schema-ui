@@ -10,7 +10,7 @@ import * as LucideIcons from "lucide-react";
  */
 export function DynamicIcon({
   name,
-  className = "h-4 w-4 mr-2 text-foreground",
+  className = "h-4 w-4 mr-2 text-foreground cursor-pointer",
   size,
   ...props
 }: {
@@ -24,8 +24,8 @@ export function DynamicIcon({
   // 🔄 Normalize to PascalCase (e.g., "layout-dashboard" → "LayoutDashboard")
   const normalized = name
     .replace(/[_-]+/g, " ")
-    .split(" ")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    ?.split(" ")
+    ?.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join("");
 
   const Icon = (LucideIcons as any)[normalized];
