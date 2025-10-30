@@ -28,7 +28,7 @@ export const ProjectLayout = React.memo(function ProjectLayout({
     children,
 }: ProjectLayoutProps) {
     const isMobile = useIsMobile();
-    const { state, t, setState } = useAppState();
+    const { state, t, setState, clearState } = useAppState();
     const user = useMemo(
         () => state?.auth?.user ?? { id: state?.auth?.userId, orgId: state?.organization?.id },
         [state?.auth?.user, state?.auth?.userId, state?.organization?.id]
@@ -56,7 +56,13 @@ export const ProjectLayout = React.memo(function ProjectLayout({
                             nav={nav}
                         >
                             <div className={clsx('min-h-screen', layoutClass)}>
-                                <NavRenderer project={project} nav={nav} state={state} setState={setState} t={t} />
+                                <NavRenderer
+                                    project={project}
+                                    nav={nav}
+                                    state={state}
+                                    setState={setState}
+                                    clearState={clearState}
+                                    t={t} />
                                 <main className="flex-1">{children}</main>
                                 <CookieBannerRenderer setState={setState} project={project} state={state} t={t} />
                                 {project.footer && (

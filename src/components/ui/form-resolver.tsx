@@ -19,7 +19,8 @@ import {
     classesFromStyleProps,
     getAccessibilityProps, cn,
     deepResolveBindings,
-    resolveDataSourceValue
+    resolveDataSourceValue,
+    isVisible
 } from "../../lib/utils";
 
 import { Button, ButtonRenderer } from "../../components/ui/button";
@@ -137,11 +138,49 @@ export function FormResolverStepBridge({ stepIndex }: { stepIndex: number }) {
 
     return null // no UI; just registers behavior
 }
+/** Recursively collect all input fields from nested form structures */
+function collectAllFormFields(element: FormElement): FormFieldType[] {
+    const fields: FormFieldType[] = [];
+
+    if (element.formFields?.length) {
+        fields.push(...element.formFields);
+    }
+
+    // Handle step wizard
+    if ((element as any).steps?.length) {
+        for (const step of (element as any).steps) {
+            if (step.formFields?.length) {
+                fields.push(...step.formFields);
+            }
+        }
+    }
+
+    // Handle tabs
+    if ((element as any).tabs?.length) {
+        for (const tab of (element as any).tabs) {
+            if (tab.content?.length) {
+                for (const child of tab.content) {
+                    fields.push(...collectAllFormFields(child as FormElement));
+                }
+            }
+        }
+    }
+
+    // Handle nested containers or cards
+    if ((element as any).children?.length) {
+        for (const child of (element as any).children) {
+            fields.push(...collectAllFormFields(child as FormElement));
+        }
+    }
+
+    return fields;
+}
+
 export function FormResolver({ element, state, t, runEventHandler, onFormSubmit }: FormResolverProps) {
     const formSchema = useMemo(() => {
         const shape: Record<string, z.ZodTypeAny> = {};
-
-        for (const f of element.formFields) {
+        const allFields = collectAllFormFields(element);
+        for (const f of allFields) {
             if (f.fieldType !== FieldType.input) continue;
             const input = f.input as InputElement;
 
@@ -384,12 +423,13 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
         }
 
         return z.object(shape);
-    }, [element.formFields, t]);
+    }, [element, t]);
 
 
     const defaultValues = useMemo(() => {
         const vals: AnyObj = {};
-        for (const f of element.formFields) {
+        const allFields = collectAllFormFields(element);
+        for (const f of allFields) {
             if (f.fieldType !== FieldType.input) continue;
             const input = f.input as InputElement;
             let def: any = resolveBinding(input.value, state, t);
@@ -418,7 +458,7 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
             vals[input.name] = def;
         }
         return vals as FormValues;
-    }, [element.formFields, state, t]);
+    }, [element, state, t]);
 
     type FormValues = z.infer<typeof formSchema>;
 
@@ -447,6 +487,8 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
     };
 
     const renderField = (f: FormFieldType) => {
+        const el = (f as any).element ?? (f as any).input ?? f;
+        if (el.visibility && !isVisible(el.visibility, state, t)) return null;
         if (f.fieldType === FieldType.input) {
             return renderInputField(f.input);
         }
@@ -960,7 +1002,13 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
                                                     }}
                                                     placeholder={placeholder}
                                                     value={(formField.value as string) ?? ""}
-                                                    onChange={formField.onChange}
+                                                    onChange={(e) => {
+                                                        if (form.formState.errors[name]) {
+                                                            form.clearErrors(name);
+                                                        }
+                                                        formField.onChange(e);
+                                                    }}
+                                                    onFocus={() => form.clearErrors(name)}
                                                     className={inputClass}
                                                 />
                                             );
@@ -976,7 +1024,7 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
     };
 
     const renderGroup = (group: FormElement) => {
-
+        if (group.visibility && !isVisible(group.visibility, state, t)) return null;
         switch (group.formGroupType) {
             case FormGroupType.card:
                 return (
@@ -1006,10 +1054,13 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
             case FormGroupType.step_wizard:
                 return (
                     <WizardGroup
-                        state={state} t={t}
+                        state={state}
+                        t={t}
                         key={group.id}
                         group={group}
+                        element={element}
                         form={form}
+                        runEventHandler={runEventHandler}
                         renderField={renderField}
                     />
                 );
@@ -1021,12 +1072,10 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
     const className = classesFromStyleProps(element.styles);
     const renderContent = () => {
 
-        // Case 1: element is a group (card, container, tabs, wizard, etc.)
         if (element.formGroupType) {
             return renderGroup(element);
         }
 
-        // Case 2: element has formFields directly (normal form)
         if (element.formFields) {
             return (
                 <div className="space-y-6">

@@ -52,6 +52,7 @@ interface AppStateContextType {
     setState: (path: string, value: any) => void;
     t: (key: string, defaultLabel?: string) => string;
     form: UseFormReturn<AnyObj>;
+    clearState: () => void;
     setTranslations: (
         translations: Record<string, Record<string, string>>
     ) => void;
@@ -304,14 +305,29 @@ export function StateProvider({
         };
     }, [project.state?.webSocketEndpoint, project.state?.webSocketKeys, state]);
 
-    /* ---------------------------- Provide Context ---------------------------- */
+    const clearState = () => {
+        setStateRaw({})
+        if (project.state?.persist && project.state.persistStorage) {
+            const storage =
+                project.state.persistStorage === "localStorage"
+                    ? localStorage
+                    : sessionStorage;
+            try {
+                storage.removeItem('appState');
+            } catch (e) {
+                console.warn("Persist state failed", e);
+            }
+        }
+    };
     const contextValue: AppStateContextType = {
         state,
         setState,
         t,
         form,
         setTranslations,
+        clearState
     };
+
 
     return (
         <AppStateContext.Provider value={contextValue}>

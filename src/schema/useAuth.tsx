@@ -2,14 +2,13 @@
 import { useEffect, useCallback, useState, createContext, useContext } from "react";
 import { NavigationAPI, UIProject } from "../types";
 import { getAuthKey } from "../lib/utils";
-import { getStoredAuthToken, refreshAuthToken, storeAuthToken } from "./authUtils";
-import { clearAuthToken } from "./useActionHandler";
+import { getStoredAuthToken, refreshAuthToken, storeAuthToken, clearAuthToken } from "./authUtils";
 
 /* --------------------------------------------------
  🔑 Auth Context Type
 -------------------------------------------------- */
 interface AuthContextType {
-    token?: string ;
+    token?: string;
     refreshToken: string | null;
     expiresAt: number | null;
     user: any;

@@ -10,30 +10,34 @@ import {
     VisibilityControl,
     StyleProps,
     NavigationAPI,
+    IRouteList,
 } from "../../types";
 import { resolveBinding } from "../../lib/utils";
 import { useClickOutside } from "../../hooks/useClickOutside";
 import { NavLink } from "./navLink";
 import { DynamicIcon } from "./dynamic-icon";
+import { clearAuthToken } from "../../schema/authUtils";
 
 function isRouteActive(route: IRoute, pathname: string): boolean {
     if (route.href === pathname) return true;
     if (route.nested) return route.nested.some((c) => isRouteActive(c, pathname));
     return false;
 }
-
-function handleLogout(setState: (path: string, value: any) => void) {
+function shouldHideNavPart(
+    routeList: IRouteList,
+    currentPath: string,
+    part: "sidebar" | "topbar" | "bottombar" | "footer"
+): boolean {
+    if (!routeList?.autoHideNavigation) return false;
+    for (const [prefix, parts] of Object.entries(routeList.autoHideNavigation)) {
+        if (currentPath.startsWith(prefix) && parts.includes(part)) return true;
+    }
+    return false;
+}
+function handleLogout(globalConfig: UIProject["globalConfig"], clearState: () => void) {
     try {
-        // Clear local/session tokens if present
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
-        sessionStorage.removeItem("access_token");
-        setState('authToken', '');
-        setState('profile', null);
-        setState('isAuthenticated', true);
-        setState('user.isAuthenticated', true);
-        setState('auth.user', null);
-        setState('user', null);
+        clearAuthToken(globalConfig)
+        clearState();
         window.location.href = "/login";
     } catch (err) {
         console.error("Logout failed:", err);
@@ -54,7 +58,7 @@ function evalVisibility(
 
     switch (v.condition?.op) {
         case "==":
-            return show ? keyVal == val : keyVal != val;
+            return show ? keyVal?.toString() == val?.toString() : keyVal?.toString() != val?.toString();
         case "!=":
             return show ? keyVal != val : keyVal == val;
         case ">":
@@ -297,7 +301,9 @@ function DesktopNavItem({
 function DesktopNav({
     routes,
     pathname,
+    project,
     setState,
+    clearState,
     state,
     nav,
     requiresAuth,
@@ -305,7 +311,9 @@ function DesktopNav({
     containerStyle,
 }: {
     routes: IRoute[];
+    project: UIProject;
     pathname: string;
+    clearState: () => void;
     setState: (path: string, value: any) => void;
     state: AnyObj;
     requiresAuth?: boolean;
@@ -334,7 +342,7 @@ function DesktopNav({
             ))}
             {requiresAuth && (state?.isAuthenticated || state?.auth?.user) ? (
                 <button
-                    onClick={() => handleLogout(setState)}
+                    onClick={() => handleLogout(project?.globalConfig, clearState)}
                     className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium bg-[var(--acp-primary)]
                             text-white
                             hover:bg-[var(--acp-primary-700)]
@@ -359,18 +367,22 @@ function MobileBurger({
     isOpen,
     requiresAuth,
     setState,
+    clearState,
     onClose,
     state,
     nav,
     t,
+    project,
     overlayStyle,
     sheetStyle,
 }: {
     routes: IRoute[];
     pathname: string;
     isOpen: boolean;
+    project: UIProject;
     onClose: () => void;
     nav?: NavigationAPI;
+    clearState: () => void;
     setState: (path: string, value: any) => void
     requiresAuth?: boolean;
     state: AnyObj;
@@ -450,7 +462,7 @@ function MobileBurger({
                     ))}
                     {requiresAuth && (state?.isAuthenticated || state?.auth?.user) ? (
                         <button
-                            onClick={() => handleLogout(setState)}
+                            onClick={() => handleLogout(project?.globalConfig, clearState)}
                             className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary)]/10 transition"
                         >
                             {t('Logout', 'Logout')}
@@ -475,6 +487,7 @@ function Sidebar({
     state,
     setState,
     requiresAuth,
+    clearState,
     t,
     nav,
     project,
@@ -482,6 +495,7 @@ function Sidebar({
     routes: IRoute[];
     pathname: string;
     state: AnyObj;
+    clearState: () => void;
     setState: (path: string, value: any) => void
     nav?: NavigationAPI;
     requiresAuth?: boolean;
@@ -570,7 +584,7 @@ function Sidebar({
             ) : null}
             {requiresAuth && (state?.isAuthenticated || state?.auth?.user) ? (
                 <button
-                    onClick={() => handleLogout(setState)}
+                    onClick={() => handleLogout(project?.globalConfig, clearState)}
                     className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary)]/10 transition">
                     {t('Logout', 'Logout')}
                 </button>
@@ -645,14 +659,17 @@ function BottomNav({
     );
 }
 
+
 export function NavRenderer({
     project,
     state,
     setState,
+    clearState,
     t,
     nav
 }: {
     project: UIProject;
+    clearState: () => void;
     setState: (path: string, value: any) => void;
     state: AnyObj;
     nav?: NavigationAPI;
@@ -687,66 +704,72 @@ export function NavRenderer({
     const overlayStyle = navList.navStyle?.overlayStyle;
     const sheetStyle = navList.navStyle?.sheetStyle;
     const requiresAuth = navList.routes.some((r) => r.requiresAuth);
+    const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
 
     return (
         <>
-            {navType === "top" && evalVisibility(state, t, navList.visibility?.topbar) && (
-                <header
-                    className={clsx(
-                        elevatedSurface(applyStyleProps(containerStyle)),
-                        "w-full sticky top-0 z-50",
-                        "flex items-center justify-between px-6 py-4",
-                        "animate__animated animate__fadeInDown"
-                    )}
-                    role="banner"
-                >
-                    <a
-                        href={project.brand.href || "/"}
-                        className="flex items-center gap-2"
-                        aria-label="Home"
-                    >
-                        {project.brand.logoUrl ? (
-                            <img
-                                src={project.brand.logoUrl}
-                                alt={`${project.brand.name} logo`}
-                                className="h-8 w-auto"
-                            />
-                        ) : (
-                            <span className="font-bold text-lg">{project.brand.name}</span>
+            {navType === "top" &&
+                !shouldHideNavPart(navList, currentPath, "topbar") &&
+                evalVisibility(state, t, navList.visibility?.topbar) && (
+                    <header
+                        className={clsx(
+                            elevatedSurface(applyStyleProps(containerStyle)),
+                            "w-full sticky top-0 z-50",
+                            "flex items-center justify-between px-6 py-4",
+                            "animate__animated animate__fadeInDown"
                         )}
-                    </a>
-
-
-                    <DesktopNav
-                        routes={routes}
-                        nav={nav}
-                        pathname={pathname}
-                        state={state}
-                        setState={setState}
-                        t={t}
-                        requiresAuth={requiresAuth}
-                        containerStyle={containerStyle}
-                    />
-
-                    {/* Burger trigger (mobile) */}
-                    {mobileNavType === "burger" && (
-                        <button
-                            className={clsx(
-                                "lg:hidden p-2 rounded-md text-foreground/80",
-                                hoverSoftPrimary
-                            )}
-                            onClick={() => setBurgerOpen(true)}
-                            aria-label="Open menu"
-                            aria-expanded={burgerOpen}
+                        role="banner"
+                    >
+                        <a
+                            href={project.brand.href || "/"}
+                            className="flex items-center gap-2"
+                            aria-label="Home"
                         >
-                            <MenuIcon className="h-6 w-6" />
-                        </button>
-                    )}
-                </header>
-            )}
+                            {project.brand.logoUrl ? (
+                                <img
+                                    src={project.brand.logoUrl}
+                                    alt={`${project.brand.name} logo`}
+                                    className="h-8 w-auto"
+                                />
+                            ) : (
+                                <span className="font-bold text-lg">{project.brand.name}</span>
+                            )}
+                        </a>
+
+
+                        <DesktopNav
+                            routes={routes}
+                            nav={nav}
+                            pathname={pathname}
+                            project={project}
+                            state={state}
+                            setState={setState}
+                            clearState={clearState}
+                            t={t}
+                            requiresAuth={requiresAuth}
+                            containerStyle={containerStyle}
+                        />
+
+                        {/* Burger trigger (mobile) */}
+                        {mobileNavType === "burger" && (
+                            <button
+                                className={clsx(
+                                    "lg:hidden p-2 rounded-md text-foreground/80",
+                                    hoverSoftPrimary
+                                )}
+                                onClick={() => setBurgerOpen(true)}
+                                aria-label="Open menu"
+                                aria-expanded={burgerOpen}
+                            >
+                                <MenuIcon className="h-6 w-6" />
+                            </button>
+                        )}
+                    </header>
+                )}
 
 
             {navType === "side" &&
+                !shouldHideNavPart(navList, currentPath, "sidebar") &&
                 evalVisibility(state, t, navList.visibility?.sidebar) && (
                     <div className="flex">
                         <Sidebar
@@ -756,6 +779,7 @@ export function NavRenderer({
                             pathname={pathname}
                             state={state}
                             setState={setState}
+                            clearState={clearState}
                             requiresAuth={requiresAuth}
                             t={t}
                         />
@@ -768,10 +792,12 @@ export function NavRenderer({
                     routes={routes}
                     nav={nav}
                     pathname={pathname}
+                    project={project}
                     isOpen={burgerOpen}
                     onClose={() => setBurgerOpen(false)}
                     state={state}
                     setState={setState}
+                    clearState={clearState}
                     requiresAuth={requiresAuth}
                     t={t}
                     overlayStyle={overlayStyle}
@@ -780,16 +806,18 @@ export function NavRenderer({
             )}
 
 
-            {mobileNavType === "bottom" && (
-                <BottomNav
-                    routes={routes}
-                    nav={nav}
-                    pathname={pathname}
-                    state={state}
-                    t={t}
-                    routeListVisibility={navList.visibility}
-                />
-            )}
+            {mobileNavType === "bottom" &&
+                !shouldHideNavPart(navList, currentPath, "bottombar") &&
+                (
+                    <BottomNav
+                        routes={routes}
+                        nav={nav}
+                        pathname={pathname}
+                        state={state}
+                        t={t}
+                        routeListVisibility={navList.visibility}
+                    />
+                )}
         </>
     );
 }

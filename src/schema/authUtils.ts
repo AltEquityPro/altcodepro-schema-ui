@@ -99,3 +99,20 @@ export function getStoredAuthToken(globalConfig: UIProject["globalConfig"]): Sto
         return null;
     }
 }
+
+
+export function clearAuthToken(globalConfig: UIProject["globalConfig"]) {
+    const authKey = getAuthKey(globalConfig);
+    const storageType = globalConfig?.auth?.tokenStorage || "localStorage";
+
+    switch (storageType) {
+        case "cookie":
+            document.cookie = `${authKey}=; Max-Age=0; path=/`;
+            break;
+        case "memory":
+            delete (window as any).__memoryAuth;
+            break;
+        default:
+            localStorage.removeItem(authKey);
+    }
+}

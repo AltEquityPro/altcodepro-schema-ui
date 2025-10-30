@@ -1,17 +1,17 @@
 "use client";
 import { useState } from "react";
 import { resolveBinding, classesFromStyleProps, cn } from "../../lib/utils";
-import { FieldType, AnyObj, FormElement, FormField as FormFieldType, } from "../../types";
+import { FieldType, AnyObj, FormElement, FormField as FormFieldType, EventHandler, } from "../../types";
 import { Button } from "./button";
 import { Progress } from "./progress";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
+import { toast } from "./sonner";
 
 type FormFieldUnion = FormFieldType & {
     tabId?: string;
     stepId?: string;
     meta?: { tabId?: string; stepId?: string };
 };
-
 const getFieldGroupId = (f: FormFieldUnion, kind: "tab" | "step") =>
     kind === "tab" ? (f.tabId ?? f.meta?.tabId) : (f.stepId ?? f.meta?.stepId);
 
@@ -20,17 +20,91 @@ function unique<T>(arr: T[]) {
 }
 
 function namesForGroup(
-    formFields: FormFieldType[],
+    formFields: FormFieldType[] | undefined,
     kind: "tab" | "step",
     groupId: string
 ): string[] {
+    if (!formFields?.length) return [];
     return formFields
         .filter((f) => getFieldGroupId(f as FormFieldUnion, kind) === groupId)
         .flatMap((f) =>
-            f.fieldType === FieldType.input ? [((f as any).input?.name as string)].filter(Boolean) : []
+            f.fieldType === FieldType.input
+                ? [((f as any).input?.name as string)].filter(Boolean)
+                : []
         );
 }
 
+export function FormStepper({
+    steps,
+    currentIndex,
+    className,
+}: {
+    steps: { id: string; title: string }[];
+    currentIndex: number;
+    className?: string;
+}) {
+    const progressValue =
+        steps.length > 0 ? ((currentIndex + 1) / steps.length) * 100 : 0;
+
+    return (
+        <div
+            className={cn(
+                "flex flex-col gap-6 p-4 rounded-lg border",
+                "border-[var(--acp-border)] bg-[var(--acp-background)] text-[var(--acp-foreground)]",
+                "shadow-sm transition-colors duration-200",
+                className
+            )}
+        >
+            <Progress
+                value={progressValue}
+                className={cn(
+                    "h-2 rounded-full overflow-hidden",
+                    "bg-[var(--acp-border)] [&>[data-slot=progress-bar]]:bg-[var(--acp-primary)]"
+                )}
+            />
+            <div className="flex justify-between text-sm font-medium overflow-x-auto pb-2">
+                {steps.map((step, idx) => {
+                    const isCompleted = idx < currentIndex;
+                    const isActive = idx === currentIndex;
+                    return (
+                        <div
+                            key={step.id}
+                            className={cn(
+                                "flex flex-col items-center text-center transition-all duration-200 w-full",
+                                isActive && "text-[var(--acp-primary)] font-semibold"
+                            )}
+                        >
+                            <div
+                                className={cn(
+                                    "w-8 h-8 flex items-center justify-center rounded-full border-2 mb-2 text-sm font-medium transition-colors duration-200",
+                                    isCompleted
+                                        ? "bg-[var(--acp-primary)] border-[var(--acp-primary)] text-[var(--acp-background)]"
+                                        : isActive
+                                            ? "border-[var(--acp-primary)] bg-[var(--acp-primary-50)] text-[var(--acp-primary-800)]"
+                                            : "border-[var(--acp-border)] bg-[var(--acp-background)] text-[var(--acp-foreground)]"
+                                )}
+                            >
+                                {isCompleted ? <Check className="w-4 h-4" /> : idx + 1}
+                            </div>
+                            <span
+                                className={cn(
+                                    "text-xs whitespace-nowrap px-1 transition-colors duration-200",
+                                    isActive
+                                        ? "text-[var(--acp-primary)]"
+                                        : isCompleted
+                                            ? "text-[var(--acp-foreground)]"
+                                            : "text-[var(--acp-secondary-500)]"
+                                )}
+                            >
+                                {step.title}
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
 
 export function TabsBar({
     tabs,
@@ -62,85 +136,6 @@ export function TabsBar({
     );
 }
 
-export function FormStepper({
-    steps,
-    currentIndex,
-    className,
-}: {
-    steps: { id: string; title: string }[];
-    currentIndex: number;
-    className?: string;
-}) {
-    const progressValue =
-        steps.length > 0 ? ((currentIndex + 1) / steps.length) * 100 : 0;
-
-    return (
-        <div
-            className={cn(
-                "flex flex-col gap-6 p-4 rounded-lg border",
-                "border-[var(--acp-border)] bg-[var(--acp-background)] text-[var(--acp-foreground)]",
-                "shadow-sm transition-colors duration-200", className
-            )}
-        >
-            {/* Progress bar */}
-            <Progress
-                value={progressValue}
-                className={cn(
-                    "h-2 rounded-full overflow-hidden",
-                    "bg-[var(--acp-border)] [&>[data-slot=progress-bar]]:bg-[var(--acp-primary)]"
-                )}
-            />
-
-            {/* Step indicators */}
-            <div className="flex justify-between text-sm font-medium overflow-x-auto pb-2">
-                {steps.map((step, idx) => {
-                    const isCompleted = idx < currentIndex;
-                    const isActive = idx === currentIndex;
-
-                    return (
-                        <div
-                            key={step.id}
-                            className={cn(
-                                "flex flex-col items-center text-center transition-all duration-200 w-full",
-                                isActive && "text-[var(--acp-primary)] font-semibold"
-                            )}
-                        >
-                            {/* Step circle */}
-                            <div
-                                className={cn(
-                                    "w-8 h-8 flex items-center justify-center rounded-full border-2 mb-2 text-sm font-medium transition-colors duration-200",
-                                    isCompleted
-                                        ? "bg-[var(--acp-primary)] border-[var(--acp-primary)] text-[var(--acp-background)]"
-                                        : isActive
-                                            ? "border-[var(--acp-primary)] bg-[var(--acp-primary-50)] text-[var(--acp-primary-800)]"
-                                            : "border-[var(--acp-border)] bg-[var(--acp-background)] text-[var(--acp-foreground)]"
-                                )}
-                            >
-                                {isCompleted ? <Check className="w-4 h-4" /> : idx + 1}
-                            </div>
-
-                            {/* Step label */}
-                            <span
-                                className={cn(
-                                    "text-xs whitespace-nowrap px-1",
-                                    "transition-colors duration-200",
-                                    isActive
-                                        ? "text-[var(--acp-primary)]"
-                                        : isCompleted
-                                            ? "text-[var(--acp-foreground)]"
-                                            : "text-[var(--acp-secondary-500)]"
-                                )}
-                            >
-                                {step.title}
-                            </span>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
-}
-
 export function TabGroup({
     group,
     form,
@@ -156,9 +151,9 @@ export function TabGroup({
 }) {
     // Prefer explicit group.tabs; otherwise derive from fields' tabId
     const derivedTabIds = unique(
-        group.formFields
-            ?.map((f) => getFieldGroupId(f as FormFieldUnion, "tab"))
-            ?.filter(Boolean) as string[]
+        (group.formFields ?? [])
+            .map((f) => getFieldGroupId(f as FormFieldUnion, "tab"))
+            .filter(Boolean) as string[]
     );
     const tabs =
         (group as any).tabs?.length
@@ -195,62 +190,125 @@ export function WizardGroup({
     group,
     form,
     state,
+    element,
     t,
     renderField,
+    runEventHandler,
 }: {
     group: FormElement;
+    element: FormElement;
     form: any;
     state: AnyObj;
     t: (key: string, defaultLabel?: string) => string;
+    runEventHandler?: (
+        handler?: EventHandler | undefined,
+        dataOverride?: AnyObj
+    ) => Promise<void>;
     renderField: (f: FormFieldType) => React.ReactNode;
 }) {
-    // Prefer explicit group.steps; otherwise derive from fields' stepId
+    const [current, setCurrent] = useState(0);
+    const [loading, setLoading] = useState(false);
+
     const derivedStepIds = unique(
-        group.formFields
+        (group.formFields ?? [])
             .map((f) => getFieldGroupId(f as FormFieldUnion, "step"))
             .filter(Boolean) as string[]
     );
+
     const steps =
         (group as any).steps?.length
             ? (group as any)?.steps?.map((s: any, i: number) => ({
                 id: s.id ?? `step-${i}`,
                 title: resolveBinding(s.title ?? s.id ?? `Step ${i + 1}`, state, t),
                 description: resolveBinding(s.description, state, t),
+                submit: s.submit,
             }))
             : derivedStepIds?.map((id, i) => ({ id, title: `Step ${i + 1}` }));
 
-    const [current, setCurrent] = useState(0);
+    const currentStepId = steps[current]?.id;
+    const currentStep = steps[current];
+
     const goNext = async () => {
-        const stepId = steps[current]?.id;
-        const names = namesForGroup(group.formFields, "step", stepId);
-        const ok = names.length ? await form.trigger(names) : await form.trigger(); // fallback to all
-        if (ok) setCurrent((c) => Math.min(c + 1, steps.length - 1));
+        const stepFields = (group as any).steps?.[current]?.formFields ?? [];
+        const names = stepFields
+            .filter((f: any) => f.fieldType === FieldType.input && f.input?.name)
+            .map((f: any) => f.input.name);
+        const ok = names.length ? await form.trigger(names) : await form.trigger();
+        if (!ok) return;
+
+        setLoading(true);
+        try {
+            if (currentStep?.submit?.onClick) {
+                const data = form.getValues();
+                await runEventHandler?.(currentStep.submit.onClick, data);
+            }
+            setCurrent((c) => Math.min(c + 1, steps.length - 1));
+        } finally {
+            setLoading(false);
+        }
     };
+
+    const onSubmit = async () => {
+        const stepFields = (group as any).steps?.[current]?.formFields ?? [];
+        const names = stepFields
+            .filter((f: any) => f.fieldType === FieldType.input && f.input?.name)
+            .map((f: any) => f.input.name);
+        const ok = names.length ? await form.trigger(names) : await form.trigger();
+        if (!ok) return;
+        setLoading(true);
+        try {
+            const submitEvent = currentStep?.submit?.onClick || group?.submit?.onClick || element.submit?.onClick
+            const data = form.getValues();
+            await runEventHandler?.(submitEvent, data);
+        } catch (error: any) {
+            toast.error((error?.message || error?.details || error?.detail) || 'An error occured');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const goPrev = () => setCurrent((c) => Math.max(0, c - 1));
+    const nestedFields = (group as any).steps?.[current]?.formFields;
+    const flatFields = group.formFields?.filter(
+        (f) => getFieldGroupId(f as FormFieldUnion, "step") === currentStepId
+    );
+
     return (
         <div className={classesFromStyleProps(group.styles)}>
             <FormStepper steps={steps} currentIndex={current} />
             <div className="space-y-4">
-                {group.formFields
-                    ?.filter((f) => getFieldGroupId(f as FormFieldUnion, "step") === steps[current]?.id)
-                    ?.map((f) => (
-                        <div key={f.id}>{renderField(f)}</div>
-                    ))}
+                {(nestedFields?.length ? nestedFields : flatFields)?.map(
+                    (f: FormFieldType) => <div key={f.id}>{renderField(f)}</div>
+                )}
             </div>
             <div className="flex justify-between space-x-2 mt-6">
-                <Button type="button" onClick={goPrev} disabled={current === 0}
-                    className="border-[var(--acp-border)] text-[var(--acp-foreground)] hover:bg-[var(--acp-primary-50)]">
-                    {t("back", "Back")}
-                </Button>
-                {current < steps.length - 1 ? (
-                    <Button type="button" onClick={goNext} className={cn(
-                        "bg-[var(--acp-primary)] text-[var(--acp-background)] hover:bg-[var(--acp-primary-600)]"
-                    )}>
-                        {t("next", "Next")}
+                {current > 0 ? (
+                    <Button
+                        type="button"
+                        onClick={goPrev}
+                        disabled={loading}
+                        className="border-[var(--acp-border)] text-[var(--acp-foreground)] hover:bg-[var(--acp-primary-50)]"
+                    >
+                        {t("back", "Back")}
                     </Button>
                 ) : (
-                    <Button type="submit" >
-                        {t("submit", "Submit")}
+                    <div />
+                )}
+
+                {current < steps.length - 1 ? (
+                    <Button
+                        type="button"
+                        onClick={goNext}
+                        disabled={loading}
+                        className={cn(
+                            "bg-[var(--acp-primary)] text-[var(--acp-background)] hover:bg-[var(--acp-primary-600)]"
+                        )}
+                    >
+                        {loading ? <Loader2 className="animate-spin w-4 h-4" /> : t("next", "Next")}
+                    </Button>
+                ) : (
+                    <Button type="button" onClick={onSubmit} disabled={loading}>
+                        {loading ? <Loader2 className="animate-spin w-4 h-4" /> : t("submit", "Submit")}
                     </Button>
                 )}
             </div>

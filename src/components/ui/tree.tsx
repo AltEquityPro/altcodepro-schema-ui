@@ -97,6 +97,33 @@ function filterTree(nodes: TreeNodeResolved[], query: string): TreeNodeResolved[
     });
     return out;
 }
+function getByPath(obj: AnyObj, path?: string): any {
+    if (!path) return undefined;
+    return path
+        .replace(/\[|\]/g, ".") // normalize array notation
+        .split(".")
+        .filter(Boolean)
+        .reduce((acc, key) => acc?.[key], obj);
+}
+function mapNodeBySchema(node: AnyObj, mapping: TreeElement["mapping"] = {}, hasExpandHandler = false): TreeNodeElement {
+    const get = (key?: string, fallback?: string) => {
+        if (!key) return node[fallback ?? ""];
+        return key.includes(".")
+            ? key.split(".").reduce((acc, k) => acc?.[k], node)
+            : node[key];
+    };
+
+    return {
+        id: get(mapping.id, "id") || Math.random().toString(36).slice(2),
+        label: get(mapping.label, "label") || get("name") || "",
+        description: get(mapping.description, "description"),
+        badge: get(mapping.badge, "badge"),
+        lazy: hasExpandHandler, // 👈 auto mark as lazy if tree supports expansion
+        children: (get(mapping.children, "children") || []).map((c: AnyObj) =>
+            mapNodeBySchema(c, mapping, hasExpandHandler)
+        ),
+    } as any;
+}
 
 interface TreeRendererProps {
     element: TreeElement;
@@ -119,16 +146,18 @@ export function TreeRenderer({ element, runEventHandler, state, t }: TreeRendere
     const loadingLabel = String(resolveBinding(element.loadingLabel ?? "Loading…", state, t));
     const searchPlaceholder = String(resolveBinding(element.searchPlaceholder ?? "Search…", state, t));
 
-    const rawNodes = useMemo<TreeNodeElement[]>(
+    const rawData = useMemo<AnyObj[]>(
         () => (element.dataSourceId ? state[element.dataSourceId] || [] : element.nodes || []),
         [element.dataSourceId, element.nodes, state]
     );
-
+    const rawNodes = useMemo<TreeNodeElement[]>(
+        () => rawData.map((item) => mapNodeBySchema(item, element.mapping, !!element.onNodeExpand)),
+        [rawData, element.mapping, element.onNodeExpand]
+    );
     const resolvedNodes = useMemo<TreeNodeResolved[]>(
         () => rawNodes?.map((n) => resolveNode(n, state, t)),
         [rawNodes, state, t]
     );
-
     const [expanded, setExpanded] = useState<Set<string>>(() => collectInitiallyExpanded(rawNodes));
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
@@ -137,46 +166,56 @@ export function TreeRenderer({ element, runEventHandler, state, t }: TreeRendere
         () => (searchable && query ? filterTree(resolvedNodes, query) : resolvedNodes),
         [resolvedNodes, searchable, query]
     );
-
-    /* ----------------------------- Expand toggle ----------------------------- */
     const toggleExpand = async (node: TreeNodeResolved) => {
         const next = new Set(expanded);
         const willExpand = !next.has(node.id);
         willExpand ? next.add(node.id) : next.delete(node.id);
         setExpanded(next);
 
-        await Promise.all([
-            runEventHandler?.((node as any).onExpand, { id: node.id, expanded: willExpand }),
-            runEventHandler?.(element.onNodeExpand, { id: node.id, expanded: willExpand }),
-        ]);
-    };
+        if (willExpand) {
+            setLoadingIds((s) => new Set([...s, node.id]));
+            await runEventHandler?.(element.onNodeExpand, { id: node.id, expanded: true, node });
 
-    /* ----------------------------- Selection toggle ----------------------------- */
-    const toggleSelect = async (node: TreeNodeResolved) => {
-        if (!selectable || (node as any).disabled) return;
-        const next = new Set(selected);
-        const currentlySelected = next.has(node.id);
+            // 🧠 After expand, check if schema had a statePath and update node dynamically
+            const expandHandler = element.onNodeExpand;
+            if (expandHandler?.params?.statePath) {
+                const childData = getByPath(state, expandHandler.params.statePath.replace("{{event.id}}", node.id));
+                if (Array.isArray(childData)) {
+                    node.children = childData.map((c: AnyObj) =>
+                        resolveNode(
+                            mapNodeBySchema(c, element.mapping, !!element.onNodeExpand),
+                            state,
+                            t
+                        )
+                    );
 
-        if (!multiple) {
-            next.clear();
-            if (!currentlySelected) next.add(node.id);
-        } else {
-            const tri = computeTriState(node, selected, checkStrictly);
-            if (!checkStrictly && node.children?.length) {
-                const target = tri !== "checked";
-                applyCascadeSelection(node, next, target);
-            } else {
-                if (currentlySelected) next.delete(node.id);
-                else next.add(node.id);
+                }
             }
-        }
 
-        setSelected(next);
-        await Promise.all([
-            runEventHandler?.((node as any).onSelect, { id: node.id, selected: next.has(node.id) }),
-            runEventHandler?.(element.onNodeSelect, { id: node.id, selected: next.has(node.id) }),
-        ]);
+            setLoadingIds((s) => {
+                const n = new Set(s);
+                n.delete(node.id);
+                return n;
+            });
+        }
     };
+
+
+    const toggleSelect = async (node: TreeNodeResolved) => {
+        if (!selectable) return;
+        console.log('toggleSelect', node)
+        const next = new Set(selected);
+        next.has(node.id) ? next.delete(node.id) : next.add(node.id);
+        setSelected(next);
+
+        await runEventHandler?.(element.onNodeSelect, {
+            id: node.id,
+            selected: next.has(node.id),
+            node,
+            event: { id: node.id, label: node.label, data: node }
+        });
+    };
+
 
     return (
         <div
@@ -260,8 +299,12 @@ function TreeRow({
     const isLoading = loadingIds.has(node.id);
 
     const labelClick = () => {
-        if (!disableToggleOnLabel && hasChildren) onToggleExpand(node);
-        else if (selectable) onToggleSelect(node);
+        if (!disableToggleOnLabel && hasChildren) {
+            onToggleExpand(node);
+        }
+        else if (selectable) {
+            onToggleSelect(node);
+        }
     };
 
     return (
@@ -272,7 +315,6 @@ function TreeRow({
                 )}
                 style={{ paddingLeft: depth * 16 + 8 }}
             >
-                {/* Caret */}
                 {hasChildren ? (
                     <button
                         type="button"
@@ -286,7 +328,6 @@ function TreeRow({
                     <span className="w-4 h-4 mt-0.5 shrink-0" />
                 )}
 
-                {/* Checkbox selection (multiple) */}
                 {selectable && multiple && (
                     <button
                         type="button"

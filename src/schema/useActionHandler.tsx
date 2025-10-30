@@ -10,7 +10,7 @@ import {
     ActionRuntime,
     ActionParams
 } from "../types";
-import { deepResolveBindings, resolveDataSource, deepResolveDataSource, resolveDataSourceValue, hash, getAuthKey } from "../lib/utils";
+import { deepResolveBindings, resolveDataSource, deepResolveDataSource, resolveDataSourceValue, hash, getAuthKey, resolveBinding } from "../lib/utils";
 import { JSONPath } from "jsonpath-plus";
 import { useAppState } from "./StateContext";
 
@@ -51,21 +51,6 @@ function cacheKeyFor(dsId: string, url: string, method: string, body?: any) {
     return `offline:${sig}`;
 }
 
-export function clearAuthToken(globalConfig: UIProject["globalConfig"]) {
-    const authKey = getAuthKey(globalConfig);
-    const storageType = globalConfig?.auth?.tokenStorage || "localStorage";
-
-    switch (storageType) {
-        case "cookie":
-            document.cookie = `${authKey}=; Max-Age=0; path=/`;
-            break;
-        case "memory":
-            delete (window as any).__memoryAuth;
-            break;
-        default:
-            localStorage.removeItem(authKey);
-    }
-}
 
 async function withRetry<T>(
     fn: () => Promise<T>,
@@ -247,7 +232,7 @@ export function useActionHandler({
                 if (h.params?.successMessage) runtime.toast?.(t(h.params.successMessage), "success");
 
                 // auth routes (login/register) — use auth.login(..)
-                if (payload && globalConfig?.auth) {
+                if (payload) {
                     const isAuthRoute = (h.dataSourceId?.toLowerCase()?.includes("login")
                         || h.dataSourceId?.toLowerCase()?.includes("register")
                         || h.params?.isAuthRoute) && typeof payload === "object";
@@ -265,7 +250,7 @@ export function useActionHandler({
                                 setState("user", null);
                             }
                             runtime.toast?.("Login successful", "success");
-                            const redirect = globalConfig.auth.postLoginHref || "/dashboard";
+                            const redirect = globalConfig?.auth?.postLoginHref || "/";
                             if (redirect) runtime.nav?.push?.(redirect);
                         }
                     }
@@ -275,7 +260,7 @@ export function useActionHandler({
                         setState('authToken', '');
                         setState("user", null);
                         runtime.toast?.("Logged out", "info");
-                        const redirect = globalConfig.auth.logoutHref || "/";
+                        const redirect = globalConfig?.auth?.logoutHref || "/";
                         if (redirect) runtime.nav?.push?.(redirect);
                     }
                 }
@@ -342,6 +327,7 @@ export function useActionHandler({
             const baseUrl = resolved.baseUrl || '';
             const path = resolved.path || '';
             let url = baseUrl ? new URL(path, baseUrl).toString() : path;
+
             url = resolveDataSourceValue(url, state, bodyOverride);
             const headers: Record<string, string> = { ...(resolved.headers || {}) };
             const storedAuth = getStoredAuthToken(globalConfig);
@@ -547,7 +533,18 @@ export function useActionHandler({
                     const dsId = h.dataSourceId || h.params?.dataSourceId; if (!dsId) throw new Error(`dataSourceId required`);
                     const ds = dataSources?.find(d => d.id === dsId) || (globalConfig?.endpoints?.registry || []).find((r: any) => r.id === dsId);
                     if (!ds) throw new Error(`DataSource ${dsId} not found`);
-                    let body: AnyObj | FormData | undefined = dataOverride;
+                    let body: AnyObj | FormData | undefined = undefined;
+                    if (ds.method === 'POST' || ds.method === 'PUT') {
+                        body = dataOverride;
+                    } else if (ds.baseUrl && dataOverride) {
+                        for (const [k, v] of Object.entries(dataOverride)) {
+                            const val = v == null ? "" : String(v);
+                            const safe = k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                            // match {key}, {{key}}, or even {{{key}}}
+                            const regex = new RegExp(`\\{+\\s*${safe}\\s*\\}+`, "g");
+                            ds.baseUrl = ds.baseUrl.replace(regex, val);
+                        }
+                    }
                     if (h.action === ActionType.audit_log) {
                         const event = String(h.params?.event || ''); if (!event) throw new Error("Event required");
                         const metadata = resolveDataSourceValue(h.params?.metadata || {}, state, undefined);
@@ -578,7 +575,29 @@ export function useActionHandler({
                     result = await executeApi(ds, body);
                     if ([ActionType.crud_create, ActionType.crud_update, ActionType.crud_delete].includes(h.action))
                         runtime.toast?.(t(h.action === ActionType.crud_create ? "Created successfully" : h.action === ActionType.crud_update ? "Updated successfully" : "Deleted successfully"), "success");
-                    if (h.responseType === "data" && h.params?.statePath) setState(h.params.statePath, applyMap(result, h.params.resultMapping));
+
+                    if (h.responseType === "data" && h.params?.statePath) {
+                        let pathTemplate = String(h.params.statePath);
+
+                        const id =
+                            dataOverride?.event?.id ??
+                            dataOverride?.id ??
+                            dataOverride?.node?.id ??
+                            dataOverride?.item?.id ??
+                            (typeof dataOverride === "string" ? dataOverride : undefined) ??
+                            state?.event?.id ??
+                            state?.selectedId ??
+                            "unknown";
+
+                        let resolvedPath = pathTemplate
+                            .replace(/\{\{.*?\}\}/g, String(id))
+                            .replace(/\{.*?\}/g, String(id))
+                            .replace(/[{}]/g, "")
+                            .trim();
+
+                        setState(resolvedPath, applyMap(result, h.params.resultMapping));
+                    }
+
                     break;
                 }
                 case ActionType.graphql:
@@ -589,7 +608,10 @@ export function useActionHandler({
                     const ds = dataSources?.find(d => d.id === dsId) || (globalConfig?.endpoints?.registry || []).find((r: any) => r.id === dsId);
                     if (!ds) throw new Error(`DataSource ${dsId} not found`);
                     result = await executeGql(ds, h.params?.query, h.params?.variables || dataOverride);
-                    if (h.responseType === "data" && h.params?.statePath) setState(h.params.statePath, applyMap(result, h.params.resultMapping));
+                    if (h.responseType === "data" && h.params?.statePath) {
+                        const resolvedPath = resolveBinding(h.params.statePath, { ...state, ...dataOverride }, t);
+                        setState(resolvedPath, applyMap(result, h.params.resultMapping));
+                    }
                     break;
                 }
                 case ActionType.export:

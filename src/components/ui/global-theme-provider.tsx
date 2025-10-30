@@ -7,15 +7,15 @@ import type { UIProject } from "../../types";
 🎨 Color Utility Helpers
 ======================================================= */
 function hexToRgb(hex: string): [number, number, number] | null {
-    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
-    if (!m) return null;
-    return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)];
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+  if (!m) return null;
+  return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)];
 }
 
 function buildScaleCSS(varName: string) {
-    const lighten: Record<number, number> = { 50: 92, 100: 84, 200: 72, 300: 60, 400: 48 };
-    const darken: Record<number, number> = { 600: 16, 700: 28, 800: 40, 900: 52, 950: 64 };
-    return `
+  const lighten: Record<number, number> = { 50: 92, 100: 84, 200: 72, 300: 60, 400: 48 };
+  const darken: Record<number, number> = { 600: 16, 700: 28, 800: 40, 900: 52, 950: 64 };
+  return `
   --${varName}-50:  color-mix(in srgb, var(--${varName}) ${lighten[50]}%, white);
   --${varName}-100: color-mix(in srgb, var(--${varName}) ${lighten[100]}%, white);
   --${varName}-200: color-mix(in srgb, var(--${varName}) ${lighten[200]}%, white);
@@ -31,17 +31,17 @@ function buildScaleCSS(varName: string) {
 }
 
 function buildUtilityClasses(name: "primary" | "secondary") {
-    const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
-    const cls: string[] = [];
+  const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+  const cls: string[] = [];
 
-    cls.push(`
+  cls.push(`
 .text-${name} { color: var(--acp-${name}); }
 .bg-${name} { background-color: var(--acp-${name}); }
 .border-${name} { border-color: var(--acp-${name}); }
 `);
 
-    for (const s of shades) {
-        cls.push(`
+  for (const s of shades) {
+    cls.push(`
 .text-${name}-${s} { color: var(--acp-${name}-${s}); }
 .bg-${name}-${s} { background-color: var(--acp-${name}-${s}); }
 .border-${name}-${s} { border-color: var(--acp-${name}-${s}); }
@@ -50,80 +50,80 @@ function buildUtilityClasses(name: "primary" | "secondary") {
 .bg-${name}-${s}\\/20 { background-color: color-mix(in srgb, var(--acp-${name}-${s}) 20%, transparent); }
 .bg-${name}-${s}\\/10 { background-color: color-mix(in srgb, var(--acp-${name}-${s}) 10%, transparent); }
 `);
-    }
+  }
 
-    return cls.join("\n");
+  return cls.join("\n");
 }
 
 /* =======================================================
 🌈 Global Theme Provider
 ======================================================= */
 export function GlobalThemeProvider({
-    project,
-    children,
+  project,
+  children,
 }: {
-    project: UIProject;
-    children: React.ReactNode;
+  project: UIProject;
+  children: React.ReactNode;
 }) {
-    const customCss = project?.globalStyles?.customCss ?? "";
-    const theme = project?.globalStyles?.theme ?? {};
+  const customCss = project?.globalStyles?.customCss ?? "";
+  const theme = project?.globalStyles?.theme ?? {};
 
-    const {
-        fontFamily = "Inter, system-ui, sans-serif",
-        fontSizeBase = "16px",
-        colorScheme = "light dark",
-        primaryColorLight = "#0c74cf",
-        primaryColorDark = "#1a8fff",
-        secondaryColorLight = "#6b7280",
-        secondaryColorDark = "#9ca3af",
-        backgroundLight = "#ffffff",
-        backgroundDark = "#0b0b0b",
-        foregroundLight = "#111111",
-        foregroundDark = "#f5f5f5",
-        borderLight = "#e5e7eb",
-        borderDark = "#2f2f2f",
-        accentLight = "#f472b6",
-        accentDark = "#db2777",
-    } = theme;
+  const {
+    fontFamily = "Inter, system-ui, sans-serif",
+    fontSizeBase = "16px",
+    colorScheme = "light dark",
+    primaryColorLight = "#0c74cf",
+    primaryColorDark = "#1a8fff",
+    secondaryColorLight = "#6b7280",
+    secondaryColorDark = "#9ca3af",
+    backgroundLight = "#ffffff",
+    backgroundDark = "#0b0b0b",
+    foregroundLight = "#111111",
+    foregroundDark = "#f5f5f5",
+    borderLight = "#e5e7eb",
+    borderDark = "#2f2f2f",
+    accentLight = "#f472b6",
+    accentDark = "#db2777",
+  } = theme;
 
-    React.useEffect(() => {
-        const root = document.documentElement;
-        const setVar = (k: string, v?: string) => v && root.style.setProperty(k, v);
+  React.useEffect(() => {
+    const root = document.documentElement;
+    const setVar = (k: string, v?: string) => v && root.style.setProperty(k, v);
 
-        setVar("--acp-font", fontFamily);
-        setVar("--acp-font-size-base", fontSizeBase);
-        setVar("--acp-primary", primaryColorLight);
-        setVar("--acp-primary-dark", primaryColorDark);
-        setVar("--acp-secondary", secondaryColorLight);
-        setVar("--acp-secondary-dark", secondaryColorDark);
-        setVar("--acp-border", borderLight);
-        setVar("--acp-border-dark", borderDark);
-        setVar("--acp-accent", accentLight);
-        setVar("--acp-accent-dark", accentDark);
-        setVar("--acp-background", backgroundLight);
-        setVar("--acp-background-dark", backgroundDark);
-        setVar("--acp-foreground", foregroundLight);
-        setVar("--acp-foreground-dark", foregroundDark);
+    setVar("--acp-font", fontFamily);
+    setVar("--acp-font-size-base", fontSizeBase);
+    setVar("--acp-primary", primaryColorLight);
+    setVar("--acp-primary-dark", primaryColorDark);
+    setVar("--acp-secondary", secondaryColorLight);
+    setVar("--acp-secondary-dark", secondaryColorDark);
+    setVar("--acp-border", borderLight);
+    setVar("--acp-border-dark", borderDark);
+    setVar("--acp-accent", accentLight);
+    setVar("--acp-accent-dark", accentDark);
+    setVar("--acp-background", backgroundLight);
+    setVar("--acp-background-dark", backgroundDark);
+    setVar("--acp-foreground", foregroundLight);
+    setVar("--acp-foreground-dark", foregroundDark);
 
-        const p = hexToRgb(primaryColorLight);
-        if (p) root.style.setProperty("--acp-primary-rgb", `${p[0]},${p[1]},${p[2]}`);
-    }, [
-        fontFamily,
-        fontSizeBase,
-        primaryColorLight,
-        primaryColorDark,
-        secondaryColorLight,
-        secondaryColorDark,
-        backgroundLight,
-        backgroundDark,
-        borderLight,
-        borderDark,
-        accentLight,
-        accentDark,
-    ]);
+    const p = hexToRgb(primaryColorLight);
+    if (p) root.style.setProperty("--acp-primary-rgb", `${p[0]},${p[1]},${p[2]}`);
+  }, [
+    fontFamily,
+    fontSizeBase,
+    primaryColorLight,
+    primaryColorDark,
+    secondaryColorLight,
+    secondaryColorDark,
+    backgroundLight,
+    backgroundDark,
+    borderLight,
+    borderDark,
+    accentLight,
+    accentDark,
+  ]);
 
-    /* 🧠 Memoized CSS string for performance */
-    const computedCss = React.useMemo(() => `
+  /* 🧠 Memoized CSS string for performance */
+  const computedCss = React.useMemo(() => `
   :root {
     color-scheme: ${colorScheme};
     ${buildScaleCSS("acp-primary")}
@@ -151,7 +151,61 @@ export function GlobalThemeProvider({
     color: var(--acp-foreground);
     transition: background-color 0.3s ease, color 0.3s ease;
   }
+  /* Base border color */
+  *, *::before, *::after {
+    border-color: var(--acp-border);
+  }
 
+  @media (prefers-color-scheme: dark) {
+    *, *::before, *::after {
+      border-color: var(--acp-border-dark);
+    }
+  }
+
+  /* Tailwind "border-input" and similar utilities */
+  .border,
+  .border-input,
+  .border-muted,
+  .border-neutral,
+  [data-slot="input"],
+  [data-slot="textarea"],
+  [data-slot="select"] {
+    border-color: var(--acp-border) !important;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .border,
+    .border-input,
+    .border-muted,
+    .border-neutral,
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select"] {
+      border-color: var(--acp-border-dark) !important;
+    }
+  }
+
+  /* Focus & active states */
+  :focus-visible {
+    outline-color: var(--acp-primary);
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    border-color: var(--acp-primary) !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--acp-primary) 30%, transparent);
+  }
+
+  /* Invalid states */
+  [aria-invalid="true"] {
+    border-color: var(--acp-accent) !important;
+  }
+
+  /* Smooth transition */
+  input, textarea, select, button, [data-slot="input"] {
+      transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.3s ease;
+  }
   @media (prefers-color-scheme: dark) {
     body {
       background-color: var(--acp-background-dark);
@@ -166,11 +220,11 @@ export function GlobalThemeProvider({
   ${customCss}
 `, [colorScheme, customCss]);
 
-    /* 🧩 Inject computed CSS */
-    return (
-        <>
-            <style dangerouslySetInnerHTML={{ __html: computedCss }} />
-            {children}
-        </>
-    );
+  /* 🧩 Inject computed CSS */
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: computedCss }} />
+      {children}
+    </>
+  );
 }

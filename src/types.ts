@@ -955,6 +955,7 @@ export type FormField =
         label?: Binding;
         placeholder?: Binding;
         tooltip?: Binding;
+        visibility?: VisibilityControl;
     }
     | {
         id: string;
@@ -1450,7 +1451,11 @@ export interface TabsElement extends BaseElement {
     type: ElementType.tabs;
     activeTab: string;
     onChange?: EventHandler;
-    tabs: { id: string; label: string; content: UIElement[] }[];
+    tabListStyle?: StyleProps;
+    tabTriggerStyle?: StyleProps;
+    activeTabStyle?: StyleProps;
+    tabContentStyle?: StyleProps;
+    tabs: { id: string; label: string; icon?: string; content: UIElement[] }[];
 }
 
 export interface TextElement extends BaseElement {
@@ -1553,6 +1558,13 @@ export interface TreeElement extends BaseElement {
     nodes?: TreeNodeElement[];
     /** If provided, root nodes are read from state[dataSourceId] (schema or data layer populates). */
     dataSourceId?: string;
+    mapping?: {
+        id?: string;
+        label?: string;
+        description?: string;
+        badge?: string;
+        children?: string;
+    };
 
     /* Behavior */
     selectable?: boolean;            // default false
@@ -1931,6 +1943,7 @@ export interface DataSource {
     id: string;
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'WEBSOCKET' | 'GRAPHQL';
     path?: string;
+    onAction?: boolean; // load data only when some action happened with action handler
     pollingInterval?: number;
     protocol?: 'graphql-ws' | 'subscriptions-transport-ws' | 'graphql-transport-ws';
     query?: string;
@@ -2013,6 +2026,7 @@ export interface IRouteList {
     navStyle: NavStyle;
     responsiveNavType?: 'bottom' | 'burger';
     routes: IRoute[];
+    autoHideNavigation?: Record<string, Array<"sidebar" | "topbar" | "bottombar" | "footer" | string>>;
     visibility?: {
         topbar?: VisibilityControl;
         sidebar?: VisibilityControl;

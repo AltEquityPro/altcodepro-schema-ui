@@ -255,7 +255,7 @@ export function useDataSources({
 
     const resolved = useMemo(() => {
         return dataSources
-            ?.filter(ds => ds.method !== "POST")
+            ?.filter(ds => ds.method !== "POST" && !ds.onAction)
             ?.map((ds) => {
                 const rds = resolveDataSource(ds, globalConfig, state);
                 // Inject token dynamically
@@ -290,6 +290,7 @@ export function useDataSources({
 
                 const run = async () => {
                     try {
+                        if (ds.onAction) return;
                         const out = ds.retry
                             ? await withRetry(
                                 () => fetcher(ds, state, controller.signal),

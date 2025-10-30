@@ -1,9 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import * as TabsPrimitive from "@radix-ui/react-tabs"
+import * as React from "react";
+import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { cn, classesFromStyleProps } from "../../lib/utils";
+import { RenderChildren } from "../../schema/RenderChildren";
+import { TabsElement, AnyObj, EventHandler } from "../../types";
+import { DynamicIcon } from "./dynamic-icon";
 
-import { cn } from "../../lib/utils"
+/* ---------- Base Tab Primitives ---------- */
 
 function Tabs({
   className,
@@ -12,10 +16,10 @@ function Tabs({
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
-      className={cn("flex flex-col gap-2", className)}
+      className={cn("flex flex-col", className)}
       {...props}
     />
-  )
+  );
 }
 
 function TabsList({
@@ -26,12 +30,12 @@ function TabsList({
     <TabsPrimitive.List
       data-slot="tabs-list"
       className={cn(
-        "bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-lg p-[3px]",
+        "flex flex-wrap items-center justify-start gap-2 border-b border-[var(--acp-border)] overflow-x-auto",
         className
       )}
       {...props}
     />
-  )
+  );
 }
 
 function TabsTrigger({
@@ -42,12 +46,14 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "data-[state=active]:bg-background text-foreground dark:data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 text-foreground dark:text-muted-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[1px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative px-4 py-2 text-sm font-medium text-[var(--acp-foreground)] transition-colors duration-200",
+        "data-[state=active]:text-[var(--acp-primary)] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-[var(--acp-border)] data-[state=active]:after:bg-[var(--acp-primary)]",
+        "hover:text-[var(--acp-primary-600)] focus-visible:outline-none",
         className
       )}
       {...props}
     />
-  )
+  );
 }
 
 function TabsContent({
@@ -57,10 +63,90 @@ function TabsContent({
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn("flex-1 outline-none", className)}
+      className={cn(
+        "transition-opacity duration-300 data-[state=inactive]:opacity-0 data-[state=active]:opacity-100",
+        className
+      )}
       {...props}
     />
-  )
+  );
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+/* ---------- Dynamic Tab Renderer ---------- */
+
+function TabRender({
+  tabs,
+  state,
+  setState,
+  t,
+  runEventHandler,
+}: {
+  tabs: TabsElement;
+  state: AnyObj;
+  t: (key: string) => string;
+  setState: (path: string, value: any) => void;
+  runEventHandler?: (
+    handler?: EventHandler,
+    dataOverride?: AnyObj
+  ) => Promise<void>;
+}) {
+  const [activeTab, setActiveTab] = React.useState(
+    tabs.activeTab ?? tabs.tabs?.[0]?.id ?? ""
+  );
+
+  const handleTabChange = React.useCallback(
+    async (value: string) => {
+      setActiveTab(value);
+      if (tabs.onChange) await runEventHandler?.(tabs.onChange, { value });
+    },
+    [tabs, runEventHandler]
+  );
+
+  const tabListClass = classesFromStyleProps(tabs.tabListStyle);
+  const tabTriggerClass = classesFromStyleProps(tabs.tabTriggerStyle);
+  const activeTabClass = classesFromStyleProps(tabs.activeTabStyle);
+  const contentClass = classesFromStyleProps(tabs.tabContentStyle);
+
+  return (
+    <Tabs
+      value={activeTab}
+      onValueChange={handleTabChange}
+      className={cn(classesFromStyleProps(tabs.styles))}
+    >
+      <TabsList className={cn(tabListClass)}>
+        {tabs.tabs?.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              className={cn(tabTriggerClass, isActive && activeTabClass)}
+            >
+              {tab.icon && (
+                <DynamicIcon
+                  name={tab.icon}
+                  className="mr-1 text-[var(--acp-primary)]"
+                />
+              )}
+              {typeof tab.label === "string" ? t(tab.label) : tab.label}
+            </TabsTrigger>
+          );
+        })}
+      </TabsList>
+
+      {tabs.tabs?.map((tab) => (
+        <TabsContent key={tab.id} value={tab.id} className={cn(contentClass)}>
+          <RenderChildren
+            children={tab.content}
+            state={state}
+            setState={setState}
+            t={t}
+            runEventHandler={runEventHandler}
+          />
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
+}
+
+export { TabRender, Tabs, TabsList, TabsTrigger, TabsContent };

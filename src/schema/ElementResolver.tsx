@@ -37,7 +37,7 @@ import { SidebarRenderer } from "../components/ui/sidebar";
 import { Skeleton } from "../components/ui/skeleton";
 import { Switch } from "../components/ui/switch";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "../components/ui/table";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent, TabRender } from "../components/ui/tabs";
 import { ToggleGroup } from "../components/ui/toggle-group";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../components/ui/tooltip";
 import { ContainerRenderer } from "../components/ui/container";
@@ -626,44 +626,61 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
 
         case ElementType.tabs:
             const tabs = element as TabsElement;
-            return <LazyComponent>
-                <Tabs
-                    value={tabs.activeTab}
-                    onValueChange={(v) => runEventHandler?.(tabs.onChange, { value: v })}
-                >
-                    <TabsList>
-                        {tabs.tabs?.map((tab) => (
-                            <TabsTrigger key={tab.id} value={tab.id}>
-                                {tab.label}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                    {tabs.tabs?.map((tab) => (
-                        <TabsContent key={tab.id} value={tab.id}>
-                            <RenderChildren
-                                state={state}
-                                setState={setState}
-                                t={t} children={tab.content} runEventHandler={runEventHandler} />
-                        </TabsContent>
-                    ))}
-                </Tabs>
-            </LazyComponent>
-
+            return <TabRender
+                tabs={tabs}
+                state={state}
+                setState={setState}
+                t={t}
+                runEventHandler={runEventHandler}
+            />
         case ElementType.text: {
             const text = element as TextElement;
             const Tag = (text.tag as React.ElementType) || "div";
-            const resolvedContent = deepResolveBindings(text.content, state, t);
-            if (!resolvedContent || resolvedContent == 'undefined') return null;
+            let resolvedContent = deepResolveBindings(text.content, state, t);
+
+            // 🧩 Normalize undefined/null at root
+            if (
+                resolvedContent === undefined ||
+                resolvedContent === null ||
+                resolvedContent === "undefined" ||
+                resolvedContent === "null"
+            ) {
+                resolvedContent = "";
+            }
+
+            // 🧹 Remove "undefined" or "null" words *inside* the text string
+            if (typeof resolvedContent === "string") {
+                resolvedContent = resolvedContent
+                    .replace(/\bundefined\b/g, "")
+                    .replace(/\bnull\b/g, "")
+                    .replace(/\s{2,}/g, " ") // clean double spaces after replacements
+                    .trim();
+            } else {
+                resolvedContent = String(resolvedContent ?? "");
+            }
+
+            // 🧠 If still empty after cleanup, skip rendering
+            if (resolvedContent === "") return null;
+
             return (
                 <Tag
                     id={text.id}
                     className={cn(className, text.alignment && `text-${text.alignment}`)}
                     {...accessibilityProps}
                 >
-                    {text.contentFormat === "html" ? <div dangerouslySetInnerHTML={{ __html: resolvedContent }} /> : resolvedContent}
+                    {text.contentFormat === "html" ? (
+                        <div
+                            dangerouslySetInnerHTML={{
+                                __html: resolvedContent.replace(/\bundefined\b/g, "").replace(/\bnull\b/g, "")
+                            }}
+                        />
+                    ) : (
+                        resolvedContent
+                    )}
                 </Tag>
             );
         }
+
         case ElementType.three_d_model:
             return (
                 <LazyComponent>

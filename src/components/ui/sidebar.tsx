@@ -71,16 +71,6 @@ function Sidebar({
 
   const toggleSidebar = () => setIsOpen((prev) => !prev);
 
-  // Handle menu item clicks
-  const handleMenuItemClick = async (handler?: EventHandler, data?: AnyObj) => {
-    if (isMobile) {
-      setIsOpen(false); // Close sidebar on mobile
-    }
-    if (runEventHandler && handler) {
-      await runEventHandler(handler, data);
-    }
-  };
-
   // Apply Animate.css classes dynamically
   useEffect(() => {
     if (isMobile && isOpen) {
@@ -122,24 +112,13 @@ function Sidebar({
             <div className="text-sm font-medium text-[var(--acp-foreground)]/70">
               {resolveBinding(group.label, state, t)}
             </div>
-            <ul className="space-y-1">
-              {group.items?.map((item) => (
-                <li key={item.id}>
-                  <div
-                    className="flex items-center rounded-md hover:bg-primary-100/50 p-2 transition-colors duration-200"
-                    onClick={() => handleMenuItemClick(item.onEvent?.click, item)}
-                  >
-                    <RenderChildren
-                      children={[item]}
-                      t={t}
-                      state={state}
-                      setState={setState}
-                      runEventHandler={runEventHandler}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <RenderChildren
+              children={group.items}
+              t={t}
+              state={state}
+              setState={setState}
+              runEventHandler={runEventHandler}
+            />
           </div>
         ))}
       </div>
