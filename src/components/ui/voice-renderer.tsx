@@ -190,9 +190,9 @@ export function VoiceRenderer({
             {element.mode !== "input" && (
                 <>
                     <div className={cn(classesFromStyleProps(element.styles))}>
-                        {recognizedText && <div>{t("🎤")} {recognizedText}</div>}
-                        {translatedText && <div>{t("🌐")} {translatedText}</div>}
-                        {aiResponse && <div>{t("🤖")} {aiResponse}</div>}
+                        {recognizedText && <div>🎤 {recognizedText}</div>}
+                        {translatedText && <div>🌐 {translatedText}</div>}
+                        {aiResponse && <div>🤖 {aiResponse}</div>}
                     </div>
                     {element.apiMode === "azure" && element.avatar?.enabled && (
                         <div ref={videoRef} className={cn(classesFromStyleProps(element.styles))} />

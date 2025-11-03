@@ -190,10 +190,7 @@ export function useActionHandler({
 
     const runEventHandler = async (handler?: EventHandler, dataOverride?: AnyObj): Promise<void> => {
         if (!handler) return;
-        const h = deepResolveBindings(handler, state, t) as EventHandler & { params?: ActionParams };
-        const controller = new AbortController();
-        const actionId = `${h.action}-${Date.now()}`;
-        abortControllers.current[actionId] = controller;
+
 
         const runSub = async (acts?: EventHandler[], ctx?: AnyObj) => {
             if (!acts?.length) return;
@@ -212,7 +209,11 @@ export function useActionHandler({
         };
 
         const then = async (ok: boolean, payload?: any, error?: { message: string; status?: number }) => {
+            const h = deepResolveBindings(handler, state, t) as EventHandler & { params?: ActionParams };
             if (ok) {
+                const controller = new AbortController();
+                const actionId = `${h.action}-${Date.now()}`;
+                abortControllers.current[actionId] = controller;
                 if (analytics) {
                     analytics.trackEvent({
                         name: h.action,
@@ -327,12 +328,13 @@ export function useActionHandler({
             const baseUrl = resolved.baseUrl || '';
             const path = resolved.path || '';
             let url = baseUrl ? new URL(path, baseUrl).toString() : path;
+            const h = handler;
 
             url = resolveDataSourceValue(url, state, bodyOverride);
             const headers: Record<string, string> = { ...(resolved.headers || {}) };
             const storedAuth = getStoredAuthToken(globalConfig);
             const liveToken = auth.token || storedAuth?.token;
-            if (auth.token && !headers["Authorization"])
+            if (auth.token && !headers["Authorization"] && ds.credentials != 'omit')
                 headers["Authorization"] = `Bearer ${liveToken}`;
             if (globalConfig?.security?.csrfHeaderName && state?.csrfToken)
                 headers[globalConfig.security.csrfHeaderName] = state.csrfToken;
@@ -351,7 +353,6 @@ export function useActionHandler({
 
             if (body instanceof FormData) delete headers['Content-Type'];
             else if (body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
-
             const method = resolved.method || (
                 h.action === ActionType.crud_create ? "POST" :
                     h.action === ActionType.crud_read ? "GET" :
@@ -360,8 +361,6 @@ export function useActionHandler({
 
             const ctl = new AbortController();
             const timeoutId = h.params?.timeout ? setTimeout(() => ctl.abort(), h.params.timeout) : null;
-            const signal = anySignal([controller.signal, ctl.signal]);
-
             const offlineEnabled = isOfflineEnabled(ds, undefined, { globalConfig });
             const cacheKey = cacheKeyFor(ds.id, url, method, body instanceof FormData ? '[formdata]' : body);
 
@@ -409,7 +408,7 @@ export function useActionHandler({
             };
 
             const result = h.params?.retry
-                ? await withRetry(doFetch, h.params.retry.attempts, h.params.retry.delay, h.params.retry.strategy || 'exponential', runtime, signal)
+                ? await withRetry(doFetch, h.params.retry.attempts, h.params.retry.delay, h.params.retry.strategy || 'exponential', runtime)
                 : await doFetch();
 
             if (timeoutId) clearTimeout(timeoutId);
@@ -452,8 +451,8 @@ export function useActionHandler({
             }
 
             const ctl = new AbortController();
+            const h = handler;
             const timeoutId = h.params?.timeout ? setTimeout(() => ctl.abort(), h.params.timeout) : null;
-            const signal = anySignal([controller.signal, ctl.signal]);
 
             const doFetch = async () => {
                 // credentials: resolved.credentials || 'same-origin', signal 
@@ -462,7 +461,7 @@ export function useActionHandler({
                 return await res.json();
             };
             const result = h.params?.retry
-                ? await withRetry(doFetch, h.params.retry.attempts, h.params.retry.delay, h.params.retry.strategy || 'exponential', runtime, signal)
+                ? await withRetry(doFetch, h.params.retry.attempts, h.params.retry.delay, h.params.retry.strategy || 'exponential', runtime)
                 : await doFetch();
             if (offlineEnabled && op === 'query') await offline.setCachedData?.(cacheKey, result);
             if (timeoutId) clearTimeout(timeoutId);
@@ -471,6 +470,7 @@ export function useActionHandler({
 
         try {
             // before
+            const h = handler;
             if (h.beforeActions?.length) for (const b of h.beforeActions) await runEventHandler(b);
 
             let result: any;
@@ -513,7 +513,18 @@ export function useActionHandler({
                 case ActionType.update_state: {
                     const path = String(h.params?.path);
                     if (path) {
-                        setState(path, resolveDataSourceValue(h.params?.value, state, undefined)); break;
+                        let val = h.params?.value;
+                        if (typeof val === "object" && val !== null) {
+                            const resolvedObj: AnyObj = {};
+                            for (const [k, v] of Object.entries(val)) {
+                                resolvedObj[k] = resolveDataSourceValue(v, state, dataOverride);
+                            }
+                            val = resolvedObj;
+                        } else {
+                            val = resolveDataSourceValue(val, state, dataOverride);
+                        }
+                        setState(path, val);
+                        break;
                     }
                 }
                 case ActionType.run_script: {
@@ -537,13 +548,17 @@ export function useActionHandler({
                     if (ds.method === 'POST' || ds.method === 'PUT') {
                         body = dataOverride;
                     } else if (ds.baseUrl && dataOverride) {
-                        for (const [k, v] of Object.entries(dataOverride)) {
-                            const val = v == null ? "" : String(v);
-                            const safe = k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                            // match {key}, {{key}}, or even {{{key}}}
-                            const regex = new RegExp(`\\{+\\s*${safe}\\s*\\}+`, "g");
-                            ds.baseUrl = ds.baseUrl.replace(regex, val);
-                        }
+                        ds.baseUrl = ds.baseUrl.replace(/\{\{([^}]+)\}\}/g, (_, expr) => {
+                            const path = expr.trim().replace(/\[(\d+)\]/g, '.$1'); // support [0].x
+                            const parts = path.split('.');
+                            let cur: any = dataOverride;
+                            for (const p of parts) {
+                                if (cur == null) break;
+                                cur = cur[p];
+                            }
+                            return cur != null ? String(cur) : `{{${expr}}}`;
+                        });
+
                     }
                     if (h.action === ActionType.audit_log) {
                         const event = String(h.params?.event || ''); if (!event) throw new Error("Event required");

@@ -17,13 +17,13 @@ const StateNode: React.FC<{
 
     const handleChange = (newVal: any) => setState(path, newVal);
     const inputClass =
-        'text-xs bg-transparent border border-[var(--acp-border)] rounded px-1 py-0.5 w-full focus:outline-none focus:border-[var(--acp-primary)]';
+        'text-xs bg-transparent border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] rounded px-1 py-0.5 w-full focus:outline-none focus:border-[var(--acp-primary)]';
 
     const renderValue = () => {
         if (isObject) {
             const entries = Object.entries(value);
             return (
-                <div className="ml-4 border-l border-[var(--acp-border)] pl-2">
+                <div className="ml-4 border-l border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] pl-2">
                     {entries?.map(([k, v]) => (
                         <StateNode
                             key={k}
@@ -65,7 +65,7 @@ const StateNode: React.FC<{
     };
 
     return (
-        <div className="text-xs text-[var(--acp-foreground)] mb-1">
+        <div className="text-xs text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)] mb-1">
             <div className={cn('flex items-center justify-between', indent)}>
                 <div
                     className="flex items-center gap-1 cursor-pointer"
@@ -165,7 +165,7 @@ const BindingsViewer: React.FC<{
                     placeholder="🔍 Search bindings..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="text-[10px] px-2 py-0.5 border border-[var(--acp-border)] rounded bg-[var(--acp-muted)] flex-1"
+                    className="text-[10px] px-2 py-0.5 border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] rounded bg-[var(--acp-muted)] flex-1"
                 />
                 <button
                     onClick={resolveAllBindings}
@@ -190,7 +190,7 @@ const BindingsViewer: React.FC<{
                     <div
                         key={i}
                         className={cn(
-                            'flex flex-col border-b border-[var(--acp-border)] py-1',
+                            'flex flex-col border-b border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] py-1',
                             error ? 'text-red-500' : 'text-[var(--acp-primary-700)]'
                         )}
                     >
@@ -272,13 +272,13 @@ export const StateTreeViewer: React.FC<{
             {visible && <div className="hidden lg:block" style={{ width }} />}
             <div
                 className={cn(
-                    'fixed top-0 right-0 z-40 h-screen flex flex-col border-l border-[var(--acp-border)] bg-[var(--acp-background)] shadow-xl transition-transform duration-300',
+                    'fixed top-0 right-0 z-40 h-screen flex flex-col border-l border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] bg-[var(--acp-background)] dark:bg-[var(--acp-background-dark)] shadow-xl transition-transform duration-300',
                     visible ? 'translate-x-0' : 'translate-x-full'
                 )}
                 style={{ width }}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between p-3 border-b border-[var(--acp-border)] bg-[var(--acp-background)]">
+                <div className="flex items-center justify-between p-3 border-b border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] bg-[var(--acp-background)] dark:bg-[var(--acp-background-dark)]">
                     <span className="text-xs font-semibold text-[var(--acp-primary)]">
                         🧠 Debug Panel
                     </span>
@@ -308,7 +308,7 @@ export const StateTreeViewer: React.FC<{
                         <button
                             onClick={handleCopy}
                             title="Copy JSON"
-                            className="text-xs px-2 py-0.5 rounded border border-[var(--acp-border)] hover:bg-[var(--acp-primary)] hover:text-white transition"
+                            className="text-xs px-2 py-0.5 rounded border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] hover:bg-[var(--acp-primary)] hover:text-white transition"
                         >
                             📋 Copy
                         </button>

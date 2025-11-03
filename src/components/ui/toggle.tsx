@@ -9,9 +9,9 @@ const toggleVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-transparent text-[var(--acp-foreground)] hover:bg-[color-mix(in_srgb,var(--acp-primary)10%,transparent)]",
+        default: "bg-transparent text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)] hover:bg-[color-mix(in_srgb,var(--acp-primary)10%,transparent)]",
         outline:
-          "border border-[var(--acp-border)] text-[var(--acp-foreground)] bg-transparent hover:bg-[color-mix(in_srgb,var(--acp-primary)10%,transparent)]",
+          "border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)] bg-transparent hover:bg-[color-mix(in_srgb,var(--acp-primary)10%,transparent)]",
       },
       size: {
         sm: "h-8 px-1.5 min-w-8",

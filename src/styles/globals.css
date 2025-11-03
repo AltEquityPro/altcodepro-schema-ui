@@ -119,7 +119,7 @@
     }
 
     body {
-        @apply bg-background text-foreground text-foreground;
+        @apply bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark) text-foreground;
     }
 }
 

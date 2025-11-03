@@ -281,7 +281,7 @@ export function CallRenderer({
 }: {
     element: CallElement;
     state: Record<string, any>;
-    t: (k: string) => string;
+    t: (k: string, defaultLabel?: string) => string;
     runEventHandler?: (h?: any, d?: any) => Promise<void>;
 }) {
     const roomId = String(resolveBinding(element.peerId, state, t));
@@ -522,7 +522,7 @@ export function CallRenderer({
                     <UsersIcon className="mr-1 h-3 w-3" /> {remoteEntries.length + 1}
                 </Badge>
                 <Badge className={classesFromStyleProps(element.styles)}>
-                    {joined ? t("LIVE") : t("Connecting…")}
+                    {joined ? t("LIVE", "LIVE") : t("Connecting", "Connecting…")}
                 </Badge>
             </div>
 
@@ -531,7 +531,7 @@ export function CallRenderer({
                 {/* Local */}
                 <Tile
                     element={element}
-                    name={t("You")}
+                    name={t("You", 'You')}
                     streamRef={localVideoRef as any}
                     mirrored={element.mirrorLocal !== false}
                     muted
@@ -553,7 +553,7 @@ export function CallRenderer({
                                 {muted ? <MicOffIcon className="h-5 w-5" /> : <MicIcon className="h-5 w-5" />}
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>{muted ? t("Unmute") : t("Mute")}</TooltipContent>
+                        <TooltipContent>{muted ? t("Unmute", "Unmute") : t("Mute", "Mute")}</TooltipContent>
                     </Tooltip>
 
                     {element.callType === "video" && (

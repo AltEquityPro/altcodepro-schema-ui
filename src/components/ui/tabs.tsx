@@ -30,7 +30,7 @@ function TabsList({
     <TabsPrimitive.List
       data-slot="tabs-list"
       className={cn(
-        "flex flex-wrap items-center justify-start gap-2 border-b border-[var(--acp-border)] overflow-x-auto",
+        "flex flex-wrap items-center justify-start gap-2 border-b border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] overflow-x-auto",
         className
       )}
       {...props}
@@ -46,7 +46,7 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "relative px-4 py-2 text-sm font-medium text-[var(--acp-foreground)] transition-colors duration-200",
+        "relative px-4 py-2 text-sm font-medium text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)] transition-colors duration-200",
         "data-[state=active]:text-[var(--acp-primary)] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-[var(--acp-border)] data-[state=active]:after:bg-[var(--acp-primary)]",
         "hover:text-[var(--acp-primary-600)] focus-visible:outline-none",
         className
@@ -125,7 +125,7 @@ function TabRender({
               {tab.icon && (
                 <DynamicIcon
                   name={tab.icon}
-                  className="mr-1 text-[var(--acp-primary)]"
+                  className="mr-1 text-(--acp-primary)"
                 />
               )}
               {typeof tab.label === "string" ? t(tab.label) : tab.label}

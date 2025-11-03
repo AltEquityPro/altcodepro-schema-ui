@@ -36,7 +36,7 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "flex w-full items-center justify-between gap-2 rounded-md border border-[var(--acp-border)] bg-transparent px-3 py-2 text-sm shadow-xs outline-none",
+        "flex w-full items-center justify-between gap-2 rounded-md border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] bg-transparent px-3 py-2 text-sm shadow-xs outline-none",
         "focus-visible:ring-[1px] focus-visible:ring-[var(--acp-primary)]",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className
@@ -78,7 +78,7 @@ function SelectContent({
         avoidCollisions={false}
         className={cn(
           // --- Base ACP Theme ---
-          "bg-[var(--acp-background)] text-[var(--acp-foreground)] border border-[var(--acp-border)]",
+          "bg-[var(--acp-background)] dark:bg-[var(--acp-background-dark)] text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)] border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)]",
           "shadow-lg rounded-md overflow-hidden backdrop-blur-sm z-[9999]",
           // --- Animation states ---
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
@@ -89,7 +89,7 @@ function SelectContent({
           isMobile
             ? [
               "fixed inset-x-2 bottom-auto top-[15vh] w-[calc(100vw-1rem)] max-h-[70vh]",
-              "mx-auto rounded-xl border border-[var(--acp-border)]",
+              "mx-auto rounded-xl border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)]",
               "overflow-y-auto overscroll-contain safe-top safe-bottom",
             ]
             : [

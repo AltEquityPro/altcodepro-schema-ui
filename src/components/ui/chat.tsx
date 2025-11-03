@@ -1,19 +1,19 @@
 "use client";
 
 import { ChangeEvent, DragEvent, memo, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { marked } from "marked";
 import { openDB } from "idb";
 import { v4 as uuidv4 } from "uuid";
+import { List } from "react-window";
 import { DynamicIcon } from "./dynamic-icon";
 import { Button } from "./button";
 import { Input } from "./input";
 import { RichTextEditor } from "./richtext-input";
-import { MarkdownInput } from "./markdown-input";
+import { MarkdownInput, MarkdownRender } from "./markdown-input";
 import { RenderChildren } from "../../schema/RenderChildren";
-import { cn, resolveBinding } from "../../lib/utils";
-import { List } from "react-window";
-import type { AnyObj, ChatElement, EventHandler, UIElement } from "../../types";
+import { cn, codeExt, resolveBinding } from "../../lib/utils";
+import { ElementType, TextElement, type AnyObj, type ChatElement, type EventHandler, type UIElement } from "../../types";
 import { useAuth } from "../../schema/useAuth";
+import { toast } from "./sonner";
 
 interface VirtualRowProps {
     messages: Msg[];
@@ -26,7 +26,7 @@ interface VirtualRowProps {
     onReact: (emoji: string, msg: Msg) => void;
     onCopy: (msg: Msg) => void;
     onDelete: (msg: Msg) => void;
-    onAction: (action: MsgAction, msg: Msg) => void;
+    onAction: (msg: Msg, action: MsgAction) => void;
     onSpeak: (msg: Msg) => void;
     t: (key: string) => string;
     state: AnyObj;
@@ -59,6 +59,8 @@ type Msg = {
     id: string;
     role: "user" | "assistant" | "system" | "other";
     text?: string;
+    type?: string;
+    ext?: string;
     createdAt?: number | string;
     jsonBuffer?: string;
     isFinal?: boolean;
@@ -70,7 +72,7 @@ type Msg = {
     actions?: MsgAction[];
     className?: string;
     children?: UIElement[];
-    author?: { name?: string; avatarUrl?: string };
+    author?: { name?: string; avatarUrl?: string; role?: string };
     tools?: { id: string; label: string; icon?: string; params?: AnyObj }[];
 };
 
@@ -585,7 +587,7 @@ function CommandBar({
 
     return (
         <div
-            className="absolute bottom-full mb-2 w-full bg-[var(--acp-background)] border border-[var(--acp-border)] rounded-md shadow-lg max-h-60 overflow-y-auto z-10"
+            className="absolute bottom-full mb-2 w-full bg-(--acp-background) dark:bg-(--acp-background-dark) border border-(--acp-border) dark:border-(--acp-border-dark) rounded-md shadow-lg max-h-60 overflow-y-auto z-10"
             role="dialog"
             aria-label="Command palette"
         >
@@ -601,7 +603,7 @@ function CommandBar({
                 aria-label="Filter commands"
             />
             {filtered?.length === 0 ? (
-                <div className="px-4 py-2 text-sm text-[var(--acp-foreground-50)]">No commands found</div>
+                <div className="px-4 py-2 text-sm text-(--acp-foreground-50)">No commands found</div>
             ) : (
                 filtered?.map((s) => (
                     <Button
@@ -621,6 +623,44 @@ function CommandBar({
             )}
         </div>
     );
+}
+
+function mapMessageData(raw: any, map?: ChatElement['dataMap'], richResponses?: boolean): Msg {
+    if (!map) map = {};
+
+    const get = (path?: string, fallback?: any) => {
+        if (!path) return fallback;
+        return path.split('.').reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : fallback), raw);
+    };
+    const createdAtRaw = get(map.createdAt, Date.now());
+    const createdAt = typeof createdAtRaw === "string" || typeof createdAtRaw === "number"
+        ? createdAtRaw
+        : Date.now();
+    return {
+        id: get(map.id, cryptoRandomId()),
+        role: get(map.role, "assistant"),
+        text: richResponses ? '' : get(map.text, get("message", "")),
+        createdAt: createdAt,
+        status: get(map.status, "delivered"),
+        replyTo: get(map.replyTo),
+        threadId: get(map.threadId),
+        reactions: get(map.reactions, {}),
+        attachments: Array.isArray(get(map.attachments)) ? get(map.attachments) : [],
+        actions: Array.isArray(get(map.actions)) ? get(map.actions) : [],
+        children: get(map.children, richResponses ? [
+            {
+                content: map.text,
+                contentFormat: 'markdown',
+                type: 'text',
+            }
+        ] : []),
+        author: {
+            name: get(map.author?.name),
+            avatarUrl: get(map.author?.avatarUrl),
+            role: get(map.author?.role),
+        },
+        tools: get(map.tools, []),
+    };
 }
 
 const MessageBubble = memo(function MessageBubble({
@@ -654,7 +694,7 @@ const MessageBubble = memo(function MessageBubble({
     onReact: (emoji: string, msg: Msg) => void;
     onCopy: (msg: Msg) => void;
     onDelete: (msg: Msg) => void;
-    onAction: (action: MsgAction, msg: Msg) => void;
+    onAction: (msg: Msg, action: MsgAction) => void;
     onSpeak: (msg: Msg) => void;
     t: (key: string, defaultLabel?: string) => string;
     state: AnyObj;
@@ -664,24 +704,17 @@ const MessageBubble = memo(function MessageBubble({
     isThreadCollapsed: boolean;
     toggleThread: () => void;
 }) {
-    const markdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (msg.status === "streaming" && markdownRef.current && msg.text) {
-            markdownRef.current.innerHTML = marked(msg.text, { async: false });
-        }
-    }, [msg.text, msg.status]);
 
     const baseByMode =
         chatMode === "ai"
             ? msg.role === "user"
-                ? cn("ml-auto", "bg-[var(--acp-primary)] text-[var(--acp-background)]", roleClasses.user)
+                ? cn("ml-auto", roleClasses.user)
                 : msg.role === "assistant"
-                    ? cn("mr-auto", "bg-[var(--acp-secondary-100)] text-[var(--acp-foreground)]", roleClasses.assistant)
-                    : cn("mx-auto", "bg-[var(--acp-accent-100)] text-[var(--acp-foreground)]", roleClasses.system)
+                    ? cn("mr-auto", "text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)]", roleClasses.assistant)
+                    : cn("mx-auto", " bg-(--acp-background)/50   dark:bg-(--acp-background-dark)/50 text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)]", roleClasses.system)
             : msg.role === "user"
-                ? cn("ml-auto", "bg-[var(--acp-primary-600)] text-[var(--acp-background)]", roleClasses.user)
-                : cn("mr-auto", "bg-[var(--acp-secondary-200)] text-[var(--acp-foreground)]", roleClasses.other);
+                ? cn("ml-auto", "bg-[var(--acp-secondary-200)]  text-[var(--acp-background)]", roleClasses.user)
+                : cn("mr-auto", "text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)]", roleClasses.other);
 
     const bubbleClass = cn(
         "group relative max-w-[80%] break-words shadow-sm transition-all duration-200",
@@ -695,39 +728,26 @@ const MessageBubble = memo(function MessageBubble({
         <img
             src={url || (msg.role === "assistant" ? "/avatars/ai.png" : msg.role === "system" ? "/avatars/system.png" : "/avatars/default.png")}
             alt={alt || msg.role}
-            className="w-8 h-8 rounded-full ring-2 ring-[var(--acp-background)]"
+            className="w-8 h-8 rounded-full ring-2 ring-(--acp-background)"
             aria-hidden="true"
         />
     );
     const [stableChildren, setStableChildren] = useState<UIElement[] | undefined>(msg.children);
-
     useEffect(() => {
         const t = setTimeout(() => setStableChildren(msg.children), 100);
         return () => clearTimeout(t);
     }, [msg.children]);
-
     return (
         <div className={cn("flex flex-col gap-3 w-full", msg.role === "user" ? "items-end" : "items-start")} role="article">
             <div className={cn("flex items-start gap-3", msg.role === "user" ? "flex-row-reverse" : "")}>
                 {showAvatars && msg.role !== "user" && <Avatar url={msg.author?.avatarUrl} alt={msg.author?.name} />}
 
                 <div className={bubbleClass}>
-                    {/* Content */}
-                    {/* Content */}
                     <div className="prose prose-sm max-w-none">
-                        {/* Hybrid mode: render Markdown first, typed UI next */}
                         {msg.text && msg.text.trim() && (
-                            <div
-                                ref={markdownRef}
-                                className={cn(
-                                    "whitespace-pre-wrap text-sm font-normal leading-relaxed break-words",
-                                    msg.status === "streaming" && "opacity-80 animate-pulse transition-opacity"
-                                )}
-                                dangerouslySetInnerHTML={{ __html: marked.parse(msg.text) }}
-                            />
+                            <MarkdownRender content={msg.text} className={msg.className} />
                         )}
 
-                        {/* If typed elements are available, render them below the text */}
                         {Array.isArray(stableChildren) && stableChildren.length > 0 && (
                             <div
                                 className={cn(
@@ -745,14 +765,12 @@ const MessageBubble = memo(function MessageBubble({
                             </div>
                         )}
 
-                        {/* Show a generating hint if neither text nor children yet */}
                         {!msg.text && (!msg.children || msg.children.length === 0) && (
                             <div className="opacity-60 italic text-xs animate-pulse">
                                 {t("generating", "Generating response…")}
                             </div>
                         )}
                     </div>
-                    {/* Attachments */}
                     {msg?.attachments?.length ? (
                         <div className="mt-4 space-y-3">
                             {msg?.attachments?.map((a) => {
@@ -772,7 +790,7 @@ const MessageBubble = memo(function MessageBubble({
                                 }
                                 if (a.type?.startsWith("audio/")) {
                                     return (
-                                        <div key={a.id} className="bg-[var(--acp-secondary-100)]/50 rounded-xl p-4">
+                                        <div key={a.id} className="bg-(--acp-secondary-100)/50 rounded-xl p-4">
                                             <audio controls className="w-full">
                                                 <source src={a.url!} type={a.type!} />
                                                 Your browser does not support the audio element.
@@ -788,8 +806,8 @@ const MessageBubble = memo(function MessageBubble({
                                         rel="noreferrer"
                                         className={cn(
                                             "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium",
-                                            "bg-[var(--acp-secondary)]/20 text-[var(--acp-foreground)] hover:bg-[var(--acp-secondary)]/30",
-                                            "transition-colors border border-[var(--acp-secondary)]/30"
+                                            "bg-(--acp-secondary)/20 text-(--acp-foreground) dark:text-(--acp-foreground-dark) hover:bg-(--acp-secondary)/30",
+                                            "transition-colors border border-(--acp-secondary)/30"
                                         )}
                                         aria-label={`Download ${a.name}`}
                                     >
@@ -801,7 +819,6 @@ const MessageBubble = memo(function MessageBubble({
                         </div>
                     ) : null}
 
-                    {/* Tools */}
                     {Array.isArray(msg?.tools) && msg?.tools?.length > 0 && (
                         <div className="mt-4 flex flex-wrap gap-2">
                             {msg?.tools?.map((tool) => (
@@ -829,11 +846,11 @@ const MessageBubble = memo(function MessageBubble({
 
                     {/* Reactions */}
                     {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                        <div className="flex gap-2 mt-4 pt-3 border-t border-[var(--acp-border)]/50">
+                        <div className="flex gap-2 mt-4 pt-3 border-t border-(--acp-border) dark:border-(--acp-border-dark)/50">
                             {Object.entries(msg.reactions)?.map(([emoji, users]) => (
                                 <button
                                     key={emoji}
-                                    className="group inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium bg-[var(--acp-secondary)]/20 text-[var(--acp-foreground)] hover:bg-[var(--acp-secondary)]/30 transition-colors"
+                                    className="group inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium bg-(--acp-secondary)/20 text-(--acp-foreground) dark:text-(--acp-foreground-dark) hover:bg-(--acp-secondary)/30 transition-colors"
                                     onClick={() => onReact(emoji, msg)}
                                     title={users.join(", ")}
                                     aria-label={`React with ${emoji}`}
@@ -845,13 +862,12 @@ const MessageBubble = memo(function MessageBubble({
                         </div>
                     )}
 
-                    {/* Footer: Status, Time, Actions */}
-                    <div className="flex items-center justify-between gap-4 mt-4 pt-3 border-t border-[var(--acp-border)]/50">
+                    <div className="flex items-center justify-between gap-4 mt-4 pt-3 border-t border-(--acp-border) dark:border-(--acp-border-dark)/50">
                         <div className="flex items-center gap-4">
                             {msg.role === "assistant" && (
                                 <button
                                     onClick={() => onSpeak(msg)}
-                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-[var(--acp-secondary)]/20 text-[var(--acp-foreground)] hover:bg-[var(--acp-secondary)]/30 transition-colors"
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-(--acp-secondary)/20 text-(--acp-foreground) dark:text-(--acp-foreground-dark) hover:bg-(--acp-secondary)/30 transition-colors"
                                     aria-label={t("listen", 'Listen')}
                                 >
                                     <DynamicIcon name="volume-2" className="h-4 w-4" />
@@ -859,16 +875,16 @@ const MessageBubble = memo(function MessageBubble({
                                 </button>
                             )}
                             {showTimestamps && (
-                                <div className="text-xs text-[var(--acp-foreground-50)]">{formatTime(msg.createdAt)}</div>
+                                <div className="text-xs text-(--acp-foreground-50)">{formatTime(msg.createdAt)}</div>
                             )}
                             {msg.status === "streaming" && !msg.children && (
-                                <div className="flex items-center gap-1 text-xs text-[var(--acp-foreground-50)] animate-pulse">
+                                <div className="flex items-center gap-1 text-xs text-(--acp-foreground-50) animate-pulse">
                                     <DynamicIcon name="loader-2" className="h-4 w-4 animate-spin" />
                                     {t("generating_ui", "Generating UI components…")}
                                 </div>
                             )}
                             {msg.status === "error" && (
-                                <div className="flex items-center gap-1 text-xs text-[var(--acp-destructive)]">
+                                <div className="flex items-center gap-1 text-xs text-(--acp-destructive)">
                                     <DynamicIcon name="alert-circle" className="h-4 w-4" />
                                     <span>{t("error", 'Error')}</span>
                                 </div>
@@ -876,10 +892,9 @@ const MessageBubble = memo(function MessageBubble({
                         </div>
 
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <DynamicIcon name="reply" className="h-4 w-4" title={t("reply", 'Reply')} onClick={() => onReply(`↩️ ${msg.text || ""}`, msg)} />
-                            <DynamicIcon name="copy" className="h-4 w-4" title={t("copy", 'Copy')} onClick={() => onCopy(msg)} />
-                            <DynamicIcon name="trash-2" className="h-4 w-4" title={t("delete", 'Delete')} onClick={() => onDelete(msg)} />
-
+                            <DynamicIcon name="reply" className="h-4 w-4 text-secondary-foreground" title={t("reply", 'Reply')} onClick={() => onReply(`↩️ ${msg.text || ""}`, msg)} />
+                            <DynamicIcon name="copy" className="h-4 w-4 text-secondary-foreground" title={t("copy", 'Copy')} onClick={() => onCopy(msg)} />
+                            <DynamicIcon name="trash-2" className="h-4 w-4 text-secondary-foreground" title={t("delete", 'Delete')} onClick={() => onDelete(msg)} />
                             {Array.isArray(msg.actions) &&
                                 msg?.actions?.map((a) => (
                                     <Button
@@ -887,7 +902,7 @@ const MessageBubble = memo(function MessageBubble({
                                         size="sm"
                                         variant={a.variant || "outline"}
                                         className="h-7 px-2 text-xs"
-                                        onClick={() => onAction(a, msg)}
+                                        onClick={() => onAction(msg, a)}
                                         aria-label={a.label}
                                     >
                                         <DynamicIcon name={a.icon || "more-horizontal"} className="h-4 w-4 mr-1" />
@@ -901,12 +916,11 @@ const MessageBubble = memo(function MessageBubble({
                 {showAvatars && msg.role === "user" && <Avatar url={msg.author?.avatarUrl} alt={msg.author?.name} />}
             </div>
 
-            {/* Inline Thread Replies */}
             {threadMessages.length > 0 && (
                 <div className={cn("w-full", msg.role === "user" ? "pl-12" : "ml-12")}>
                     <button
                         onClick={toggleThread}
-                        className="group inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-[var(--acp-secondary)]/20 text-[var(--acp-foreground)] hover:bg-[var(--acp-secondary)]/30 transition-colors w-full"
+                        className="group inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-(--acp-secondary)/20 text-(--acp-foreground) dark:text-(--acp-foreground-dark) hover:bg-(--acp-secondary)/30 transition-colors w-full"
                         aria-expanded={!isThreadCollapsed}
                         aria-controls={`thread-${msg.id}`}
                     >
@@ -983,8 +997,77 @@ const MessageRow = memo(({ index, style, data }: MessageRowProps) => {
         </div>
     );
 });
+const messagesFromSource = (element: ChatElement, state: AnyObj, t: (key: string, defaultLabel?: string | undefined) => string): Msg[] => {
+    if (!element.dataSourceId) return [];
+    const val = resolveBinding(element.dataSourceId, state, t);
+    if (!val) return []
+    if (typeof val === 'string') {
+        return element.richResponses ? [{
+            id: cryptoRandomId(),
+            role: 'assistant',
+            createdAt: Date.now(),
+            isFinal: true,
+            status: 'read',
+            children: [
+                {
+                    content: val,
+                    contentFormat: 'markdown',
+                    type: ElementType.text
+                } as TextElement
+            ]
+        }] : [{
+            id: cryptoRandomId(),
+            role: 'assistant',
+            createdAt: Date.now(),
+            isFinal: true,
+            status: 'read',
+            text: val
+        }];
+    } else if (Array.isArray(val)) {
+        return val.map((item: any) => mapMessageData(item, element.dataMap, element.richResponses));
+    } else if (typeof val === 'object') {
+        const resp = { ...val };
+        if (element.richResponses) {
+            let el: any = {};
+            if (val.type?.includes('image') || (val.ext && ['png', 'jpg', 'svg', 'gif', 'webp', 'ico'].includes(val.ext))) {
+                el = {
+                    type: 'image',
+                    src: val.content || val.text
+                }
+            } else if (val.type?.includes('video') || (val.ext && ['mp4', 'mov', 'mkv', 'avi', 'webm'].includes(val.ext))) {
+                el = {
+                    type: 'video',
+                    src: val.content || val.text
+                }
+            } else if (codeExt.includes(val.ext)) {
+                el = {
+                    type: 'code',
+                    value: val.content || val.text
+                }
+            } else {
+                el = {
+                    type: 'text',
+                    contentFormat: 'markdown',
+                    content: val.content || val.text
+                }
+            }
 
-export function ChatRenderer({
+            resp.children = [el]
+            delete resp.text;
+            return [resp];
+        } else {
+            if (!resp.text && resp.content) {
+                resp.text = resp.content
+            }
+            return [resp];
+        }
+
+    } else {
+        return val
+    }
+};
+
+export function Chat({
     element,
     state,
     t,
@@ -997,7 +1080,6 @@ export function ChatRenderer({
     t: (key: string, defaultLabel?: string) => string;
     runEventHandler?: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>;
 }) {
-    const listRef = useRef<any>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
     const auth = useAuth();
@@ -1019,38 +1101,24 @@ export function ChatRenderer({
 
     const placeholder = resolveBinding(element.placeholder, state, t) || "Type a message…";
     const headers = useMemo(() => ({ ...(element?.headers || {}) }), [element]);
-
-
-    const [{ messages, typing, activeThreadId, participants, voice, collapsedThreads, commandBar }, dispatch] = useReducer(
-        chatReducer,
-        {
-            messages: [],
-            typing: {},
-            activeThreadId: null,
-            participants: [],
-            voice: "idle",
-            collapsedThreads: new Set<string>(),
-            commandBar: { visible: false, suggestions: commandSuggestions },
-        }
-    );
-
     const [input, setInput] = useState("");
     const [attachments, setAttachments] = useState<Msg["attachments"]>([]);
 
-    useEffect(() => {
-        let mounted = true;
-        initPersistence(element).then((db) => {
-            if (!mounted || !db) return;
-            db.load().then((msgs) => {
-                if (mounted) dispatch({ type: "init_from_history", payload: msgs.slice(-maxMessages) });
-            });
-            const saveInterval = setInterval(() => db.save(messages), 5000);
-            return () => clearInterval(saveInterval);
-        });
-        return () => {
-            mounted = false;
-        };
-    }, [maxMessages, messages]);
+    const [{ messages, typing, activeThreadId,
+        participants, voice, collapsedThreads,
+        commandBar }, dispatch] = useReducer(
+            chatReducer,
+            {
+                messages: [],
+                typing: {},
+                activeThreadId: null,
+                participants: [],
+                voice: "idle",
+                collapsedThreads: new Set<string>(),
+                commandBar: { visible: false, suggestions: commandSuggestions },
+            }
+        );
+
 
     const handleDragDrop = useCallback(
         (e: DragEvent) => {
@@ -1098,16 +1166,20 @@ export function ChatRenderer({
         return arr;
     }, [messages]);
 
-    const visibleMessages = useMemo(() => {
-        if (!activeThreadId) return messages.filter((m) => !m.threadId && !m.replyTo);
-        return messages.filter((m) => (m.threadId || m.replyTo || "") === activeThreadId);
-    }, [messages, activeThreadId]);
-
     useEffect(() => {
-        if (listRef.current && visibleMessages.length > 0) {
-            listRef.current.scrollToItem(visibleMessages.length - 1, "end");
-        }
-    }, [visibleMessages.length, activeThreadId]);
+        let mounted = true;
+        initPersistence(element).then((db) => {
+            if (!mounted || !db) return;
+            db.load().then((msgs) => {
+                if (mounted) dispatch({ type: "init_from_history", payload: msgs.slice(-maxMessages) });
+            });
+            const saveInterval = setInterval(() => db.save(messages), 5000);
+            return () => clearInterval(saveInterval);
+        });
+        return () => {
+            mounted = false;
+        };
+    }, [maxMessages, messages]);
 
     useEffect(() => {
         const historyKey = element.historyDataSourceId;
@@ -1189,6 +1261,7 @@ export function ChatRenderer({
                 dispatch({ type: "update_msg", id: data.messageId, patch: { status: data.status } });
             }
         };
+
         const heads: any = { ...headers }
         heads['Authorization'] = `Bearer ${auth.token}`;
         if (element.ws?.url) {
@@ -1256,6 +1329,12 @@ export function ChatRenderer({
         return () => cleanup?.close();
     }, [element, headers, messages, auth.token]);
 
+
+    useEffect(() => {
+        dispatch({ type: "init_from_history", payload: messagesFromSource(element, state, t) });
+    }, []);
+
+
     const dictation = useSpeechDictation(allowVoice, voiceLanguage, (txt) => setInput(txt));
     const capture = useAudioCapture();
     const { speak } = useCustomTTS(
@@ -1279,8 +1358,8 @@ export function ChatRenderer({
     }, [capture, activeThreadId]);
 
     const toggleReaction = useCallback(
-        (msgId: string, emoji: string) => {
-            runEventHandler?.((element as AnyObj).onMessageAction, { action: "react", id: msgId, emoji });
+        (emoji: string, msg: Msg) => {
+            runEventHandler?.((element as AnyObj).onMessageAction, { action: "react", id: msg.id, emoji });
         },
         [runEventHandler, element]
     );
@@ -1307,7 +1386,7 @@ export function ChatRenderer({
 
             const moderation = applyModeration(text, moderationRules);
             if (!moderation.allowed) {
-                alert(`Message blocked: ${moderation.reason}`);
+                toast.error(`Message blocked: ${moderation.reason}`);
                 return;
             }
 
@@ -1403,7 +1482,7 @@ export function ChatRenderer({
                 }
             } catch (e) {
                 dispatch({ type: "update_msg", id: localId, patch: { status: "error" } });
-                alert("Failed to send message. Please try again.");
+                toast.error("Failed to send message. Please try again.");
             } finally {
                 dispatch({ type: "set_typing", userId: "self", value: false });
                 setInput("");
@@ -1486,7 +1565,7 @@ export function ChatRenderer({
 
     const virtualizedListData = useMemo(
         () => ({
-            messages: visibleMessages,
+            messages: messages,
             chatMode,
             roleClasses,
             messageClassName,
@@ -1496,18 +1575,17 @@ export function ChatRenderer({
             onReact: toggleReaction,
             onCopy: (msg: Msg) => runEventHandler?.((element as AnyObj).onCopyMessage, { id: msg.id, text: msg.text }),
             onDelete: (msg: Msg) => runEventHandler?.((element as AnyObj).onDeleteMessage, { id: msg.id }),
-            onAction: runMsgAction,
             onSpeak: (msg: Msg) => speak(msg.text || ""),
+            toggleThread: (id: string) => dispatch({ type: "toggle_thread", id }),
+            onAction: runMsgAction,
             t,
             state,
             setState,
             runEventHandler,
             threadMap,
             collapsedThreads,
-            toggleThread: (id: string) => dispatch({ type: "toggle_thread", id }),
         }),
         [
-            visibleMessages,
             chatMode,
             roleClasses,
             messageClassName,
@@ -1530,7 +1608,7 @@ export function ChatRenderer({
         <div
             className={cn(
                 "flex flex-col rounded-md shadow-sm h-full relative",
-                "bg-[var(--acp-background)] text-[var(--acp-foreground)] border border-[var(--acp-border)]",
+                "bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark) border-0",
                 element.styles?.className
             )}
             onDragOver={(e) => e.preventDefault()}
@@ -1541,7 +1619,7 @@ export function ChatRenderer({
         >
             {/* Quick Actions */}
             {element.quickActions?.length ? (
-                <div className="p-3 border-b border-[var(--acp-border)]">
+                <div className="p-3">
                     <RenderChildren
                         children={element.quickActions}
                         state={state}
@@ -1552,10 +1630,9 @@ export function ChatRenderer({
                 </div>
             ) : null}
 
-            {/* Presence Bar */}
             {participants?.length > 0 && (
                 <div
-                    className="px-3 py-2 border-b border-[var(--acp-border)] flex items-center gap-2 overflow-x-auto"
+                    className="px-3 py-2 flex items-center gap-2 overflow-x-auto"
                     role="status"
                     aria-live="polite"
                 >
@@ -1580,7 +1657,7 @@ export function ChatRenderer({
 
             {/* Thread Headers */}
             {showThreadHeaders && threads?.length > 1 && (
-                <div className="border-b border-[var(--acp-border)] px-3 py-2 flex items-center gap-2 overflow-x-auto">
+                <div className="px-3 py-2 flex items-center gap-2 overflow-x-auto">
                     {threads?.map((th) => {
                         const label = th.id || (t("general_thread") || "General");
                         const isActive = (activeThreadId || "") === th.id;
@@ -1602,29 +1679,53 @@ export function ChatRenderer({
             )}
 
             {/* Messages (Virtualized) */}
-            <div className="flex-1 overflow-hidden">
-                {visibleMessages.length === 0 ? (
+            <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
+                {messages.length === 0 ? (
                     <div
-                        className="flex flex-col items-center justify-center h-full text-sm text-[var(--acp-foreground-50)]"
+                        className="flex flex-col items-center justify-center h-full text-sm text-(--acp-foreground-50)"
                         role="alert"
                         aria-live="polite"
                     >
                         <DynamicIcon name="message-circle" className="h-12 w-12 mb-4 opacity-50" aria-hidden="true" />
                         <p>{t("no_messages_yet") || "No messages yet"}</p>
-                        <p className="mt-1 opacity-70">{t("start_conversation") || "Start a conversation"}</p>
+                        <p className="mt-1 opacity-70">{t("start_conversation", "Start a conversation")}</p>
                     </div>
                 ) : (
-                    <List
-                        rowCount={visibleMessages.length}
-                        rowHeight={100}
-                        rowComponent={MessageRow as any}
-                        rowProps={{ data: virtualizedListData }}
-                    />
+                    chatMode === 'ai' ?
+                        messages.map((msg, index) => (
+                            <MessageBubble
+                                key={`${msg.id}_${index}`}
+                                msg={msg}
+                                chatMode={chatMode}
+                                roleClasses={roleClasses}
+                                globalMessageClassName={messageClassName}
+                                showAvatars={false}
+                                showTimestamps={true}
+                                onReply={virtualizedListData.onReply}
+                                onReact={toggleReaction}
+                                onCopy={virtualizedListData.onCopy}
+                                onDelete={virtualizedListData.onDelete}
+                                onAction={runMsgAction}
+                                onSpeak={virtualizedListData.onSpeak}
+                                toggleThread={() => virtualizedListData.toggleThread(msg.id)}
+                                t={t}
+                                state={state}
+                                setState={setState}
+                                runEventHandler={runEventHandler}
+                                threadMessages={threadMap.get(msg.id) || []}
+                                isThreadCollapsed={collapsedThreads.has(msg.id)}
+                            />
+                        ))
+                        : <List
+                            rowCount={messages.length}
+                            rowHeight={100}
+                            rowComponent={MessageRow as any}
+                            rowProps={{ data: virtualizedListData }}
+                        />
 
                 )}
             </div>
 
-            {/* Typing Indicator */}
             {typingIndicator && Object.values(typing).some((v) => v) && (
                 <div className="px-3 py-2 text-sm text-[color-mix(in srgb, var(--acp-foreground) 70%, transparent)]">
                     <span className="flex items-center gap-2 animate-pulse">
@@ -1634,7 +1735,6 @@ export function ChatRenderer({
                 </div>
             )}
 
-            {/* Command Bar */}
             <CommandBar
                 suggestions={commandBar.suggestions}
                 onSelect={(id) => {
@@ -1649,7 +1749,7 @@ export function ChatRenderer({
                 {Editor}
             </div>
             <div
-                className="flex items-end border-0 justify-between rounded-xl  bg-[var(--acp-bg)]"
+                className="flex items-end border-0 justify-between rounded-xl  bg-(--acp-bg)"
                 role="form"
                 aria-label="Message composer"
             >
@@ -1671,8 +1771,8 @@ export function ChatRenderer({
                     {allowVoice && (
                         <button
                             className={cn(
-                                "p-2 rounded-lg hover:bg-[var(--acp-secondary-100)] text-[var(--acp-foreground)] transition-colors",
-                                voice === "recording" && "bg-[var(--acp-primary-100)] text-[var(--acp-primary)]"
+                                "p-2 rounded-lg hover:bg-(--acp-secondary-100) text-(--acp-foreground) dark:text-(--acp-foreground-dark) transition-colors",
+                                voice === "recording" && "bg-(--acp-primary-100) text-(--acp-primary)"
                             )}
                             onClick={voice === "recording" ? stopRecording : startRecording}
                             aria-label={voice === "recording" ? "Stop recording" : "Start recording"}
@@ -1708,13 +1808,13 @@ export function ChatRenderer({
                         {attachments.map((att) => (
                             <div
                                 key={att.id}
-                                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--acp-secondary-100)] text-sm"
+                                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-(--acp-secondary-100) text-sm"
                             >
                                 <DynamicIcon name="paperclip" className="h-4 w-4" />
                                 {att.name}
                                 <button
                                     onClick={() => setAttachments((prev) => prev?.filter((a) => a.id !== att.id))}
-                                    className="ml-1 text-[var(--acp-foreground-50)] hover:text-[var(--acp-foreground)]"
+                                    className="ml-1 text-(--acp-foreground-50) hover:text-(--acp-foreground) dark:text-(--acp-foreground-dark)"
                                     aria-label={`Remove ${att.name}`}
                                 >
                                     <DynamicIcon name="x" className="h-4 w-4" />
@@ -1727,4 +1827,14 @@ export function ChatRenderer({
         </div>
     );
 }
+
+export const ChatRenderer = memo(Chat, (prev, next) => {
+    return (
+        prev.element === next.element &&
+        prev.state === next.state &&
+        prev.t === next.t &&
+        prev.setState === next.setState &&
+        prev.runEventHandler === next.runEventHandler
+    );
+});
 

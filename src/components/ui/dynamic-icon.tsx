@@ -1,5 +1,6 @@
 "use client";
 import * as LucideIcons from "lucide-react";
+import { getIconColor } from "../../lib/utils";
 
 /**
  * 🧩 DynamicIcon — resolves Lucide icon names automatically.
@@ -8,15 +9,18 @@ import * as LucideIcons from "lucide-react";
  *   <DynamicIcon name="layout-dashboard" className="h-5 w-5 text-primary-600" />
  *   <DynamicIcon name="CheckCircle" size={18} />
  */
+
+
 export function DynamicIcon({
   name,
   className = "h-4 w-4 mr-2 text-foreground cursor-pointer",
   size,
-  ...props
+  colorIcon,
 }: {
   name?: string;
   className?: string;
   size?: number;
+  colorIcon?: boolean;
   [key: string]: any;
 }) {
   if (!name) return null;
@@ -34,6 +38,7 @@ export function DynamicIcon({
     console.warn(`⚠️ Lucide icon not found for: "${name}" (resolved to "${normalized}")`);
     return null;
   }
+  const color = colorIcon ? getIconColor(normalized) : '';
 
-  return <Icon className={className} size={size} {...props} />;
+  return color ? <Icon className={className} size={size} color={color} /> : <Icon className={className} size={size} />;
 }

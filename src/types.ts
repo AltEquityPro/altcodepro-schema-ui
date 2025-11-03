@@ -182,6 +182,7 @@ export enum ElementType {
     container = 'container',
     context_menu = 'context_menu',
     custom = 'custom',
+    dynamic = 'dynamic',
     datagrid = 'datagrid',
     drawer = 'drawer',
     dropdown = 'dropdown',
@@ -571,7 +572,25 @@ export interface ChatElement extends BaseElement {
     onReceive?: EventHandler;
     streaming?: boolean;
     streamMode?: "append" | "replace";
-
+    dataMap?: {
+        id?: string;                     // unique message id
+        role?: string;                   // "user" | "assistant" | "system" etc.
+        text?: string;                   // main text content
+        createdAt?: string;              // timestamp field
+        replyTo?: string;                // parent message id
+        threadId?: string;               // thread/group id
+        attachments?: string;            // path to attachments array
+        actions?: string;                // array of available actions
+        reactions?: string;              // emoji reactions
+        children?: string;               // nested UI element structure
+        author?: {                       // nested author mapping
+            name?: string;
+            avatarUrl?: string;
+            role?: string;
+        };
+        tools?: string;                  // AI tool buttons
+        status?: string;                 // message status
+    }
     onStreamChunk?: EventHandler;
 
     // Suggestions
@@ -1021,7 +1040,13 @@ export interface ImageElement extends BaseElement {
     src: string;
     width?: number | string;
 }
-
+export interface DynamicElement extends BaseElement {
+    type: ElementType.dynamic;
+    url?: string;
+    contentType?: string;
+    ext?: string;
+    content?: string | object | null;
+}
 export interface InputElement extends BaseElement {
     accept?: string;
     currency?: string | Binding;
@@ -1080,7 +1105,9 @@ export interface ListElement extends BaseElement {
     type: ElementType.list;
     ordered?: boolean;
     items: UIElement[];
-    virtualHeight: number;
+    virtualHeight?: number;
+    orientation?: 'horizontal' | 'vertical';
+    itemHeight?: number;
     showDividers?: boolean;
     density?: "comfortable" | "compact";
     virtualizeAfter?: number;//60
@@ -1368,7 +1395,11 @@ export interface SidebarElement extends BaseElement {
         id: string;
         items: UIElement[];
         label: Binding;
+        className?: string;
+        headerClassName?: string;
+        collapseContainerClassName?: string;
     }>;
+    showSearch?: boolean;
     header?: UIElement;
 }
 export interface SignaturePadElement extends BaseElement {
@@ -1558,11 +1589,13 @@ export interface TreeElement extends BaseElement {
     nodes?: TreeNodeElement[];
     /** If provided, root nodes are read from state[dataSourceId] (schema or data layer populates). */
     dataSourceId?: string;
+    colorizeFiles?: boolean;
     mapping?: {
         id?: string;
         label?: string;
         description?: string;
         badge?: string;
+        icon?: string;
         children?: string;
     };
 
@@ -1784,6 +1817,7 @@ export type UIElement =
     | DataGridElement
     | DrawerElement
     | DropdownElement
+    | DynamicElement
     | EditorElement
     | FileUploadElement
     | FooterElement
@@ -2203,6 +2237,7 @@ export interface UIProject {
     brand: Brand;
     footer?: FooterElement;
     search?: { enabled?: boolean; path?: string };
+    hideNav?: boolean;
     globalConfig?: {
         projectId?: string;
         accessibilityConfig?: AccessibilityConfig;

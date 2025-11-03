@@ -186,6 +186,18 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
 
             const err = (msg: string) =>
                 t((input.validation?.errorMessage as string) || msg);
+            if (input.validation?.required) {
+                let s: any = trimString;
+                if (s instanceof z.ZodString) {
+                    s = s.min(1, err("field_required"));
+                } else if (s instanceof z.ZodArray) {
+                    s = s.min(1, err("field_required"));
+                } else if (s instanceof z.ZodNumber) {
+                    s = s.refine((val) => val !== undefined, { message: err("field_required") });
+                } else if (s instanceof z.ZodBoolean) {
+                    s = s.refine((val) => val === true, { message: err("must_be_checked") });
+                }
+            }
 
             switch (input.inputType) {
                 case InputType.text:
@@ -214,16 +226,15 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
 
                     if (input.validation?.required)
                         s = s.refine((v: any) => v.length > 0, { message: err("field_required") });
-
                     shape[input.name] = s;
                     break;
                 }
                 case InputType.number: {
                     let s: any = z.preprocess(numberCoerce, z.number());
                     if (input.validation?.required)
-                        s = s.refine((val: any) => val !== undefined, { message: err("field_required") });
+                        s = s?.refine((val: any) => val !== undefined, { message: err("field_required") });
                     if (input.validation?.max !== undefined)
-                        s = s.max(input.validation.max, { message: err("too_large") });
+                        s = s?.max(input.validation.max, { message: err("too_large") });
                     shape[input.name] = s;
                     break;
                 }
@@ -238,14 +249,14 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
 
                 case InputType.select: {
                     let s = z.string();
-                    if (input.validation?.required) s = s.min(1, err("field_required"));
+                    if (input.validation?.required) s = s?.min(1, err("field_required"));
                     shape[input.name] = s;
                     break;
                 }
 
                 case InputType.multiselect: {
                     let s = z.array(z.string());
-                    if (input.validation?.required) s = s.min(1, err("field_required"));
+                    if (input.validation?.required) s = s?.min(1, err("field_required"));
                     shape[input.name] = s;
                     break;
                 }
@@ -271,16 +282,16 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
                 case InputType.range: {
                     let s = z.number();
                     if (input.validation?.min !== undefined)
-                        s = s.min(input.validation.min, err("too_small"));
+                        s = s?.min(input.validation.min, err("too_small"));
                     if (input.validation?.max !== undefined)
-                        s = s.max(input.validation.max, err("too_large"));
+                        s = s?.max(input.validation.max, err("too_large"));
                     shape[input.name] = s;
                     break;
                 }
 
                 case InputType.search: {
                     let s = z.string();
-                    if (input.validation?.required) s = s.min(1, err("field_required"));
+                    if (input.validation?.required) s = s?.min(1, err("field_required"));
                     shape[input.name] = s;
                     break;
                 }
@@ -288,9 +299,9 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
                 case InputType.slider: {
                     let s = z.number();
                     if (input.validation?.min !== undefined)
-                        s = s.min(input.validation.min, err("too_small"));
+                        s = s?.min(input.validation.min, err("too_small"));
                     if (input.validation?.max !== undefined)
-                        s = s.max(input.validation.max, err("too_large"));
+                        s = s?.max(input.validation.max, err("too_large"));
                     shape[input.name] = s;
                     break;
                 }
@@ -319,40 +330,42 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
                 case InputType.month:
                 case InputType.week: {
                     let s = z.string(); // ISO string
-                    if (input.validation?.required) s = s.min(1, err("field_required"));
+                    if (input.validation?.required) s = s?.min(1, err("field_required"));
                     shape[input.name] = s;
                     break;
                 }
                 case InputType.otp: {
                     let s = z.string();
-                    if (input.validation?.required) s = s.min(1, err("otp_required"));
+                    if (input.validation?.required) s = s?.min(1, err("otp_required"));
                     shape[input.name] = s;
                     break;
                 }
                 case InputType.voice: {
                     let s = z.string();
-                    if (input.validation?.required) s = s.min(1, t("voice_input_required"));
+                    if (input.validation?.required) s = s?.min(1, t("voice_input_required"));
                     shape[input.name] = s;
                     break;
                 }
                 case InputType.radio: {
                     let s = z.string();
-                    if (input.validation?.required) s = s.min(1, err("field_required"));
+                    if (input.validation?.required) s = s?.min(1, err("field_required"));
                     shape[input.name] = s;
                     break;
                 }
 
                 case InputType.url: {
                     let s = z.string().url(err("invalid_url"));
-                    if (input.validation?.required) s = s.min(1, err("field_required"));
+                    if (input.validation?.required) s = s?.min(1, err("field_required"));
                     shape[input.name] = s;
                     break;
                 }
 
                 case InputType.tel: {
-                    let s = z.string().regex(/^\+?[0-9\s\-()]+$/, err("invalid_phone"));
-                    if (input.validation?.required) s = s.min(1, err("field_required"));
+                    let s = z.string()
+                        .regex(/^\+\d{1,3}\s?\d{4,14}$/, err("invalid_phone_with_isocode"))
+                        .min(1, err("field_required"));
                     shape[input.name] = s;
+                    if (input.validation?.required) s = s?.min(1, err("field_required"));
                     break;
                 }
 
@@ -381,7 +394,7 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
 
                 case InputType.signature: {
                     let s = z.string(); // base64 or URL to signature image
-                    if (input.validation?.required) s = s.min(1, err("signature_required"));
+                    if (input.validation?.required) s = s?.min(1, err("signature_required"));
                     shape[input.name] = s;
                     break;
                 }
@@ -396,22 +409,22 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
                 case InputType.code:
                 case InputType.markdown: {
                     let s = z.string();
-                    if (input.validation?.required) s = s.min(1, err("field_required"));
+                    if (input.validation?.required) s = s?.min(1, err("field_required"));
                     shape[input.name] = s;
                     break;
                 }
 
                 case InputType.tags: {
                     let s = z.array(z.string());
-                    if (input.validation?.required) s = s.min(1, err("tags_required"));
+                    if (input.validation?.required) s = s?.min(1, err("tags_required"));
                     shape[input.name] = s;
                     break;
                 }
 
                 case InputType.currency: {
                     let s = z.number();
-                    if (input.validation?.min !== undefined) s = s.min(input.validation.min, err("too_small"));
-                    if (input.validation?.max !== undefined) s = s.max(input.validation.max, err("too_large"));
+                    if (input.validation?.min !== undefined) s = s?.min(input.validation.min, err("too_small"));
+                    if (input.validation?.max !== undefined) s = s?.max(input.validation.max, err("too_large"));
                     shape[input.name] = s;
                     break;
                 }
@@ -608,7 +621,7 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
                                                         <SelectValue placeholder={placeholder} />
                                                     </SelectTrigger>
                                                     <SelectContent className={cn(
-                                                        "z-50 bg-background text-foreground shadow-md border border-border rounded-md min-w-sm",
+                                                        "z-50 bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark) shadow-md border border-border rounded-md min-w-sm",
                                                         input.styles?.className
                                                     )}>
                                                         {options?.map((opt) => (

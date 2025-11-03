@@ -35,7 +35,7 @@ export function RichTextEditor({
     if (!editor) return null
 
     return (
-        <div className={cn("border rounded-md bg-background text-foreground", className)}>
+        <div className={cn("border rounded-md bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark)", className)}>
             {/* Toolbar */}
             {toolbar && (
                 <div className="flex gap-2 border-b p-2">

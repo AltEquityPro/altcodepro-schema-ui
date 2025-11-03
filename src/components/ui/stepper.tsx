@@ -171,7 +171,7 @@ export default function StepWizardRenderer({
     if (!visibleSteps.length) {
         return wrapWithMotion(
             fixedElement,
-            <div className="text-[var(--acp-secondary-500)] text-sm italic">
+            <div className="text-(--acp-secondary-500) text-sm italic">
                 {t("wizard.empty", "No steps configured")}
             </div>
         );
@@ -187,14 +187,14 @@ export default function StepWizardRenderer({
             style={{ zIndex: fixedElement.zIndex }}
             className={cn(
                 "flex flex-col gap-6 p-4 rounded-lg border",
-                "border-[var(--acp-border)] bg-[var(--acp-background)] text-[var(--acp-foreground)]",
+                "border-(--acp-border) dark:border-(--acp-border-dark) bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark)",
                 "shadow-sm transition-colors duration-200"
             )}
         >
             {/* Progress Bar */}
             <Progress
                 value={progressValue}
-                className="h-2 bg-[var(--acp-border)] [&>[data-slot=progress-bar]]:bg-[var(--acp-primary)]"
+                className="h-2 bg-(--acp-border) *:data-[slot=progress-bar]:bg-(--acp-primary)"
             />
 
             {/* Step Indicators */}
@@ -206,9 +206,9 @@ export default function StepWizardRenderer({
                         className={cn(
                             "px-3 py-1.5 mr-2 rounded-md whitespace-nowrap transition-colors duration-150",
                             idx === currentStep
-                                ? "bg-[var(--acp-primary)] text-[var(--acp-background)]"
-                                : "bg-[var(--acp-primary-50)] text-[var(--acp-primary-800)] hover:bg-[var(--acp-primary-100)]",
-                            "dark:data-[active]:bg-[var(--acp-primary-800)] dark:data-[active]:text-[var(--acp-primary-50)]"
+                                ? "bg-(--acp-primary) text-(--acp-background)"
+                                : "bg-(--acp-primary-50) text-(--acp-primary-800) hover:bg-(--acp-primary-100)",
+                            "dark:data-active:bg-(--acp-primary-800) dark:data-active:text-(--acp-primary-50)"
                         )}
                         aria-current={idx === currentStep ? "step" : undefined}
                     >
@@ -219,7 +219,7 @@ export default function StepWizardRenderer({
 
             {/* Step Content */}
             <div className="mt-4">
-                <h3 className="text-lg font-semibold mb-3 text-[var(--acp-foreground)]">
+                <h3 className="text-lg font-semibold mb-3 text-(--acp-foreground) dark:text-(--acp-foreground-dark)">
                     {t("wizard.step")} {currentStep + 1}:{" "}
                     {resolveBinding(step?.title, state, t)}
                 </h3>
@@ -233,7 +233,7 @@ export default function StepWizardRenderer({
                         runEventHandler={runEventHandler}
                     />
                 ) : (
-                    <div className="text-[var(--acp-secondary-500)] italic">
+                    <div className="text-(--acp-secondary-500) italic">
                         {t("wizard.no_content", "No content for this step")}
                     </div>
                 )}
@@ -245,7 +245,7 @@ export default function StepWizardRenderer({
                     variant="outline"
                     onClick={handlePrev}
                     disabled={currentStep === 0}
-                    className="border-[var(--acp-border)] text-[var(--acp-foreground)] hover:bg-[var(--acp-primary-50)]"
+                    className="border-(--acp-border) dark:border-(--acp-border-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark) hover:bg-(--acp-primary-50)"
                 >
                     {t("wizard.previous", "Previous")}
                 </Button>
@@ -253,7 +253,7 @@ export default function StepWizardRenderer({
                 <Button
                     onClick={handleNext}
                     className={cn(
-                        "bg-[var(--acp-primary)] text-[var(--acp-background)] hover:bg-[var(--acp-primary-600)]"
+                        "bg-(--acp-primary) text-(--acp-background) hover:bg-(--acp-primary-600)"
                     )}
                 >
                     {currentStep === totalSteps - 1

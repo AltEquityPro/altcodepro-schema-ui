@@ -45,7 +45,7 @@ function DropdownMenuContent({
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         className={cn(
-          "z-[9999] min-w-[10rem] overflow-hidden rounded-lg bg-[var(--acp-background)] text-[var(--acp-foreground)]",
+          "z-[9999] min-w-[10rem] overflow-hidden rounded-lg bg-[var(--acp-background)] dark:bg-[var(--acp-background-dark)] text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)]",
           "shadow-lg ring-1 ring-[var(--acp-border)] ring-opacity-20",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
@@ -243,7 +243,7 @@ function DropdownMenuSubContent({
       sideOffset={sideOffset}
       alignOffset={alignOffset}
       className={cn(
-        "z-[9999] min-w-[10rem] rounded-lg bg-[var(--acp-background)] text-[var(--acp-foreground)]",
+        "z-[9999] min-w-[10rem] rounded-lg bg-[var(--acp-background)] dark:bg-[var(--acp-background-dark)] text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)]",
         "shadow-lg ring-1 ring-[var(--acp-border)] ring-opacity-20 backdrop-blur-sm",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",

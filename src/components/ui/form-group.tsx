@@ -33,7 +33,6 @@ function namesForGroup(
                 : []
         );
 }
-
 export function FormStepper({
     steps,
     currentIndex,
@@ -49,39 +48,42 @@ export function FormStepper({
     return (
         <div
             className={cn(
-                "flex flex-col gap-6 p-4 rounded-lg border",
-                "border-[var(--acp-border)] bg-[var(--acp-background)] text-[var(--acp-foreground)]",
-                "shadow-sm transition-colors duration-200",
+                "flex flex-col gap-6 p-4 rounded-lg border shadow-sm transition-colors duration-200",
+                "border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] bg-[var(--acp-background)] dark:bg-[var(--acp-background-dark)] text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)]",
+                "dark:border-[var(--acp-border-dark)] dark:bg-[var(--acp-background-dark)] dark:text-[var(--acp-foreground-dark)]",
                 className
             )}
         >
             <Progress
                 value={progressValue}
                 className={cn(
-                    "h-2 rounded-full overflow-hidden",
-                    "bg-[var(--acp-border)] [&>[data-slot=progress-bar]]:bg-[var(--acp-primary)]"
+                    "h-2 rounded-full overflow-hidden transition-colors",
+                    "bg-(--acp-border) dark:bg-(--acp-border-dark)",
+                    "*:data-[slot=progress-bar]:bg-(--acp-primary) dark:*:data-[slot=progress-bar]:bg-(--acp-primary-dark)"
                 )}
             />
             <div className="flex justify-between text-sm font-medium overflow-x-auto pb-2">
                 {steps.map((step, idx) => {
                     const isCompleted = idx < currentIndex;
                     const isActive = idx === currentIndex;
+
                     return (
                         <div
                             key={step.id}
                             className={cn(
                                 "flex flex-col items-center text-center transition-all duration-200 w-full",
-                                isActive && "text-[var(--acp-primary)] font-semibold"
+                                isActive &&
+                                "text-[var(--acp-primary)] dark:text-[var(--acp-primary-dark)] font-semibold"
                             )}
                         >
                             <div
                                 className={cn(
                                     "w-8 h-8 flex items-center justify-center rounded-full border-2 mb-2 text-sm font-medium transition-colors duration-200",
                                     isCompleted
-                                        ? "bg-[var(--acp-primary)] border-[var(--acp-primary)] text-[var(--acp-background)]"
+                                        ? "bg-[var(--acp-primary)] border-[var(--acp-primary)] text-[var(--acp-background)] dark:bg-[var(--acp-primary-dark)] dark:border-[var(--acp-primary-dark)] dark:text-[var(--acp-background-dark)]"
                                         : isActive
-                                            ? "border-[var(--acp-primary)] bg-[var(--acp-primary-50)] text-[var(--acp-primary-800)]"
-                                            : "border-[var(--acp-border)] bg-[var(--acp-background)] text-[var(--acp-foreground)]"
+                                            ? "border-[var(--acp-primary)] bg-[color-mix(in_srgb,var(--acp-primary)15%,transparent)] text-[var(--acp-primary-800)] dark:border-[var(--acp-primary-dark)] dark:bg-[color-mix(in_srgb,var(--acp-primary-dark)25%,transparent)] dark:text-[var(--acp-primary-dark)]"
+                                            : "border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] bg-[var(--acp-background)] dark:bg-[var(--acp-background-dark)] text-[var(--acp-secondary-600)] dark:border-[var(--acp-border-dark)] dark:bg-[var(--acp-background-dark)] dark:text-[var(--acp-secondary-400)]"
                                 )}
                             >
                                 {isCompleted ? <Check className="w-4 h-4" /> : idx + 1}
@@ -90,10 +92,10 @@ export function FormStepper({
                                 className={cn(
                                     "text-xs whitespace-nowrap px-1 transition-colors duration-200",
                                     isActive
-                                        ? "text-[var(--acp-primary)]"
+                                        ? "text-[var(--acp-primary)] dark:text-[var(--acp-primary-dark)]"
                                         : isCompleted
-                                            ? "text-[var(--acp-foreground)]"
-                                            : "text-[var(--acp-secondary-500)]"
+                                            ? "text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)] dark:text-[var(--acp-foreground-dark)]"
+                                            : "text-[var(--acp-secondary-500)] dark:text-[var(--acp-secondary-400)]"
                                 )}
                             >
                                 {step.title}
@@ -105,7 +107,6 @@ export function FormStepper({
         </div>
     );
 }
-
 export function TabsBar({
     tabs,
     activeId,
@@ -234,7 +235,10 @@ export function WizardGroup({
             .filter((f: any) => f.fieldType === FieldType.input && f.input?.name)
             .map((f: any) => f.input.name);
         const ok = names.length ? await form.trigger(names) : await form.trigger();
-        if (!ok) return;
+        if (!ok) {
+            toast.error(t("Please correct the highlighted fields before continuing"));
+            return
+        };
 
         setLoading(true);
         try {
@@ -253,8 +257,11 @@ export function WizardGroup({
         const names = stepFields
             .filter((f: any) => f.fieldType === FieldType.input && f.input?.name)
             .map((f: any) => f.input.name);
-        const ok = names.length ? await form.trigger(names) : await form.trigger();
-        if (!ok) return;
+        const valid = await form.trigger(undefined, { shouldFocus: true });
+        if (!valid) {
+            toast.error(t("Please correct the highlighted fields before continuing"));
+            return
+        };
         setLoading(true);
         try {
             const submitEvent = currentStep?.submit?.onClick || group?.submit?.onClick || element.submit?.onClick
@@ -287,7 +294,7 @@ export function WizardGroup({
                         type="button"
                         onClick={goPrev}
                         disabled={loading}
-                        className="border-[var(--acp-border)] text-[var(--acp-foreground)] hover:bg-[var(--acp-primary-50)]"
+                        className="border-(--acp-border) dark:border-(--acp-border-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark) hover:bg-(--acp-primary-50)"
                     >
                         {t("back", "Back")}
                     </Button>
@@ -301,7 +308,7 @@ export function WizardGroup({
                         onClick={goNext}
                         disabled={loading}
                         className={cn(
-                            "bg-[var(--acp-primary)] text-[var(--acp-background)] hover:bg-[var(--acp-primary-600)]"
+                            "bg-(--acp-primary) text-(--acp-background) hover:bg-(--acp-primary-600)"
                         )}
                     >
                         {loading ? <Loader2 className="animate-spin w-4 h-4" /> : t("next", "Next")}

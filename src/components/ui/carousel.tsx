@@ -124,14 +124,14 @@ export function Carousel({ element, state, setState, t, runEventHandler }: Carou
         <div className="absolute inset-0 flex items-center justify-between px-4">
           <button
             onClick={goToPrev}
-            className="bg-background text-foreground/80 hover:bg-primary/20 rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark)/80 hover:bg-primary/20 rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-primary"
             aria-label="Previous"
           >
             <ChevronDown className="h-6 w-6 rotate-90" />
           </button>
           <button
             onClick={goToNext}
-            className="bg-background text-foreground/80  hover:bg-primary/20 rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark)/80  hover:bg-primary/20 rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-primary"
             aria-label="Next"
           >
             <ChevronDown className="h-6 w-6 -rotate-90" />

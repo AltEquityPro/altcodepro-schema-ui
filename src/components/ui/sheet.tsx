@@ -55,7 +55,7 @@ function SheetContent({
   showCloseButton?: boolean
 }) {
   const base =
-    "bg-background text-foreground fixed z-50 flex flex-col shadow-lg border data-[state=open]:animate-in data-[state=closed]:animate-out"
+    "bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark) fixed z-50 flex flex-col shadow-lg border data-[state=open]:animate-in data-[state=closed]:animate-out"
 
   const position = {
     right: "inset-y-0 right-0 w-3/4 max-w-sm border-l data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right",

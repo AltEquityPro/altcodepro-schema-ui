@@ -225,7 +225,7 @@ export const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputPro
                 onChange={handleChange}
                 onBlur={handleBlur}
                 className={cn(
-                    "border-input flex h-10 w-full rounded-md border bg-background text-foreground px-3 py-2",
+                    "border-input flex h-10 w-full rounded-md border bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark) px-3 py-2",
                     "text-sm shadow-sm placeholder:text-muted-foreground",
                     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                     "disabled:cursor-not-allowed disabled:opacity-50",

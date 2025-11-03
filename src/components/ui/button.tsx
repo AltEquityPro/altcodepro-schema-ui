@@ -18,6 +18,7 @@ const buttonVariants: Record<string, string> = {
   /* 🌊 PRIMARY: brand color focus */
   primary: `
     bg-[var(--acp-primary)]
+    dark:bg-[var(--acp-primary-dark)]
     text-white
     hover:bg-[var(--acp-primary-700)]
     focus:ring-2 focus:ring-[var(--acp-primary-400)]
@@ -27,6 +28,7 @@ const buttonVariants: Record<string, string> = {
   /* 🩶 SECONDARY: neutral tone, subtle contrast */
   secondary: `
     bg-[var(--acp-secondary)]
+    dark:bg-[var(--acp-secondary-dark)]
     text-white
     hover:bg-[var(--acp-secondary-700)]
     focus:ring-2 focus:ring-[var(--acp-secondary-400)]
@@ -35,9 +37,9 @@ const buttonVariants: Record<string, string> = {
 
   /* ⚪ OUTLINE: transparent with border */
   outline: `
-    border border-[var(--acp-border)]
-    text-[var(--acp-foreground)]
+    border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)]  dark:border-[var(--acp-border-dark)]
     bg-transparent
+    text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)] 
     hover:bg-[color-mix(in_srgb,var(--acp-foreground)10%,transparent)]
     focus:ring-2 focus:ring-[var(--acp-primary)]
     focus:border-[var(--acp-primary)]
@@ -47,7 +49,8 @@ const buttonVariants: Record<string, string> = {
   /* 🎨 TERTIARY: soft background accent */
   tertiary: `
     bg-[color-mix(in_srgb,var(--acp-secondary)10%,transparent)]
-    text-[var(--acp-foreground)]
+    dark:bg-[color-mix(in_srgb,var(--acp-secondary-dark)10%,transparent)]
+    text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)] 
     hover:bg-[color-mix(in_srgb,var(--acp-secondary)20%,transparent)]
     focus:ring-2 focus:ring-[var(--acp-secondary)]
     disabled:opacity-50 disabled:cursor-not-allowed
@@ -66,8 +69,9 @@ const buttonVariants: Record<string, string> = {
 
   /* 👻 GHOST: text only, transparent background */
   ghost: `
-    text-[var(--acp-foreground)]
+    text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)] 
     bg-transparent
+    border-0
     hover:bg-[color-mix(in_srgb,var(--acp-foreground)8%,transparent)]
     focus:ring-2 focus:ring-[var(--acp-primary)]
     disabled:opacity-50 disabled:cursor-not-allowed
@@ -180,11 +184,11 @@ export function ButtonRenderer({
       {...accessibilityProps}
     >
       {element.iconLeft?.name && (
-        <DynamicIcon name={element.iconLeft.name} className="mr-1" />
+        <DynamicIcon {...element.iconLeft} name={element.iconLeft.name} className="mr-1" />
       )}
       {resolvedBinding(element.text)}
       {element.iconRight?.name && (
-        <DynamicIcon name={element.iconRight.name} className="ml-1" />
+        <DynamicIcon {...element.iconRight} name={element.iconRight.name} className="ml-1" />
       )}
     </button>
   );

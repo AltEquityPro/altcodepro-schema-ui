@@ -10,7 +10,7 @@ import {
     useCallback,
 } from "react";
 import { AnyObj, UIProject } from "../types";
-import { resolveBinding } from "../lib/utils";
+import { deepMerge, resolveBinding } from "../lib/utils";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -34,13 +34,8 @@ export function t(key: string, defaultLabel?: string): string {
     }
 }
 export function setTranslations(translations: Record<string, Record<string, string>>) {
-    for (const [locale, map] of Object.entries(translations)) {
-        globalTranslations[locale] = {
-            ...(globalTranslations[locale] || {}),
-            ...map,
-        };
-    }
     try {
+        deepMerge(globalTranslations, translations);
         localStorage.setItem("translations", JSON.stringify(globalTranslations));
     } catch {
         /* ignore */
@@ -60,9 +55,7 @@ interface AppStateContextType {
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
 
-/* -------------------------------------------------------------------------- */
-/* Provider                                                                   */
-/* -------------------------------------------------------------------------- */
+
 export function StateProvider({
     project,
     children,
@@ -77,19 +70,12 @@ export function StateProvider({
 
     useLayoutEffect(() => {
         try {
-            // Load previously saved translations (if any)
+            // Load previously saved translations (if any) replaces globalTranslations
             const saved = localStorage.getItem("translations");
             if (saved) Object.assign(globalTranslations, JSON.parse(saved));
 
-            // Merge in current project's translations (no overwrite, per locale)
             if (project?.translations) {
-                for (const [locale, map] of Object.entries(project.translations)) {
-                    globalTranslations[locale] = {
-                        ...(globalTranslations[locale] || {}),
-                        ...map,
-                    };
-                }
-
+                deepMerge(globalTranslations, project.translations)
                 localStorage.setItem(
                     "translations",
                     JSON.stringify(globalTranslations)

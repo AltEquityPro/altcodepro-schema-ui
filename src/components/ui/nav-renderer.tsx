@@ -343,16 +343,16 @@ function DesktopNav({
             {requiresAuth && (state?.isAuthenticated || state?.auth?.user) ? (
                 <button
                     onClick={() => handleLogout(project?.globalConfig, clearState)}
-                    className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium bg-[var(--acp-primary)]
+                    className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium bg-(--acp-primary)
                             text-white
-                            hover:bg-[var(--acp-primary-700)]
-                            focus:ring-2 focus:ring-[var(--acp-primary-400)] transition">
+                            hover:bg-(--acp-primary-700)
+                            focus:ring-2 focus:ring-(--acp-primary-400) transition">
                     Logout
                 </button>
             ) : (
                 <a
                     href="/login"
-                    className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary)]/10 transition"
+                    className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-(--acp-primary) hover:bg-(--acp-primary)/10 transition"
                 >
                     Login
                 </a>
@@ -463,14 +463,14 @@ function MobileBurger({
                     {requiresAuth && (state?.isAuthenticated || state?.auth?.user) ? (
                         <button
                             onClick={() => handleLogout(project?.globalConfig, clearState)}
-                            className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary)]/10 transition"
+                            className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-(--acp-primary) hover:bg-(--acp-primary)/10 transition"
                         >
                             {t('Logout', 'Logout')}
                         </button>
                     ) : (
                         <a
                             href="/login"
-                            className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary)]/10 transition"
+                            className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-(--acp-primary) hover:bg-(--acp-primary)/10 transition"
                         >
                             {t('Login', 'Login')}
                         </a>
@@ -533,7 +533,7 @@ function Sidebar({
                     <input
                         type="text"
                         placeholder="Search…"
-                        className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[color:var(--acp-primary)]/40"
+                        className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-(--acp-primary)/40"
                     />
                 </div>
             )}
@@ -585,13 +585,13 @@ function Sidebar({
             {requiresAuth && (state?.isAuthenticated || state?.auth?.user) ? (
                 <button
                     onClick={() => handleLogout(project?.globalConfig, clearState)}
-                    className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary)]/10 transition">
+                    className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-(--acp-primary) hover:bg-(--acp-primary)/10 transition">
                     {t('Logout', 'Logout')}
                 </button>
             ) : (
                 <a
                     href="/login"
-                    className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-[color:var(--acp-primary)] hover:bg-[color:var(--acp-primary)]/10 transition"
+                    className="lg:inline-flex px-4 py-2 rounded-md text-sm font-medium text-(--acp-primary) hover:bg-(--acp-primary)/10 transition"
                 >
                     {t('Login', 'Login')}
                 </a>
@@ -625,7 +625,7 @@ function BottomNav({
             className={clsx(
                 "fixed bottom-0 left-0 right-0 z-40 lg:hidden",
                 "border-t border-border/50",
-                "bg-[color:var(--acp-background)]/92 backdrop-blur-lg",
+                "bg-(--acp-background)/92 dark:bg-(--acp-background-dark)/92  backdrop-blur-lg",
                 "shadow-[0_-4px_12px_rgba(0,0,0,0.08)]"
             )}
             role="navigation"
@@ -640,8 +640,8 @@ function BottomNav({
                             className={clsx(
                                 "flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-xs transition-all",
                                 active
-                                    ? "text-[color:var(--acp-primary)]"
-                                    : "text-foreground/60 hover:text-[color:var(--acp-primary)]"
+                                    ? "text-(--acp-primary)"
+                                    : "text-foreground/60 hover:text-(--acp-primary)"
                             )}
                             aria-current={active ? "page" : undefined}
                             route={route}

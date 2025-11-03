@@ -1,5 +1,5 @@
 'use client';
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     UIProject, UIDefinition,
     ActionRuntime, NavigationAPI,
@@ -43,9 +43,12 @@ export function ScreenRenderer({
 
     useAuth({ requiresAuth, nav });
     const analytics = useAnalytics();
-
+    const [loaded, setLoaded] = useState(false);
     useEffect(() => {
         setTranslations(uiDef.translations || {});
+        setTimeout(() => {
+            setLoaded(true);
+        }, 400)
     }, [uiDef.translations]);
     const { state, t, setState, setTranslations } = useAppState();
 
@@ -115,7 +118,7 @@ export function ScreenRenderer({
                     }}
                 />
             )}
-            {uiDef.screens?.map((screen) => (
+            {loaded && uiDef.screens?.map((screen) => (
                 <ScreenView
                     key={screen.id}
                     screen={screen}

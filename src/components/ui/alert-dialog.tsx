@@ -108,7 +108,7 @@ function AlertDialogRenderer({
         <AlertDialogPrimitive.Content asChild>
           <div
             className={cn(
-              "bg-background text-foreground fixed z-50 grid w-full max-w-[calc(100%-2rem)]",
+              "bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark) fixed z-50 grid w-full max-w-[calc(100%-2rem)]",
               posClass,
               sizeClass,
               "gap-4 rounded-lg p-6 shadow-lg duration-200",

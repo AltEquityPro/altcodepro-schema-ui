@@ -136,14 +136,14 @@ export function GlobalThemeProvider({
       ${buildScaleCSS("acp-secondary")}
     }
   }
-@media (prefers-color-scheme: dark) {
-  .bg-\[var\(--acp-primary\)\] {
-    background-color: var(--acp-primary-dark) !important;
+  @media (prefers-color-scheme: dark) {
+    .bg-\[var\(--acp-primary\)\] {
+      background-color: var(--acp-primary-dark) !important;
+    }
+    .bg-\[var\(--acp-secondary\)\] {
+      background-color: var(--acp-secondary-dark) !important;
+    }
   }
-  .bg-\[var\(--acp-secondary\)\] {
-    background-color: var(--acp-secondary-dark) !important;
-  }
-}
   html, body {
     font-family: var(--acp-font);
     font-size: var(--acp-font-size-base);
@@ -151,6 +151,7 @@ export function GlobalThemeProvider({
     color: var(--acp-foreground);
     transition: background-color 0.3s ease, color 0.3s ease;
   }
+
   /* Base border color */
   *, *::before, *::after {
     border-color: var(--acp-border);
@@ -162,7 +163,6 @@ export function GlobalThemeProvider({
     }
   }
 
-  /* Tailwind "border-input" and similar utilities */
   .border,
   .border-input,
   .border-muted,
@@ -185,7 +185,6 @@ export function GlobalThemeProvider({
     }
   }
 
-  /* Focus & active states */
   :focus-visible {
     outline-color: var(--acp-primary);
   }
@@ -212,9 +211,10 @@ export function GlobalThemeProvider({
       color: var(--acp-foreground-dark);
     }
   }
-.group:hover .group-hover\:visible {
-  transition-delay: 100ms;
-}
+  .group:hover .group-hover\:visible {
+    transition-delay: 100ms;
+  }
+    
   ${buildUtilityClasses("primary")}
   ${buildUtilityClasses("secondary")}
   ${customCss}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, lazy, useMemo } from "react";
+import { Suspense, lazy } from "react";
 import {
     resolveBinding,
     isVisible,
@@ -37,7 +37,7 @@ import { SidebarRenderer } from "../components/ui/sidebar";
 import { Skeleton } from "../components/ui/skeleton";
 import { Switch } from "../components/ui/switch";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "../components/ui/table";
-import { Tabs, TabsList, TabsTrigger, TabsContent, TabRender } from "../components/ui/tabs";
+import { TabRender } from "../components/ui/tabs";
 import { ToggleGroup } from "../components/ui/toggle-group";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../components/ui/tooltip";
 import { ContainerRenderer } from "../components/ui/container";
@@ -134,8 +134,11 @@ import {
     DataSource,
     FooterElement,
     HeaderElement,
-    EventHandler
+    EventHandler,
+    DynamicElement
 } from "../types";
+import { MarkdownRender } from "../components/ui/markdown-input";
+import { DynamicContentRenderer } from "../components/dynamic-content";
 
 
 interface ElementResolverProps {
@@ -661,22 +664,28 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
 
             // 🧠 If still empty after cleanup, skip rendering
             if (resolvedContent === "") return null;
-
+            if (text.contentFormat == 'markdown') {
+                return <MarkdownRender content={resolvedContent} className={className} />
+            }
+            if (text.contentFormat == 'html' || text.contentFormat == 'rich') {
+                return (<div id={text.id}
+                    className={cn(className, text.alignment && `text-${text.alignment}`)}
+                    {...accessibilityProps}>
+                    <div
+                        data-text-format='html'
+                        dangerouslySetInnerHTML={{
+                            __html: resolvedContent.replace(/\bundefined\b/g, "").replace(/\bnull\b/g, "")
+                        }}
+                    />
+                </div>)
+            }
             return (
                 <Tag
                     id={text.id}
                     className={cn(className, text.alignment && `text-${text.alignment}`)}
                     {...accessibilityProps}
                 >
-                    {text.contentFormat === "html" ? (
-                        <div
-                            dangerouslySetInnerHTML={{
-                                __html: resolvedContent.replace(/\bundefined\b/g, "").replace(/\bnull\b/g, "")
-                            }}
-                        />
-                    ) : (
-                        resolvedContent
-                    )}
+                    {resolvedContent}
                 </Tag>
             );
         }
@@ -783,7 +792,13 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     <VoiceRenderer element={voice} state={state} t={t} runEventHandler={runEventHandler} />
                 </LazyComponent>
             )
-
+        case ElementType.dynamic:
+            const el = element as DynamicElement;
+            const url = resolveBinding(el.url, state, t)
+            const content = resolveBinding(el.content, state, t)
+            return <LazyComponent>
+                <DynamicContentRenderer url={url} content={content} contentType={el.contentType} ext={el.ext} state={state} t={t} setState={setState} runEventHandler={runEventHandler} />
+            </LazyComponent>
         case ElementType.wallet:
             const wallet = element as WalletElement;
             return <LazyComponent>

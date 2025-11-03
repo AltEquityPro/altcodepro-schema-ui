@@ -1,6 +1,6 @@
 {
   "name": "altcodepro-schema-ui",
-  "version": "1.0.26",
+  "version": "1.0.27",
   "description": "AltcodePro Schema driven UI",
   "scripts": {
     "build": "rm -rf dist && tsup && cp dist/* /Users/sireeshpangaluri/Desktop/Projects/AltEquityPro/altcodepro-ai-studio/node_modules/altcodepro-schema-ui/dist",
@@ -54,6 +54,7 @@
     "embla-carousel-react": "^8.6.0",
     "ethers": "^6.15.0",
     "gsap": "^3.13.0",
+    "highlight.js": "^11.11.1",
     "hls.js": "^1.6.13",
     "idb": "^8.0.3",
     "input-otp": "^1.4.2",
@@ -67,6 +68,7 @@
     "lucide-react": "^0.548.0",
     "mapbox-gl": "^3.16.0",
     "marked": "^16.4.1",
+    "marked-highlight": "^2.2.2",
     "next-themes": "^0.4.6",
     "qrcode.react": "^4.2.0",
     "radix-ui": "^1.4.3",

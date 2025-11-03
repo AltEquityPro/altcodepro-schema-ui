@@ -213,9 +213,9 @@ export const variants = cva(
                 secondary:
                     "bg-[var(--acp-secondary)] text-white hover:bg-[var(--acp-secondary-700)]",
                 outline:
-                    "border border-[var(--acp-border)] text-[var(--acp-foreground)] bg-transparent hover:bg-[color-mix(in_srgb,var(--acp-foreground)10%,transparent)]",
+                    "border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)] bg-transparent hover:bg-[color-mix(in_srgb,var(--acp-foreground)10%,transparent)]",
                 ghost:
-                    "text-[var(--acp-foreground)] bg-transparent hover:bg-[color-mix(in_srgb,var(--acp-foreground)8%,transparent)]",
+                    "text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)] bg-transparent hover:bg-[color-mix(in_srgb,var(--acp-foreground)8%,transparent)]",
                 link:
                     "text-[var(--acp-primary)] underline-offset-4 hover:underline hover:text-[var(--acp-primary-700)]",
                 success:
@@ -463,3 +463,144 @@ export function deepResolveBindings(val: any,
     return deepResolveBindingsDepth(val, state, t);
 }
 
+
+export function deepMerge(target: AnyObj, source: AnyObj) {
+    for (const key in source) {
+        if (source[key] && typeof source[key] === "object" && !Array.isArray(source[key])) {
+            target[key] = deepMerge(target[key] || {}, source[key]);
+        } else {
+            target[key] = source[key];
+        }
+    }
+    return target;
+}
+export const codeExt = ['json', 'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'cs', 'cpp', 'c', 'go', 'rs', 'php', 'rb', 'swift', 'kotlin', 'html', 'css', 'scss', 'yml', 'xml', 'sql']
+export function detectFileIcon(
+    fileName: string,
+    isFolder: boolean,
+    hasChildren: boolean
+): string {
+    if (isFolder || hasChildren) return "Folder";
+
+    const ext = (fileName?.split(".").pop() || "").toLowerCase();
+
+    const iconMap: Record<string, string> = {
+        // 🧱 Code
+        js: "FileCode",
+        jsx: "FileCode",
+        ts: "FileCode",
+        tsx: "FileCode",
+        py: "FileCode",
+        java: "FileCode",
+        cs: "FileCode",
+        cpp: "FileCode",
+        c: "FileCode",
+        go: "FileCode",
+        rs: "FileCode",
+        php: "FileCode",
+        rb: "FileCode",
+        swift: "FileCode",
+        kotlin: "FileCode",
+        html: "FileCode",
+        css: "FileCode",
+        scss: "FileCode",
+        json: "FileJson",
+        yaml: "FileJson",
+        yml: "FileJson",
+        xml: "FileCode",
+        sql: "FileText",
+
+        // 📄 Docs & Text
+        md: "FileText",
+        txt: "FileText",
+        pdf: "FileText",
+        doc: "FileText",
+        docx: "FileText",
+        xls: "FileSpreadsheet",
+        xlsx: "FileSpreadsheet",
+        csv: "FileSpreadsheet",
+        ppt: "FilePresentation",
+        pptx: "FilePresentation",
+
+        // 🖼️ Images
+        png: "Image",
+        jpg: "Image",
+        jpeg: "Image",
+        gif: "Image",
+        bmp: "Image",
+        svg: "Image",
+        webp: "Image",
+        ico: "Image",
+
+        // 🎞️ Videos
+        mp4: "Video",
+        mov: "Video",
+        mkv: "Video",
+        avi: "Video",
+        webm: "Video",
+
+        // 🎧 Audio
+        mp3: "Music",
+        wav: "Music",
+        flac: "Music",
+        ogg: "Music",
+        m4a: "Music",
+
+        // 📦 Archives
+        zip: "Archive",
+        tar: "Archive",
+        gz: "Archive",
+        rar: "Archive",
+        "7z": "Archive",
+    };
+
+    return iconMap[ext] || "File";
+}
+
+
+export function getIconColor(iconName: string): string {
+    const name = iconName.toLowerCase();
+
+    const colorMap: Record<string, string> = {
+        // 🧱 Code
+        "filecode": "#3178c6", // TypeScript / code
+        "filejson": "#f1e05a",
+        "filetext": "#cccccc",
+        "fileterminal": "#00bfa5",
+        "file": "#9e9e9e",
+
+        // 📦 Structured data
+        "filespreadsheet": "#1d6f42",
+        "filepresentation": "#b7472a",
+        "filearchive": "#f9a825",
+
+        // 🖼️ Media
+        "image": "#4fa07b",
+        "video": "#673ab7",
+        "music": "#43a047",
+        "fileaudio": "#43a047",
+
+        // 📄 Docs
+        "filedoc": "#295397",
+        "filepdf": "#b30b00",
+        "filemd": "#083fa1",
+
+        // 📁 Folders
+        "folder": "#e0a92e",
+        "folderopen": "#fbc02d",
+
+        // ⚙️ Configs / misc
+        "settings": "#00acc1",
+        "gear": "#00acc1",
+        "package": "#795548",
+        "database": "#3f51b5",
+        "lock": "#c2185b",
+        "shield": "#8e24aa",
+    };
+
+    for (const key of Object.keys(colorMap)) {
+        if (name.includes(key)) return colorMap[key];
+    }
+
+    return "";
+}

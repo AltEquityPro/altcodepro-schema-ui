@@ -172,7 +172,7 @@ export function SearchRenderer({
     return (
         <div
             className={cn(
-                "relative flex flex-col rounded-md border bg-background text-foreground shadow-sm",
+                "relative flex flex-col rounded-md border bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark) shadow-sm",
                 element.styles?.className
             )}
         >

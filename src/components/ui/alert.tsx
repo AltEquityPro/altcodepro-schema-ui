@@ -9,7 +9,7 @@ export const alertVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-[var(--acp-background)] text-[var(--acp-foreground)] border-[var(--acp-border)]",
+        default: "bg-[var(--acp-background)] dark:bg-[var(--acp-background-dark)] text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)] border-[var(--acp-border)] dark:border-[var(--acp-border-dark)]",
         primary:
           "bg-[color-mix(in_srgb,var(--acp-primary)10%,transparent)] text-[var(--acp-primary)] border-[color-mix(in_srgb,var(--acp-primary)30%,transparent)] [&>svg]:text-[var(--acp-primary)]",
         success:

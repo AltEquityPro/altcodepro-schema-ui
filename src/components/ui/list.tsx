@@ -4,7 +4,7 @@ import React, { useMemo, useCallback } from "react";
 import { cn, resolveBinding } from "../../lib/utils";
 import { RenderChildren } from "../../schema/RenderChildren";
 import type { AnyObj, EventHandler, ListElement, UIElement } from "../../types";
-import { List, RowComponentProps, useDynamicRowHeight, useListRef } from "react-window";
+import { List, useDynamicRowHeight, useListRef, RowComponentProps } from "react-window";
 
 interface ListRendererProps {
     element: ListElement;
@@ -23,6 +23,9 @@ export function ListRenderer({
 }: ListRendererProps) {
     const listRef = useListRef(null);
     const dynamicHeight = useDynamicRowHeight({ defaultRowHeight: 56 });
+
+    const orientation = element.orientation || "vertical"; // new property
+    const isHorizontal = orientation === "horizontal";
 
     const items = useMemo<any[]>(
         () => (element.dataSourceId ? state[element.dataSourceId] || [] : element.items || []),
@@ -63,7 +66,10 @@ export function ListRenderer({
                     key={index}
                     style={style}
                     className={cn(
-                        "flex items-center px-3 py-2 border-b border-[var(--acp-border)] hover:bg-[var(--acp-hover)] cursor-pointer",
+                        "flex items-center border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] cursor-pointer select-none",
+                        isHorizontal
+                            ? "px-3 py-2 border-r hover:bg-[var(--acp-hover)]"
+                            : "px-3 py-2 border-b hover:bg-[var(--acp-hover)]",
                         element.styles?.className
                     )}
                     onClick={() => handleRowClick(item, index)}
@@ -78,14 +84,42 @@ export function ListRenderer({
                 </div>
             );
         },
-        [items, element, state, t, setState, runEventHandler, handleRowClick]
+        [items, element, state, t, setState, runEventHandler, handleRowClick, isHorizontal]
     );
+
+    if (isHorizontal) {
+        return (
+            <div
+                role="list"
+                className={cn(
+                    "w-full overflow-x-auto hide-scrollbar flex flex-row gap-4",
+                    element.styles?.className
+                )}
+            >
+                {items.map((item, index) => (
+                    <div
+                        key={index}
+                        className="flex-shrink-0 min-w-[300px]"
+                        onClick={() => handleRowClick(item, index)}
+                    >
+                        <RenderChildren
+                            children={element.children || []}
+                            t={t}
+                            state={{ ...state, currentItem: item }}
+                            setState={setState}
+                            runEventHandler={runEventHandler}
+                        />
+                    </div>
+                ))}
+            </div>
+        );
+    }
 
     return (
         <div
             role="list"
             className={cn(
-                "w-full rounded-md border border-[var(--acp-border)] bg-card overflow-hidden",
+                "w-full rounded-md border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] bg-card overflow-hidden",
                 element.styles?.className
             )}
             data-slot="list"
@@ -98,7 +132,6 @@ export function ListRenderer({
                 overscanCount={5}
                 defaultHeight={element.virtualHeight || 400}
                 listRef={listRef}
-                className="w-full h-full"
             />
         </div>
     );

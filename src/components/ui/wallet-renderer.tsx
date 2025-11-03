@@ -14,6 +14,7 @@ import { Input } from "../../components/ui/input";
 import { cn, classesFromStyleProps, resolveBinding } from "../../lib/utils";
 import { WalletElement } from "../../types";
 import { Checkbox } from "../../components/ui/checkbox";
+import { toast } from "./sonner";
 
 type WalletContract = NonNullable<WalletElement["contracts"]>[number];
 type WalletFunction = WalletContract["functions"][number];
@@ -294,7 +295,7 @@ export function WalletRenderer({
             {address ? (
                 <>
                     <div className="text-sm">
-                        {t("Connected:")} {address.slice(0, 6)}...{address.slice(-4)} (chain{" "}
+                        {t("Connected")} {address.slice(0, 6)}...{address.slice(-4)} (chain{" "}
                         {chainId})
                     </div>
                     <Button variant="destructive" onClick={disconnect}>
@@ -323,7 +324,7 @@ export function WalletRenderer({
                                                         if (result)
                                                             alert(`${fn.name} result: ${result.toString()}`);
                                                     } catch (err: any) {
-                                                        alert(`Error: ${err.message}`);
+                                                        toast.error(`Error: ${err.message}`);
                                                     }
                                                 }}
                                             >

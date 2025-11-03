@@ -46,7 +46,7 @@ export function Multiselect({
                         type="button"
                         role="combobox"
                         className={cn(
-                            "w-full justify-between border-[var(--acp-border)] bg-[var(--acp-background)] text-[var(--acp-foreground)]",
+                            "w-full justify-between border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] bg-[var(--acp-background)] dark:bg-[var(--acp-background-dark)] text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)]",
                             "hover:bg-[var(--acp-primary-50)] dark:hover:bg-[var(--acp-primary-900)] transition-colors"
                         )}
                     >
@@ -86,7 +86,7 @@ export function Multiselect({
                         // 💡 Fix clipping & overlap
                         "fixed z-[9999] min-w-[240px] max-h-[320px] overflow-y-auto",
                         // 🎨 Apply ACP theme
-                        "rounded-md border border-[var(--acp-border)] bg-[var(--acp-background)] text-[var(--acp-foreground)]",
+                        "rounded-md border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] bg-[var(--acp-background)] dark:bg-[var(--acp-background-dark)] text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)]",
                         "shadow-lg backdrop-blur-sm animate-in fade-in-80 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2"
                     )}
                 >

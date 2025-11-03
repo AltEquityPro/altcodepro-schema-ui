@@ -56,13 +56,13 @@ export const ProjectLayout = React.memo(function ProjectLayout({
                             nav={nav}
                         >
                             <div className={clsx('min-h-screen', layoutClass)}>
-                                <NavRenderer
+                                {!project.hideNav && <NavRenderer
                                     project={project}
                                     nav={nav}
                                     state={state}
                                     setState={setState}
                                     clearState={clearState}
-                                    t={t} />
+                                    t={t} />}
                                 <main className="flex-1">{children}</main>
                                 <CookieBannerRenderer setState={setState} project={project} state={state} t={t} />
                                 {project.footer && (

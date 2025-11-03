@@ -117,7 +117,7 @@ export function CommentsRenderer({
                             value={newComment}
                             onChange={(e) => setNewComment(e.target.value)}
                             placeholder={t("add_comment") || "Add a comment…"}
-                            className="min-h-[80px]"
+                            className="min-h-20"
                             onKeyDown={(e) => {
                                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                                     e.preventDefault()
@@ -470,7 +470,7 @@ function CommentNode({
 
             {/* Reply composer */}
             {isReplying && (
-                <div className="mt-2 rounded-md border bg-background text-foreground p-2">
+                <div className="mt-2 rounded-md border bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark) p-2">
                     <Input
                         value={replyContent}
                         onChange={(e) => setReplyContent(e.target.value)}

@@ -63,7 +63,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "bg-background text-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
+          "bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark) data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
           className
         )}
         {...props}
@@ -140,52 +140,45 @@ interface ModalRendererProps {
 }
 
 function ModalRenderer({ element, setState, state, t, runEventHandler }: ModalRendererProps) {
+  const modal = element;
+  const title = resolveBinding(modal.title, state, t);
+  const description = resolveBinding(modal.description, state, t);
 
-  const modal = element
-
-  // Resolve title/description but ignore external isOpen binding
-  const title = resolveBinding(modal.title, state, t)
-  const description = resolveBinding(modal.description, state, t)
-
-  // Local open state, defaults to false unless the modal specifies otherwise
   const [open, setOpen] = React.useState(
     typeof modal.isOpen === "boolean"
       ? modal.isOpen
       : resolveBinding(modal.isOpen, state, t) ?? false
-  )
+  );
 
-  // Close modal helper
   const handleClose = React.useCallback(async () => {
-    setOpen(false)
+    setOpen(false);
     if (modal.onClose) {
-      await runEventHandler?.(modal.onClose)
+      await runEventHandler?.(modal.onClose);
     }
-  }, [modal.onClose, runEventHandler])
+  }, [modal.onClose, runEventHandler]);
 
-  // Optional: expose a way for any inner button action to close modal after completion
   const handleActionWrapper = React.useCallback(
     async (handler?: EventHandler, dataOverride?: AnyObj) => {
-      await runEventHandler?.(handler, dataOverride)
-      // Auto-close modal if handler is close_modal or API call succeeded
+      await runEventHandler?.(handler, dataOverride);
       if (
         handler?.action === "close_modal" ||
         handler?.action === "api_call" ||
         handler?.action === "crud_create" ||
         handler?.action === "crud_update"
       ) {
-        setOpen(false)
+        setOpen(false);
       }
     },
     [runEventHandler]
-  )
+  );
 
   return wrapWithMotion(
     element,
     <Dialog
       open={open}
       onOpenChange={(isOpen) => {
-        if (!isOpen) handleClose()
-        else setOpen(true)
+        if (!isOpen) handleClose();
+        else setOpen(true);
       }}
     >
       <DialogContent
@@ -193,34 +186,41 @@ function ModalRenderer({ element, setState, state, t, runEventHandler }: ModalRe
         style={{ zIndex: modal.zIndex }}
         showCloseButton={!!modal.closeButton}
       >
-        {/* Header */}
-        {(title || description) && (
-          <DialogHeader>
-            {title && <DialogTitle>{title}</DialogTitle>}
-            {description && <DialogDescription>{description}</DialogDescription>}
-          </DialogHeader>
-        )}
+        <DialogHeader>
+          {title ? (
+            <DialogTitle>{title}</DialogTitle>
+          ) : (
+            <DialogPrimitive.Title asChild>
+              <span className="sr-only">Dialog</span>
+            </DialogPrimitive.Title>
+          )}
+          {description && <DialogDescription>{description}</DialogDescription>}
+        </DialogHeader>
+
 
         {/* Body */}
         <RenderChildren
-          state={state} setState={setState} t={t}
+          state={state}
+          setState={setState}
+          t={t}
           children={modal.content}
           runEventHandler={handleActionWrapper}
         />
 
-        {/* Footer (custom close button if provided) */}
+        {/* Footer */}
         {modal.closeButton && (
           <DialogFooter>
             <ElementResolver
               setState={setState}
-              state={state} t={t}
+              state={state}
+              t={t}
               element={modal.closeButton}
               runEventHandler={handleActionWrapper}
             />
           </DialogFooter>
         )}
 
-        {/* Built-in Close Button */}
+        {/* Built-in Close Button (fallback) */}
         {!modal.closeButton && (
           <DialogClose
             onClick={handleClose}
@@ -231,7 +231,7 @@ function ModalRenderer({ element, setState, state, t, runEventHandler }: ModalRe
         )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 export {
