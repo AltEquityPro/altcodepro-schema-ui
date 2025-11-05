@@ -28,7 +28,10 @@ export const ProjectLayout = React.memo(function ProjectLayout({
     children,
 }: ProjectLayoutProps) {
     const isMobile = useIsMobile();
-    const { state, t, setState, clearState } = useAppState();
+    const { state, t, setState, clearState, setTranslations } = useAppState();
+    if (project?.translations) {
+        setTranslations(project?.translations)
+    }
     const user = useMemo(
         () => state?.auth?.user ?? { id: state?.auth?.userId, orgId: state?.organization?.id },
         [state?.auth?.user, state?.auth?.userId, state?.organization?.id]
@@ -38,11 +41,11 @@ export const ProjectLayout = React.memo(function ProjectLayout({
         return <Loader />
     }
 
-    const requiresAuth = !!project?.routeList?.routes?.some(r => r.requiresAuth);
+    const requiresAuth = !!project?.routeList?.routes?.some(r => r.requiresAuth) || !project?.screenConfigList?.some(r => r.requiresAuth);
     const navType = isMobile
-        ? project.routeList.responsiveNavType
-        : project.routeList.desktopNavType;
-    const layoutClass = navType === 'side' ? 'flex' : 'flex flex-col';
+        ? project.routeList?.responsiveNavType
+        : project.routeList?.desktopNavType;
+    const layoutClass = project.routeList ? (navType === 'side' ? 'flex' : 'flex flex-col') : 'flex'
 
     return (
         <GlobalThemeProvider project={project}>
@@ -56,7 +59,13 @@ export const ProjectLayout = React.memo(function ProjectLayout({
                             nav={nav}
                         >
                             <div className={clsx('min-h-screen', layoutClass)}>
-                                {!project.hideNav && <NavRenderer
+                                {project.navigation && <ElementResolver
+                                    state={state}
+                                    setState={setState}
+                                    t={t}
+                                    element={project.navigation}
+                                />}
+                                {!project.navigation && project.routeList?.routes && <NavRenderer
                                     project={project}
                                     nav={nav}
                                     state={state}

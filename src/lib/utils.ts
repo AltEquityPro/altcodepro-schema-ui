@@ -5,7 +5,8 @@ import {
     DataSource,
     AccessibilityProps,
     StyleProps,
-    VisibilityControl
+    VisibilityControl,
+    ConditionExpr
 } from "../types";
 
 import { clsx, type ClassValue } from "clsx"
@@ -106,32 +107,62 @@ export function resolveAnimation(animation?: any) {
     }
 }
 
-export function isVisible(visibility: VisibilityControl | undefined, state: AnyObj, t: (key: string) => string): boolean {
+export function isVisible(
+    visibility: VisibilityControl | undefined,
+    state: AnyObj,
+    t: (key: string) => string
+): boolean {
     try {
         if (!visibility || !visibility.condition) return true;
-        const { key, op, value } = visibility.condition;
-        if (!key || !op) {
-            return true
-        }
-        const resolvedKey = resolveBinding(key, state, t);
-        const resolvedValue = resolveBinding(value, state, t);
 
-        switch (op) {
-            case "==": return resolvedKey === resolvedValue;
-            case "!=": return resolvedKey !== resolvedValue;
-            case ">": return resolvedKey > resolvedValue;
-            case "<": return resolvedKey < resolvedValue;
-            case ">=": return resolvedKey >= resolvedValue;
-            case "<=": return resolvedKey <= resolvedValue;
-            case "exists": return resolvedKey !== null && resolvedKey !== undefined;
-            case "not_exists": return resolvedKey === null || resolvedKey === undefined;
-            case "matches": return new RegExp(resolvedValue).test(resolvedKey);
-            case "in": return Array.isArray(resolvedValue) && resolvedValue.includes(resolvedKey);
-            case "not_in": return Array.isArray(resolvedValue) && !resolvedValue.includes(resolvedKey);
-            default: return true;
-        }
+        const coerce = (v: any): any => {
+            if (typeof v === "string") {
+                const lower = v.trim().toLowerCase();
+                if (lower === "true") return true;
+                if (lower === "false") return false;
+                if (!isNaN(Number(v)) && v !== "") return Number(v);
+            }
+            return v;
+        };
+
+        const evaluate = (expr: ConditionExpr): boolean => {
+            if (!expr) return true;
+
+            if (expr.conditions && expr.conditions.length > 0) {
+                const results = expr.conditions.map(c => evaluate(c));
+                return expr.logic === "or" ? results.some(Boolean) : results.every(Boolean);
+            }
+
+            const { key, op, value } = expr;
+            if (!key || !op) return true;
+
+            let resolvedKey = resolveBinding(key, state, t);
+            let resolvedValue = resolveBinding(value, state, t);
+
+            // Normalize / coerce types
+            resolvedKey = coerce(resolvedKey);
+            resolvedValue = coerce(resolvedValue);
+
+            switch (op) {
+                case "==": return resolvedKey == resolvedValue;
+                case "!=": return resolvedKey != resolvedValue;
+                case ">": return resolvedKey > resolvedValue;
+                case "<": return resolvedKey < resolvedValue;
+                case ">=": return resolvedKey >= resolvedValue;
+                case "<=": return resolvedKey <= resolvedValue;
+                case "exists": return resolvedKey !== null && resolvedKey !== undefined && resolvedKey !== "";
+                case "not_exists": return resolvedKey === null || resolvedKey === undefined || resolvedKey === "";
+                case "matches": return new RegExp(String(resolvedValue)).test(String(resolvedKey));
+                case "in": return Array.isArray(resolvedValue) && resolvedValue.map(coerce).includes(resolvedKey);
+                case "not_in": return Array.isArray(resolvedValue) && !resolvedValue.map(coerce).includes(resolvedKey);
+                default: return true;
+            }
+        };
+
+        const result = evaluate(visibility.condition);
+        return visibility.show ? result : !result;
     } catch (error) {
-        console.error("Error kye:", visibility?.condition);
+        console.error("Error in isVisible:", error, visibility?.condition);
         return false;
     }
 }

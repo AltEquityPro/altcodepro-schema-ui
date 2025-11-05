@@ -49,8 +49,8 @@ export function FormStepper({
         <div
             className={cn(
                 "flex flex-col gap-6 p-4 rounded-lg border shadow-sm transition-colors duration-200",
-                "border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] bg-[var(--acp-background)] dark:bg-[var(--acp-background-dark)] text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)]",
-                "dark:border-[var(--acp-border-dark)] dark:bg-[var(--acp-background-dark)] dark:text-[var(--acp-foreground-dark)]",
+                "border-(--acp-border) dark:border-(--acp-border-dark) bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark)",
+                "dark:border-(--acp-border-dark) dark:bg-(--acp-background-dark) dark:text-(--acp-foreground-dark)",
                 className
             )}
         >
@@ -59,7 +59,7 @@ export function FormStepper({
                 className={cn(
                     "h-2 rounded-full overflow-hidden transition-colors",
                     "bg-(--acp-border) dark:bg-(--acp-border-dark)",
-                    "*:data-[slot=progress-bar]:bg-(--acp-primary) dark:*:data-[slot=progress-bar]:bg-(--acp-primary-dark)"
+                    "*:data-[slot=progress-bar]:bg-(--acp-accent) dark:*:data-[slot=progress-bar]:bg-(--acp-accent-dark)"
                 )}
             />
             <div className="flex justify-between text-sm font-medium overflow-x-auto pb-2">
@@ -73,17 +73,17 @@ export function FormStepper({
                             className={cn(
                                 "flex flex-col items-center text-center transition-all duration-200 w-full",
                                 isActive &&
-                                "text-[var(--acp-primary)] dark:text-[var(--acp-primary-dark)] font-semibold"
+                                "text-(--acp-accent) dark:text-(--acp-accent-dark) font-semibold"
                             )}
                         >
                             <div
                                 className={cn(
                                     "w-8 h-8 flex items-center justify-center rounded-full border-2 mb-2 text-sm font-medium transition-colors duration-200",
                                     isCompleted
-                                        ? "bg-[var(--acp-primary)] border-[var(--acp-primary)] text-[var(--acp-background)] dark:bg-[var(--acp-primary-dark)] dark:border-[var(--acp-primary-dark)] dark:text-[var(--acp-background-dark)]"
+                                        ? "bg-(--acp-accent) border-(--acp-accent) text-(--acp-background) dark:bg-(--acp-accent-dark) dark:border-(--acp-accent-dark) dark:text-(--acp-background-dark)"
                                         : isActive
-                                            ? "border-[var(--acp-primary)] bg-[color-mix(in_srgb,var(--acp-primary)15%,transparent)] text-[var(--acp-primary-800)] dark:border-[var(--acp-primary-dark)] dark:bg-[color-mix(in_srgb,var(--acp-primary-dark)25%,transparent)] dark:text-[var(--acp-primary-dark)]"
-                                            : "border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] bg-[var(--acp-background)] dark:bg-[var(--acp-background-dark)] text-[var(--acp-secondary-600)] dark:border-[var(--acp-border-dark)] dark:bg-[var(--acp-background-dark)] dark:text-[var(--acp-secondary-400)]"
+                                            ? "border-(--acp-accent) bg-[color-mix(in_srgb,var(--acp-accent)15%,transparent)] text-(--acp-accent-800) dark:border-(--acp-accent-dark) dark:bg-[color-mix(in_srgb,var(--acp-accent-dark)25%,transparent)] dark:text-(--acp-accent-dark)"
+                                            : "border-(--acp-border) dark:border-(--acp-border-dark) bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-secondary-600) dark:text-(--acp-secondary-400)"
                                 )}
                             >
                                 {isCompleted ? <Check className="w-4 h-4" /> : idx + 1}
@@ -92,10 +92,10 @@ export function FormStepper({
                                 className={cn(
                                     "text-xs whitespace-nowrap px-1 transition-colors duration-200",
                                     isActive
-                                        ? "text-[var(--acp-primary)] dark:text-[var(--acp-primary-dark)]"
+                                        ? "text-(--acp-accent) dark:text-(--acp-accent-dark)"
                                         : isCompleted
-                                            ? "text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)] dark:text-[var(--acp-foreground-dark)]"
-                                            : "text-[var(--acp-secondary-500)] dark:text-[var(--acp-secondary-400)]"
+                                            ? "text-(--acp-foreground) dark:text-(--acp-foreground-dark)"
+                                            : "text-(--acp-secondary-500) dark:text-(--acp-secondary-400)"
                                 )}
                             >
                                 {step.title}
@@ -294,7 +294,7 @@ export function WizardGroup({
                         type="button"
                         onClick={goPrev}
                         disabled={loading}
-                        className="border-(--acp-border) dark:border-(--acp-border-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark) hover:bg-(--acp-primary-50)"
+                        className="border-(--acp-border) dark:border-(--acp-border-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark) hover:bg-(--acp-accent-50)"
                     >
                         {t("back", "Back")}
                     </Button>
@@ -308,7 +308,7 @@ export function WizardGroup({
                         onClick={goNext}
                         disabled={loading}
                         className={cn(
-                            "bg-(--acp-primary) text-(--acp-background) hover:bg-(--acp-primary-600)"
+                            "bg-(--acp-accent) text-(--acp-background) hover:bg-(--acp-accent-600)"
                         )}
                     >
                         {loading ? <Loader2 className="animate-spin w-4 h-4" /> : t("next", "Next")}

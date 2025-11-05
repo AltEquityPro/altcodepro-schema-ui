@@ -1,12 +1,9 @@
 'use client';
-import { useEffect, useCallback, useState, createContext, useContext } from "react";
+import { useEffect, useCallback, useState, createContext, useContext, useRef } from "react";
 import { NavigationAPI, UIProject } from "../types";
 import { getAuthKey } from "../lib/utils";
 import { getStoredAuthToken, refreshAuthToken, storeAuthToken, clearAuthToken } from "./authUtils";
 
-/* --------------------------------------------------
- 🔑 Auth Context Type
--------------------------------------------------- */
 interface AuthContextType {
     token?: string;
     refreshToken: string | null;
@@ -18,13 +15,18 @@ interface AuthContextType {
     refresh: () => Promise<string | null>;
     setUser: (user: any) => void;
     requiresAuth?: boolean;
+    reloadProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+const decodeJwtExp = (tkn: string): number | null => {
+    try {
+        const payload = JSON.parse(atob(tkn.split('.')[1]));
+        if (payload.exp) return payload.exp * 1000;
+    } catch { }
+    return null;
+};
 
-/* --------------------------------------------------
- 🧠 AuthProvider
--------------------------------------------------- */
 export function AuthProvider({
     children,
     requiresAuth = false,
@@ -38,23 +40,28 @@ export function AuthProvider({
     setState?: (path: string, value: any) => void;
     nav?: NavigationAPI;
 }) {
-    const [token, setToken] = useState<string | undefined>(undefined);
+    const [token, setToken] = useState<string | undefined>();
     const [refreshToken, setRefreshToken] = useState<string | null>(null);
     const [expiresAt, setExpiresAt] = useState<number | null>(null);
     const [user, setUser] = useState<any>(null);
     const [initialized, setInitialized] = useState(false);
+    const hasLoadedProfile = useRef(false);
+
     const isLoggedIn = !!token && (!expiresAt || Date.now() < expiresAt - 5 * 60 * 1000);
 
     /* --------------------------------------------------
-       🔐 Login / Logout / Refresh
+    Login / Logout / Refresh
     -------------------------------------------------- */
-    const login = useCallback((tkn: string, rt?: string, expiresIn?: number) => {
-        const exp = Date.now() + (expiresIn || 3600) * 1000;
-        storeAuthToken(globalConfig, { token: tkn, refreshToken: rt, expiresAt: exp });
-        setToken(tkn);
-        setRefreshToken(rt || null);
-        setExpiresAt(exp);
-    }, [globalConfig]);
+    const login = useCallback(
+        (tkn: string, rt?: string, expiresIn?: number) => {
+            const exp = decodeJwtExp(tkn) || Date.now() + (expiresIn || 3600) * 1000;
+            storeAuthToken(globalConfig, { token: tkn, refreshToken: rt, expiresAt: exp });
+            setToken(tkn);
+            setRefreshToken(rt || null);
+            setExpiresAt(exp);
+        },
+        [globalConfig]
+    );
 
     const logout = useCallback(() => {
         clearAuthToken(globalConfig);
@@ -62,19 +69,20 @@ export function AuthProvider({
         setRefreshToken(null);
         setExpiresAt(null);
         setUser(null);
+        hasLoadedProfile.current = false;
+
         if (setState) {
             setState("auth.user", null);
             setState("isAuthenticated", false);
             setState("user", null);
         }
-
-        // only redirect if layout or screen explicitly requires login
         if (requiresAuth) {
             const loginHref = globalConfig?.auth?.loginHref || "/login";
             if (nav?.push) nav.push(loginHref);
             else if (typeof window !== "undefined") window.location.href = loginHref;
         }
     }, [globalConfig, setState, nav, requiresAuth]);
+
 
     const refresh = useCallback(async () => {
         if (!refreshToken) return null;
@@ -94,12 +102,37 @@ export function AuthProvider({
         return null;
     }, [globalConfig, refreshToken, logout]);
 
+    const loadProfile = useCallback(async () => {
+        const ds = globalConfig?.profile?.dataSources;
+        if (!token || !ds?.apiUrl) return;
+
+        const headers: Record<string, string> = {
+            ...(ds.headers || {}),
+            Authorization: `Bearer ${token}`,
+        };
+
+        try {
+            const res = await fetch(ds.apiUrl, { method: ds.method || "GET", headers });
+            if (!res.ok) {
+                if (res.status === 401) logout();
+                return;
+            }
+            const profile = await res.json();
+            setUser(profile);
+            setState?.("profile", profile);
+            setState?.("auth.user", profile);
+            setState?.("user", profile);
+            setState?.("isAuthenticated", true);
+        } catch (err) {
+            console.warn("Error fetching user profile:", err);
+        }
+    }, [globalConfig, token, logout, setState]);
+
     /* --------------------------------------------------
-       🚀 Initialize from stored token
+    Initialize from stored token (fixed)
     -------------------------------------------------- */
     useEffect(() => {
         if (typeof window === "undefined") return;
-
         const stored = getStoredAuthToken(globalConfig);
         if (stored?.token) {
             login(
@@ -107,11 +140,18 @@ export function AuthProvider({
                 stored.refreshToken,
                 stored.expiresAt ? (stored.expiresAt - Date.now()) / 1000 : 3600
             );
+            if (!hasLoadedProfile.current) {
+                hasLoadedProfile.current = true;
+                loadProfile();
+            }
         }
-
         setInitialized(true);
+    }, [globalConfig, login, loadProfile]);
 
-        // 🔁 cross-tab sync
+    /* --------------------------------------------------
+    Cross-tab sync
+    -------------------------------------------------- */
+    useEffect(() => {
         const onStorage = (e: StorageEvent) => {
             if (e.key === getAuthKey(globalConfig)) {
                 const updated = getStoredAuthToken(globalConfig);
@@ -121,59 +161,26 @@ export function AuthProvider({
                         updated.refreshToken,
                         updated.expiresAt ? (updated.expiresAt - Date.now()) / 1000 : 3600
                     );
+                    loadProfile();
                 } else logout();
             }
         };
         window.addEventListener("storage", onStorage);
         return () => window.removeEventListener("storage", onStorage);
-    }, [globalConfig]);
+    }, [globalConfig, login, logout, loadProfile]);
 
     /* --------------------------------------------------
-       👤 Auto-load user when layout requires auth
+    Auto-load user when token changes
     -------------------------------------------------- */
     useEffect(() => {
-        const loadProfile = async () => {
-            const ds = globalConfig?.profile?.dataSources;
-            const url = ds?.apiUrl;
-            if (!url) return;
-
-            const method = ds.method || "GET";
-            const headers: Record<string, string> = {
-                ...(ds.headers || {}),
-                Authorization: `Bearer ${token}`,
-            };
-            const options: any = { method, headers };
-            if (ds.credentials) options.credentials = ds.credentials;
-
-            try {
-                const res = await fetch(url, options);
-                if (!res.ok) {
-                    if (res.status === 401 && requiresAuth) {
-                        logout();
-                        return;
-                    }
-                    console.warn(`Failed to load user profile: HTTP ${res.status}`);
-                    return;
-                }
-
-                const profile = await res.json();
-                setUser(profile);
-                if (setState) {
-                    setState("profile", profile);
-                    setState("auth.user", profile);
-                    setState("user", profile);
-                    setState("isAuthenticated", true);
-                }
-            } catch (err) {
-                console.warn("Error fetching user profile:", err);
-            }
-        };
-
-        if (requiresAuth && token) loadProfile();
-    }, [token, globalConfig, requiresAuth]);
+        if (initialized && token && !hasLoadedProfile.current) {
+            hasLoadedProfile.current = true;
+            loadProfile();
+        }
+    }, [initialized, token, loadProfile]);
 
     /* --------------------------------------------------
-       ⏰ Background refresh
+    Background refresh
     -------------------------------------------------- */
     useEffect(() => {
         if (!refreshToken) return;
@@ -183,9 +190,6 @@ export function AuthProvider({
         return () => clearInterval(id);
     }, [refreshToken, expiresAt, refresh]);
 
-    /* --------------------------------------------------
-       ✅ Context Value
-    -------------------------------------------------- */
     const value: AuthContextType = {
         token,
         refreshToken,
@@ -197,6 +201,7 @@ export function AuthProvider({
         refresh,
         setUser,
         requiresAuth,
+        reloadProfile: loadProfile,
     };
 
     if (requiresAuth && !initialized) {
@@ -218,46 +223,17 @@ export function useAuth(options?: { requiresAuth?: boolean; nav?: NavigationAPI 
     if (!ctx) throw new Error("useAuth must be used within <AuthProvider>");
 
     const { requiresAuth, nav } = options || {};
-    const loginHref = ctx?.requiresAuth
+    const loginHref = ctx.requiresAuth
         ? undefined
         : (ctx as any)?.globalConfig?.auth?.loginHref || "/login";
 
-    // If screen explicitly requires auth, ensure login
     useEffect(() => {
         if (requiresAuth && !ctx.isLoggedIn) {
-            if (typeof window !== "undefined") {
-                const dest = loginHref || "/login";
-                if (nav?.push) nav.push(dest);
-                else window.location.href = dest;
-            }
+            const dest = loginHref || "/login";
+            if (nav?.push) nav.push(dest);
+            else window.location.href = dest;
         }
-    }, [requiresAuth, ctx.isLoggedIn]);
-
-    // Lazy-load user if public layout but screen now needs auth
-    useEffect(() => {
-        const maybeLoadUser = async () => {
-            if (!requiresAuth || ctx.user || !ctx.token) return;
-            // load user profile on demand for screens that need it
-            try {
-                const ds = (ctx as any)?.globalConfig?.profile?.dataSources;
-                const url = ds?.apiUrl;
-                if (!url) return;
-
-                const res = await fetch(url, {
-                    headers: { Authorization: `Bearer ${ctx.token}` },
-                });
-                if (!res.ok) {
-                    if (res.status === 401) ctx.logout();
-                    return;
-                }
-                const profile = await res.json();
-                ctx.setUser(profile);
-            } catch (e) {
-                console.warn("Failed to fetch user on-demand", e);
-            }
-        };
-        maybeLoadUser();
-    }, [requiresAuth, ctx.token]);
+    }, [requiresAuth, ctx.isLoggedIn, nav, loginHref]);
 
     return ctx;
 }

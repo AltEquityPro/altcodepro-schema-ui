@@ -1099,33 +1099,47 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
 
         return null;
     };
-    const submitAccProps = element.submit ? getAccessibilityProps(element.submit.accessibility) : {};
-    const submitClassName = element.submit ? classesFromStyleProps(element.submit.styles) : '';
     return (
         <Form {...form}>
-            <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className={className}
-            >
+            <form onSubmit={form.handleSubmit(onSubmit)} className={className}>
                 {renderContent()}
-                <div className="flex flex-col items-center justify-center pt-6 mt-8 border-t border-border space-y-4">
-                    {element.formGroupType !== "step_wizard" && element.submit && (
-                        <Button type="submit" disabled={isSubmitting} className={submitClassName} {...submitAccProps}>
-                            {isSubmitting ? t("Submitting", "Submitting") : resolveBinding(element.submit.text, state, t)}
-                        </Button>
+
+                <div
+                    className={cn(
+                        "flex flex-col items-center justify-center gap-4 mt-8 pt-6 border-t border-border",
+                        element.footerClassName
                     )}
+                >
+                    {element.formGroupType !== "step_wizard" && element.submit && (
+                        <ButtonRenderer
+                            element={{ ...element.submit, disabled: isSubmitting }}
+                            runEventHandler={runEventHandler}
+                            state={state}
+                            t={t}
+                        />
+                    )}
+
                     {element.actions?.length ? (
-                        <div className="flex flex-wrap justify-center gap-3 pt-2">
-                            {element.actions?.map((act, index) => (
+                        <div
+                            className={cn(
+                                "flex flex-wrap justify-center gap-3 pt-2",
+                                element.actionsContainerClassName
+                            )}
+                        >
+                            {element.actions.map((act, index) => (
                                 <ButtonRenderer
-                                    key={`${act.id}_${index}`} element={act}
+                                    key={`${act.id}_${index}`}
+                                    element={act}
                                     runEventHandler={runEventHandler}
                                     state={state}
-                                    t={t} />
+                                    t={t}
+                                />
                             ))}
-                        </div>) : null}
+                        </div>
+                    ) : null}
                 </div>
             </form>
         </Form>
+
     );
 }

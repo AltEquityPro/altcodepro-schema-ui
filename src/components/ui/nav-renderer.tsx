@@ -12,7 +12,7 @@ import {
     NavigationAPI,
     IRouteList,
 } from "../../types";
-import { resolveBinding } from "../../lib/utils";
+import { isVisible, resolveBinding } from "../../lib/utils";
 import { useClickOutside } from "../../hooks/useClickOutside";
 import { NavLink } from "./navLink";
 import { DynamicIcon } from "./dynamic-icon";
@@ -44,49 +44,6 @@ function handleLogout(globalConfig: UIProject["globalConfig"], clearState: () =>
     }
 }
 
-function evalVisibility(
-    state: AnyObj,
-    t: (k: string) => string,
-    v?: VisibilityControl,
-) {
-    if (!v) return true;
-    if (!v.condition) return true;
-
-    const keyVal = resolveBinding(v.condition?.key, state, t);
-    const val = resolveBinding(v.condition?.value, state, t);
-    const show = !!v.show;
-
-    switch (v.condition?.op) {
-        case "==":
-            return show ? keyVal?.toString() == val?.toString() : keyVal?.toString() != val?.toString();
-        case "!=":
-            return show ? keyVal != val : keyVal == val;
-        case ">":
-            return show ? keyVal > val : !(keyVal > val);
-        case "<":
-            return show ? keyVal < val : !(keyVal < val);
-        case ">=":
-            return show ? keyVal >= val : !(keyVal >= val);
-        case "<=":
-            return show ? keyVal <= val : !(keyVal <= val);
-        case "exists":
-            return show ? keyVal != null && keyVal != undefined : keyVal == null || keyVal == undefined;
-        case "not_exists":
-            return show ? keyVal == null || keyVal == undefined : keyVal != null && keyVal != undefined;
-        case "matches":
-            try {
-                return show ? new RegExp(val).test(String(keyVal ?? "")) : !new RegExp(val).test(String(keyVal ?? ""));
-            } catch {
-                return false;
-            }
-        case "in":
-            return show ? Array.isArray(val) && val.includes(keyVal) : !(Array.isArray(val) && val.includes(keyVal));
-        case "not_in":
-            return show ? Array.isArray(val) && !val.includes(keyVal) : !(Array.isArray(val) && !val.includes(keyVal));
-        default:
-            return show;
-    }
-}
 
 /** Apply StyleProps.className and safely fall back to themeful elevation */
 function applyStyleProps(sp?: StyleProps, fallback?: string) {
@@ -502,7 +459,7 @@ function Sidebar({
     t: (k: string, defaultLabel?: string) => string;
     project: UIProject;
 }) {
-    const visible = evalVisibility(state, t, project.routeList.visibility?.sidebar);
+    const visible = isVisible(project.routeList?.visibility?.sidebar, state, t);
     if (!visible) return null;
 
     const [openRoutes, setOpenRoutes] = useState<Set<string>>(new Set());
@@ -517,7 +474,7 @@ function Sidebar({
         setOpenRoutes(init);
     }, [pathname, routes]);
 
-    const cfg = project.routeList.sidebarConfig ?? {};
+    const cfg = project.routeList?.sidebarConfig ?? {};
 
     return (
         <aside
@@ -617,7 +574,7 @@ function BottomNav({
         bottombar?: VisibilityControl;
     };
 }) {
-    const visible = evalVisibility(state, t, routeListVisibility?.bottombar);
+    const visible = isVisible(routeListVisibility?.bottombar, state, t);
     if (!visible) return null;
 
     return (
@@ -691,10 +648,10 @@ export function NavRenderer({
     }, []);
 
     const navList = project.routeList;
-    const fullVisible = evalVisibility(state, t, navList.visibility?.fullNav);
+    const fullVisible = isVisible(navList.visibility?.fullNav, state, t,);
     if (!fullVisible) return null;
 
-    const routes = navList.routes.filter(
+    const routes = navList.routes?.filter(
         (r) => r.screenConfigUrl || project.screens?.some((s) => s.id === r.screenId)
     );
 
@@ -703,14 +660,14 @@ export function NavRenderer({
     const containerStyle = navList.navStyle?.containerStyle;
     const overlayStyle = navList.navStyle?.overlayStyle;
     const sheetStyle = navList.navStyle?.sheetStyle;
-    const requiresAuth = navList.routes.some((r) => r.requiresAuth);
+    const requiresAuth = navList.routes?.some((r) => r.requiresAuth);
     const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
 
     return (
         <>
             {navType === "top" &&
                 !shouldHideNavPart(navList, currentPath, "topbar") &&
-                evalVisibility(state, t, navList.visibility?.topbar) && (
+                isVisible(navList.visibility?.topbar, state, t,) && (
                     <header
                         className={clsx(
                             elevatedSurface(applyStyleProps(containerStyle)),
@@ -770,7 +727,7 @@ export function NavRenderer({
 
             {navType === "side" &&
                 !shouldHideNavPart(navList, currentPath, "sidebar") &&
-                evalVisibility(state, t, navList.visibility?.sidebar) && (
+                isVisible(navList.visibility?.sidebar, state, t,) && (
                     <div className="flex">
                         <Sidebar
                             project={project}

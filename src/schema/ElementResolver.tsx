@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, lazy } from "react";
+import { JSX } from 'react';
 import {
     resolveBinding,
     isVisible,
@@ -9,9 +10,9 @@ import {
     cn,
     getAccessibilityProps
 } from "../lib/utils";
+
 // Lazy load shadcn components
 import { AccordionRenderer } from "../components/ui/accordion";
-import { Input } from "../components/ui/input";
 import { AlertDialogRenderer } from "../components/ui/alert-dialog";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { AvatarRenderer } from "../components/ui/avatar";
@@ -35,7 +36,6 @@ import { Separator } from "../components/ui/separator";
 import { SheetRenderer } from "../components/ui/sheet";
 import { SidebarRenderer } from "../components/ui/sidebar";
 import { Skeleton } from "../components/ui/skeleton";
-import { Switch } from "../components/ui/switch";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "../components/ui/table";
 import { TabRender } from "../components/ui/tabs";
 import { ToggleGroup } from "../components/ui/toggle-group";
@@ -135,10 +135,13 @@ import {
     FooterElement,
     HeaderElement,
     EventHandler,
-    DynamicElement
+    DynamicElement,
+    ComposerElement
 } from "../types";
 import { MarkdownRender } from "../components/ui/markdown-input";
 import { DynamicContentRenderer } from "../components/dynamic-content";
+import { jsx } from "react/jsx-runtime";
+import { ComposerRenderer } from "@/components/ui/composer";
 
 
 interface ElementResolverProps {
@@ -288,6 +291,13 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                     runEventHandler={runEventHandler}
                 />
             </LazyComponent>
+        case ElementType.composer:
+            return <ComposerRenderer
+                state={state}
+                t={t}
+                element={element as ComposerElement}
+                runEventHandler={runEventHandler} />
+
         case ElementType.command:
             return <LazyComponent>
                 <CommandRenderer
@@ -393,9 +403,6 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             return <LazyComponent>
                 <FormResolver element={element as FormElement} state={state} t={t} runEventHandler={runEventHandler} />
             </LazyComponent>
-        case (ElementType as any).input:
-            return <Input  {...element as any} value={state[element.id]} onChange={(e) => setState(element.id, e.target.value)} />
-
         case ElementType.header:
             const header = element as HeaderElement;
             return <LazyComponent>
@@ -592,15 +599,6 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                 </LazyComponent>
             )
 
-        case (ElementType as any).checkbox:
-        case (ElementType as any).switch:
-            const switchEl = element as InputElement;
-            return <LazyComponent>
-                <Switch
-                    checked={resolveBinding(switchEl.value, state, t)}
-                    onCheckedChange={(checked) => runEventHandler?.(switchEl.onChange, { value: checked })}
-                />
-            </LazyComponent>
 
         case ElementType.table:
             const table = element as TableElement;
@@ -805,19 +803,94 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                 <WalletRenderer element={wallet} state={state} t={t} runEventHandler={runEventHandler} />
             </LazyComponent>
 
-        default:
+        default: {
             if (CustomElementResolver) {
-                const maybeNode = CustomElementResolver(element, {
-                    state,
-                    t,
-                    runEventHandler,
-                });
+                const maybeNode = CustomElementResolver(element, { state, t, runEventHandler });
                 if (maybeNode) return <>{maybeNode}</>;
             }
+
+            const elm = element as any;
+            const tagType = elm.type;
+
+            const isHtmlTag =
+                typeof tagType === "string" &&
+                /^[a-z]+(-[a-z]+)*$/.test(tagType);
+
+            if (isHtmlTag) {
+                const Tag = tagType as keyof JSX.IntrinsicElements;
+
+                const resolvedValue = resolveBinding(elm.value, state, t);
+                const commonProps = {
+                    id: elm.id,
+                    className: classesFromStyleProps(elm.styles),
+                    ...getAccessibilityProps(elm.accessibility, state, t),
+                };
+
+                if (Tag === "input" || Tag === "textarea" || Tag === "select") {
+                    const handleChange = (e: any) => {
+                        const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+                        if (elm.onChange) {
+                            runEventHandler?.(elm.onChange, { value });
+                        } else if (elm.bind) {
+                            setState(elm.bind, value);
+                        }
+                    };
+
+                    const valueProp =
+                        Tag === "input"
+                            ? { value: resolvedValue ?? "", onChange: handleChange }
+                            : Tag === "textarea"
+                                ? { value: resolvedValue ?? "", onChange: handleChange }
+                                : Tag === "select"
+                                    ? { value: resolvedValue ?? "", onChange: handleChange }
+                                    : {};
+
+                    const extra = Tag === "input" && elm.inputType ? { type: elm.inputType } : {};
+
+                    return (
+                        <Tag {...commonProps} {...valueProp} {...extra}>
+                            {Tag === "select" && elm.options
+                                ? elm.options.map((opt: any, i: number) => (
+                                    <option key={i} value={opt.value}>
+                                        {resolveBinding(opt.label, state, t)}
+                                    </option>
+                                ))
+                                : elm.children && (
+                                    <RenderChildren
+                                        children={elm.children}
+                                        state={state}
+                                        setState={setState}
+                                        t={t}
+                                        runEventHandler={runEventHandler}
+                                    />
+                                )}
+                        </Tag>
+                    );
+                }
+
+                return (
+                    <Tag {...commonProps}>
+                        {Array.isArray(elm.children) ? (
+                            <RenderChildren
+                                children={elm.children}
+                                state={state}
+                                setState={setState}
+                                t={t}
+                                runEventHandler={runEventHandler}
+                            />
+                        ) : (
+                            deepResolveBindings(elm.content, state, t)
+                        )}
+                    </Tag>
+                );
+            }
+
             return (
-                <div>
+                <div className="text-red-500 text-xs italic">
                     Unsupported element type: {(element as any).type}
                 </div>
             );
+        }
+
     }
 }

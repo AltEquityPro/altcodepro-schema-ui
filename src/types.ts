@@ -176,6 +176,7 @@ export enum ElementType {
     chart = 'chart',
     chat = 'chat',
     code = 'code',
+    composer = 'composer',
     collapsible = 'collapsible',
     command = 'command',
     comments = 'comments',
@@ -215,7 +216,6 @@ export enum ElementType {
     signature_pad = 'signature_pad',
     skeleton = 'skeleton',
     step_wizard = 'step_wizard',
-    switch = 'switch',
     table = 'table',
     tabs = 'tabs',
     text = 'text',
@@ -462,6 +462,7 @@ export interface ButtonElement extends BaseElement {
     iconLeft?: IconElement;
     iconRight?: IconElement;
     onClick?: EventHandler;
+    isSubmit?: boolean;
     size?: 'default' | 'sm' | 'lg' | 'icon';
     text: Binding;
     variant: ButtonVariant;
@@ -560,6 +561,37 @@ export interface CarouselElement extends BaseElement {
     showIndicators?: boolean;
     showProgress?: boolean;
 }
+export interface ComposerElement extends BaseElement {
+    type: ElementType.composer;
+
+    inputMode?: 'text' | 'textarea' | 'markdown' | 'richtext' | 'code';
+    placeholder?: Binding;
+    maxLength?: number;
+    minRows?: number;
+    maxRows?: number;
+    autoFocus?: boolean;
+    disabled?: boolean | Binding;
+
+    /** 🎛️ Unified schema-managed actions (icons, buttons, submit, etc.) */
+    actions?: ButtonElement[];
+    editorClassName?: string;
+    actionsContainerClassName?: string;
+
+    /** 📎 Optional attachment & voice support */
+    allowAttachments?: boolean;
+    attachmentTypes?: string[]; // e.g. ["image/*", "application/pdf"]
+    maxAttachments?: number;
+    allowVoice?: boolean;
+
+    /** ⚡ Event handlers */
+    onSend?: EventHandler; // fires on enter or submit
+    onChange?: EventHandler; // fires on input change
+    onAttachmentAdd?: EventHandler;
+    onAttachmentRemove?: EventHandler;
+    onVoiceStart?: EventHandler;
+    onVoiceStop?: EventHandler;
+}
+
 
 export interface ChatElement extends BaseElement {
     type: ElementType.chat;
@@ -1005,6 +1037,8 @@ export interface FormElement extends BaseElement {
     formFields: FormField[];
     formGroupType: FormGroupType;
     submit: ButtonElement;
+    footerClassName?: string;
+    actionsContainerClassName?: string;
     actions?: Array<ButtonElement>;
     tabsConfig?: {
         tabPosition?: 'top' | 'left' | 'right';
@@ -1047,7 +1081,7 @@ export interface DynamicElement extends BaseElement {
     ext?: string;
     content?: string | object | null;
 }
-export interface InputElement extends BaseElement {
+export interface InputElement {
     accept?: string;
     currency?: string | Binding;
     inputType: InputType;
@@ -1076,6 +1110,15 @@ export interface InputElement extends BaseElement {
         required?: boolean;
     };
     value?: Binding;
+    id: string;
+    accessibility?: AccessibilityProps;
+    children?: UIElement[];
+    dataSourceId?: string;
+    onEvent?: Record<string, EventHandler>;
+    styles?: StyleProps;
+    type: ElementType;
+    visibility?: VisibilityControl;
+    zIndex?: number;
 }
 
 export interface MapElement extends BaseElement {
@@ -1810,6 +1853,7 @@ export type UIElement =
     | ChatElement
     | CollapsibleElement
     | CommandElement
+    | ComposerElement
     | CommentsElement
     | ContainerElement
     | ContextMenuElement
@@ -1951,13 +1995,6 @@ export interface StyleProps {
     responsiveClasses?: Record<string, string>;
 }
 
-// === Data and Navigation Types ===
-export interface ConditionExpr {
-    key: Binding;
-    op: ConditionOp;
-    value?: any;
-}
-
 export interface DataMapping {
     crudOperation?: ActionType;
     outputKey: string;
@@ -1977,7 +2014,7 @@ export interface DataSource {
     id: string;
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'WEBSOCKET' | 'GRAPHQL';
     path?: string;
-    onAction?: boolean; // load data only when some action happened with action handler
+    trigger?: 'init' | 'action' | 'interval' | 'manual';
     pollingInterval?: number;
     protocol?: 'graphql-ws' | 'subscriptions-transport-ws' | 'graphql-transport-ws';
     query?: string;
@@ -2100,7 +2137,41 @@ export interface TransitionSpec {
     screenId?: string;
     statePatches?: Array<{ key: string; value: any | Binding }>;
 }
+export interface ConditionExpr {
+    key?: Binding;
+    op?: ConditionOp;
+    value?: any;
 
+    conditions?: ConditionExpr[];
+    logic?: 'and' | 'or';
+}
+
+export interface VisibilityControl {
+    condition: ConditionExpr;
+    show: boolean;
+}
+
+export interface EventHandler {
+    action: ActionType;
+    aiPrompt?: string;
+    dataSourceId?: string;
+    errorAction?: EventHandler;
+    streamHandler?: {
+        /** Callback event name used by WebSocket/SSE messages */
+        eventKey?: string;
+        /** JSONPath or regex to extract token from message */
+        tokenPath?: string;
+    };
+    errorTransition?: TransitionSpec;
+    exportConfig?: ExportConfig;
+    params?: Record<string, any | Binding>;
+    responseType?: 'ui' | 'data' | 'none' | 'voice' | 'call';
+    successTransition?: TransitionSpec;
+    beforeActions?: EventHandler[];      // actions to run before main action
+    successActions?: EventHandler[];     // actions if main succeeds
+    errorActions?: EventHandler[];       // actions if main fails
+    finallyActions?: EventHandler[];     // always runs
+}
 export interface UIDefinition {
     id: string;
     initialData?: Record<string, any>;
@@ -2148,33 +2219,6 @@ export interface UIDefinition {
     };
     translations: Record<string, Record<string, string>>;
     version: string;
-}
-
-export interface VisibilityControl {
-    condition: ConditionExpr;
-    show: boolean;
-}
-
-export interface EventHandler {
-    action: ActionType;
-    aiPrompt?: string;
-    dataSourceId?: string;
-    errorAction?: EventHandler;
-    streamHandler?: {
-        /** Callback event name used by WebSocket/SSE messages */
-        eventKey?: string;
-        /** JSONPath or regex to extract token from message */
-        tokenPath?: string;
-    };
-    errorTransition?: TransitionSpec;
-    exportConfig?: ExportConfig;
-    params?: Record<string, any | Binding>;
-    responseType?: 'ui' | 'data' | 'none' | 'voice' | 'call';
-    successTransition?: TransitionSpec;
-    beforeActions?: EventHandler[];      // actions to run before main action
-    successActions?: EventHandler[];     // actions if main succeeds
-    errorActions?: EventHandler[];       // actions if main fails
-    finallyActions?: EventHandler[];     // always runs
 }
 
 export interface ExportConfig {
@@ -2233,11 +2277,20 @@ export interface SocialMediaLinks {
     [platform: string]: string | undefined;
 }
 
+
 export interface UIProject {
+    /** Brand & Navigation */
     brand: Brand;
     footer?: FooterElement;
-    search?: { enabled?: boolean; path?: string };
-    hideNav?: boolean;
+    navigation?: UIElement;
+    search?: {
+        enabled?: boolean;
+        path?: string;
+    };
+
+    /* ------------------------------------------------------
+     🌍 Global Configuration
+    ------------------------------------------------------ */
     globalConfig?: {
         projectId?: string;
         accessibilityConfig?: AccessibilityConfig;
@@ -2250,6 +2303,7 @@ export interface UIProject {
             registry?: DataSource[];
         };
         maps?: MapsGlobalConfig;
+
         metadata?: {
             appLinks?: {
                 android?: { app_name?: string; class?: string; package: string; url: string };
@@ -2261,7 +2315,7 @@ export interface UIProject {
                 windows_phone?: { app_id: string; app_name?: string; url: string };
                 windows_universal?: { app_id: string; app_name: string; url: string };
             };
-            bookmarks?: string | Array<string>;
+            bookmarks?: string | string[];
             category?: string;
             classification?: string;
             facebook?: { appId: string; admins?: never };
@@ -2274,15 +2328,24 @@ export interface UIProject {
             verification?: {
                 google?: string | number | (string | number)[];
                 me?: string | number | (string | number)[];
-                other?: { [name: string]: string | number | (string | number)[] };
+                other?: Record<string, string | number | (string | number)[]>;
                 yahoo?: string | number | (string | number)[];
                 yandex?: string | number | (string | number)[];
             };
             viewport?: {
-                colorScheme?: 'normal' | 'light' | 'dark' | 'light dark' | 'dark light' | 'only light';
+                colorScheme?:
+                | 'normal'
+                | 'light'
+                | 'dark'
+                | 'light dark'
+                | 'dark light'
+                | 'only light';
                 height?: string | number;
                 initialScale?: number;
-                interactiveWidget?: 'resizes-visual' | 'resizes-content' | 'overlays-content';
+                interactiveWidget?:
+                | 'resizes-visual'
+                | 'resizes-content'
+                | 'overlays-content';
                 maximumScale?: number;
                 minimumScale?: number;
                 themeColor?: string;
@@ -2291,12 +2354,18 @@ export interface UIProject {
                 width?: string | number;
             };
         };
+
+        /** Payment / Integration URLs */
         paymentCheckoutAPIUrl?: string;
         paypalUrl?: string;
-        security?: SecurityConfig;
-        translateConfig: I18nConfig;
         walletConnectUrl?: string;
-        profile?: { // load user profile to store in global state , this will be called after loggedin
+
+        /** Security & Localization */
+        security?: SecurityConfig;
+        translateConfig?: I18nConfig;
+
+        /** Profile bootstrap after login */
+        profile?: {
             dataSources?: {
                 auth?: { type: 'basic' | 'bearer' | 'api_key'; value: string };
                 apiUrl?: string;
@@ -2306,25 +2375,29 @@ export interface UIProject {
                 headers?: Record<string, string>;
                 method?: 'GET' | 'POST' | 'WEBSOCKET' | 'GRAPHQL';
                 protocol?: 'graphql-ws' | 'subscriptions-transport-ws' | 'graphql-transport-ws';
-            },
-        },
+            };
+        };
     };
-    globalStyles?: {
-        customCss?: string;  // Custom Sytles to add at project style
-        theme?: {
-            colorScheme?: "normal" | "light" | "dark" | "light dark" | "dark light" | "only light";
 
-            /** Font family & base sizing */
+    /* ------------------------------------------------------
+     🎨 Global Styles / Theme
+    ------------------------------------------------------ */
+    globalStyles?: {
+        customCss?: string;  // Injected CSS (inline or <style> tag)
+        theme?: {
+            colorScheme?: 'normal' | 'light' | 'dark' | 'light dark' | 'dark light' | 'only light';
+
+            /** Typography */
             fontFamily?: string;
             fontSizeBase?: string;
 
-            /** Brand colors */
+            /** Core Colors */
             primaryColorLight?: string;
             primaryColorDark?: string;
             secondaryColorLight?: string;
             secondaryColorDark?: string;
 
-            /** Extended tokens (new, safe defaults) */
+            /** Extended Tokens */
             backgroundLight?: string;
             backgroundDark?: string;
             foregroundLight?: string;
@@ -2339,23 +2412,42 @@ export interface UIProject {
             customCss?: string;
         };
     };
+
+    /* ------------------------------------------------------
+     💾 Initial State / Data
+    ------------------------------------------------------ */
     initialData?: Record<string, any>;
     routeBase?: string;
     routeList: IRouteList;
+
+    screenConfigList: Array<{
+        screenId: string;
+        screenVersion?: string;
+        href?: string;
+        requiresAuth?: boolean;
+        screenConfigUrl?: string;
+    }>;
+
+    /* ------------------------------------------------------
+     🧠 Reactive State Management
+    ------------------------------------------------------ */
     state?: {
-        keys?: Record<string, {
-            binding?: Binding;
-            dataType: 'string' | 'number' | 'boolean' | 'object' | 'array';
-            defaultValue: any;
-            validation?: {
-                max?: number;
-                maxLength?: number;
-                min?: number;
-                minLength?: number;
-                regex?: string;
-                required?: boolean;
-            };
-        }>;
+        keys?: Record<
+            string,
+            {
+                binding?: Binding;
+                dataType: 'string' | 'number' | 'boolean' | 'object' | 'array';
+                defaultValue: any;
+                validation?: {
+                    max?: number;
+                    maxLength?: number;
+                    min?: number;
+                    minLength?: number;
+                    regex?: string;
+                    required?: boolean;
+                };
+            }
+        >;
         persist?: boolean;
         persistStorage?: 'localStorage' | 'sessionStorage' | 'cookie';
         webSocketEndpoint?: {
@@ -2365,37 +2457,55 @@ export interface UIProject {
         };
         webSocketKeys?: string[];
     };
+
+    /* ------------------------------------------------------
+     📊 Telemetry & Observability
+    ------------------------------------------------------ */
     telemetry?: {
         errorUrl?: string;
         ingestUrl?: string;
         sampleRate?: number;
     };
+
+    /* ------------------------------------------------------
+     🌐 i18n / Translations
+    ------------------------------------------------------ */
     translations?: Record<string, Record<string, string>>;
+
+    /* ------------------------------------------------------
+     🍪 Cookie Consent Banner
+    ------------------------------------------------------ */
     cookie_banner?: {
         id: string;
         name: string;
         styles?: StyleProps;
-        position?: "bottom" | "top";
+        position?: 'bottom' | 'top';
         persistKey?: string;
         description?: Binding;
 
         /** Buttons */
-        acceptButton?: ButtonElement;   // Accept all
-        manageButton?: ButtonElement;   // Opens modal
-        saveButton?: ButtonElement;     // Save preferences
+        acceptButton?: ButtonElement;
+        manageButton?: ButtonElement;
+        saveButton?: ButtonElement;
 
         /** Preferences modal */
         preferencesModal?: ModalElement;
 
-        /** Options list */
+        /** Option list */
         options?: Array<{
             id: string;
             label: Binding;
             required?: boolean;
             defaultValue?: boolean;
         }>;
-    }
+    };
+
+    /* ------------------------------------------------------
+     📱 Internal Screens / Routes
+    ------------------------------------------------------ */
     screens?: UIDefinition[];
+
+    /** Project version */
     version: string;
 }
 

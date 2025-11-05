@@ -109,6 +109,7 @@ function CardRenderer({ element, setState, runEventHandler, state, t }: CardRend
   const cardBody = (
     <Card
       className={cn(variantClass, schemaClass)}
+
       {...acc}
     >
       {/* Header */}
@@ -146,10 +147,11 @@ function CardRenderer({ element, setState, runEventHandler, state, t }: CardRend
   );
 
   // Clickable wrapper (smooth transition)
-  if (element.clickable && element.href) {
+  if (element.clickable && (element.href || element.onEvent)) {
+    const action = element.href ? { "action": "navigation", "params": { "href": element.href } } : element.onEvent?.onClick?.params?.href
     return (
       <a
-        href={String(resolveBinding(element.href, state, t))}
+        href={String(resolveBinding(action, state, t))}
         className="block transition-colors duration-200 hover:opacity-80"
       >
         {cardBody}
