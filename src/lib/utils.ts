@@ -11,7 +11,7 @@ import {
 
 import { clsx, type ClassValue } from "clsx"
 import { cva } from 'class-variance-authority';
-import { deepResolveBindingsDepth, resolveBindingWithDepth } from './resoveBinding';
+import { buildScope, deepResolveBindingsDepth, resolveBindingWithDepth } from './resoveBinding';
 
 export function cn(...inputs: ClassValue[]) {
     return (clsx(inputs))
@@ -407,16 +407,7 @@ export function resolveDataSourceValue(val: any, state: AnyObj, extra?: AnyObj):
 
     let str = String(val);
 
-    // 🔹 Unified context for binding resolution
-    const context: AnyObj = {
-        ...state,
-        user: state.user || state.auth?.user || {},
-        auth: state.auth || {},
-        organization: state.organization || state.org || {},
-        org: state.organization || state.org || {},
-        form: extra || {},
-        state, // allow {state.user.id} style
-    };
+    const context = buildScope(state, (extra || {}))
 
     /**
      * 🔄 Internal function to resolve a binding expression like "user.org_id" or "state.project.id"

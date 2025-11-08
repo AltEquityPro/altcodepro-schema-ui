@@ -3,12 +3,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { DataSource, AnyObj, UIProject, DataMapping } from "../types";
 import { resolveDataSource, joinUrl } from "../lib/utils";
 import { useAuth } from "./useAuth";
+import { getStoredAuthToken } from "./authUtils";
 
 type Fetcher = (
     ds: DataSource,
-    state: AnyObj,
+    globalConfig: UIProject['globalConfig'],
     signal?: AbortSignal,
-    formData?: AnyObj
 ) => Promise<any>;
 
 async function withRetry<T>(
@@ -70,16 +70,17 @@ function applyDataMappings(
     return result;
 }
 
-const defaultFetcher: Fetcher = async (ds, state, signal, formData) => {
+const defaultFetcher: Fetcher = async (ds, globalConfig, signal) => {
     const baseUrl = ds.baseUrl || '';
     const path = ds.path || '';
     let url = path ? joinUrl(baseUrl, path) : baseUrl;
     const headers: Record<string, string> = ds.headers || {};
 
-    if (ds.auth && ds.auth.value) {
+    if (ds.auth) {
         switch (ds.auth.type) {
             case 'bearer':
-                headers['Authorization'] = `Bearer ${ds.auth.value}`;
+                const auth = getStoredAuthToken(globalConfig)
+                headers['Authorization'] = `Bearer ${auth?.token}`;
                 break;
             case 'basic':
                 headers['Authorization'] = `Basic ${btoa(ds.auth.value)}`;
@@ -109,7 +110,9 @@ const defaultFetcher: Fetcher = async (ds, state, signal, formData) => {
                 credentials: ds.credentials || 'same-origin',
                 signal,
             });
-            if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
+            if (!r.ok) {
+                throw new Error(`HTTP ${r.status}: ${await r.text()}`);
+            }
             return r.json();
         }
     }
@@ -238,15 +241,16 @@ export function useDataSources({
     screen,
     state,
     setState,
-    fetcher = defaultFetcher,
+    routeParams,
 }: {
     dataSources?: DataSource[];
     globalConfig?: UIProject['globalConfig'];
     screen?: any;
     state: AnyObj;
     setState: (path: string, value: any) => void;
-    fetcher?: Fetcher;
+    routeParams?: Record<string, string>;
 }) {
+
     const [data, setData] = useState<Record<string, any>>({});
     const timers = useRef<Record<string, NodeJS.Timeout>>({});
     const wsCleanups = useRef<Record<string, () => void>>({});
@@ -254,17 +258,20 @@ export function useDataSources({
     const { token } = useAuth();
 
     const resolved = useMemo(() => {
-        return dataSources
-            ?.filter(ds => ds.method !== "POST" && ds.trigger !== 'action')
-            ?.map((ds) => {
-                const rds = resolveDataSource(ds, globalConfig, state);
-                // Inject token dynamically
-                if (token && rds.auth?.type === 'bearer') {
-                    rds.auth.value = token;
-                }
+        const screenSources = dataSources || [];
+        const combined = [...screenSources];
+        const unique = combined.filter(
+            (ds, idx, arr) => arr.findIndex(x => x.id === ds.id) === idx
+        );
+
+        return unique
+            .filter(ds => ds.method !== "POST" && ds.trigger !== 'action')
+            .map(ds => {
+                const rds = resolveDataSource(ds, globalConfig, { ...state, params: routeParams || state.params });
+                if (token && rds.auth?.type === 'bearer') rds.auth.value = token;
                 return rds;
             });
-    }, [dataSources, globalConfig, state, token]);
+    }, [dataSources, globalConfig, state, routeParams, token]);
 
 
     const mappings = useMemo(() => {
@@ -273,13 +280,36 @@ export function useDataSources({
         return [...globalMappings, ...screenMappings];
     }, [globalConfig, screen]);
 
+    const globalSources = useMemo(() => {
+        const sources = globalConfig?.endpoints?.registry || [];
+        return sources.filter((ds) => ds.trigger === "init");
+    }, [globalConfig]);
+
+    const loadedGlobals = useRef(false);
+
+    useEffect(() => {
+        if (loadedGlobals.current) return; // skip if already done
+        loadedGlobals.current = true;
+
+        (async () => {
+            for (const ds of globalSources) {
+                try {
+                    if (!ds.auth) {
+                        ds.auth = globalConfig?.endpoints?.auth
+                    }
+                    const rds = resolveDataSource(ds, globalConfig, state);
+                    const out = await defaultFetcher(rds, globalConfig);
+                    const mapped = applyDataMappings(out, rds, mappings, setState);
+                    setData((prev) => ({ ...prev, [rds.id]: mapped }));
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+        })();
+    }, []);
+
     useEffect(() => {
         if (!resolved.length) return;
-
-        let initialized = false;
-        if (initialized) return;
-        initialized = true;
-
         let mounted = true;
         const stops: Array<() => void> = [];
 
@@ -290,31 +320,31 @@ export function useDataSources({
 
                 const run = async () => {
                     try {
-                        if (ds.trigger == 'action') return;
+                        if (ds.trigger === 'action') return;
                         const out = ds.retry
                             ? await withRetry(
-                                () => fetcher(ds, state, controller.signal),
+                                () => defaultFetcher(ds, globalConfig, controller.signal),
                                 ds.retry.attempts,
                                 ds.retry.delay,
                                 ds.retry.strategy,
                                 controller.signal
                             )
-                            : await fetcher(ds, state, controller.signal);
-
+                            : await defaultFetcher(ds, globalConfig, controller.signal);
                         const mapped = applyDataMappings(out, ds, mappings, setState);
-                        if (mounted) setData((prev) => ({ ...prev, [ds.id]: mapped }));
+                        if (mounted) {
+                            setData(prev => ({ ...prev, [ds.id]: mapped }));
+                        }
                     } catch (e: any) {
                         if (e.name === "AbortError") return;
-                        console.log('Error fetching data source', ds.id, e);
+                        console.warn("DataSource error:", ds.id, e);
                     }
                 };
-
                 if (ds.method !== "WEBSOCKET" && !(ds.method === "GRAPHQL" && ds.graphql_operation === "subscription")) {
                     await run();
                 } else {
                     let out;
                     try {
-                        out = await fetcher(ds, state, undefined);
+                        out = await defaultFetcher(ds, globalConfig, undefined);
                     } catch (e: any) {
                         if (e.name === "AbortError") continue;
                         const errorObj = {
@@ -363,32 +393,14 @@ export function useDataSources({
                         stops.push(cleanup);
                     }
                 }
-
-                if (
-                    ds.pollingInterval &&
-                    ds.method !== "WEBSOCKET" &&
-                    !(ds.method === "GRAPHQL" && ds.graphql_operation === "subscription")
-                ) {
-                    const id = setInterval(async () => {
-                        const newController = new AbortController();
-                        abortControllers.current[ds.id] = newController;
-                        await run();
-                    }, ds.pollingInterval);
-                    timers.current[ds.id] = id;
-                    stops.push(() => {
-                        clearInterval(id);
-                        abortControllers.current[ds.id]?.abort();
-                        delete abortControllers.current[ds.id];
-                    });
-                }
             }
         })();
 
         return () => {
             mounted = false;
-            stops.forEach((s) => s());
+            stops.forEach(s => s());
             Object.values(timers.current).forEach(clearInterval);
-            Object.values(abortControllers.current).forEach((c) => c.abort());
+            Object.values(abortControllers.current).forEach(c => c.abort());
             timers.current = {};
             abortControllers.current = {};
             Object.values(wsCleanups.current).forEach((c) => c());

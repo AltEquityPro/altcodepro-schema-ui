@@ -13,6 +13,7 @@ import { AuthProvider } from './useAuth';
 import { useAppState } from './StateContext';
 import Loader from '../components/ui/loader';
 import { ElementResolver } from './ElementResolver';
+import { useActionHandler } from './useActionHandler';
 
 export interface ProjectLayoutProps {
     project: UIProject;
@@ -20,6 +21,71 @@ export interface ProjectLayoutProps {
     nav?: NavigationAPI;
     children?: React.ReactNode;
 }
+function RenderWithContexts({ project, nav, state, t, setState, clearState, children }: any) {
+    const { runEventHandler } = useActionHandler({
+        globalConfig: project.globalConfig,
+        runtime: {
+            ...({ nav }),
+            patchState: (path: string, val: any) => setState(path, val)
+        }
+    });
+    const isMobile = useIsMobile();
+
+    const navType = isMobile
+        ? project.routeList?.responsiveNavType
+        : project.routeList?.desktopNavType;
+
+    const layoutClass = project.routeList
+        ? navType === 'side'
+            ? 'flex'
+            : 'flex flex-col'
+        : 'flex';
+
+    return (
+        <div className={clsx('min-h-screen', layoutClass)}>
+            {project.navigation && (
+                <ElementResolver
+                    state={state}
+                    setState={setState}
+                    t={t}
+                    element={project.navigation}
+                    runEventHandler={runEventHandler}
+                />
+            )}
+
+            {!project.navigation && project.routeList?.routes && (
+                <NavRenderer
+                    project={project}
+                    nav={nav}
+                    state={state}
+                    setState={setState}
+                    clearState={clearState}
+                    t={t}
+                />
+            )}
+
+            <main className="flex-1">{children}</main>
+
+            <CookieBannerRenderer
+                setState={setState}
+                project={project}
+                state={state}
+                t={t}
+            />
+
+            {project.footer && (
+                <ElementResolver
+                    state={state}
+                    setState={setState}
+                    t={t}
+                    element={project.footer}
+                    runEventHandler={runEventHandler}
+                />
+            )}
+        </div>
+    );
+};
+
 
 export const ProjectLayout = React.memo(function ProjectLayout({
     project,
@@ -27,25 +93,29 @@ export const ProjectLayout = React.memo(function ProjectLayout({
     nav,
     children,
 }: ProjectLayoutProps) {
-    const isMobile = useIsMobile();
     const { state, t, setState, clearState, setTranslations } = useAppState();
+
     if (project?.translations) {
-        setTranslations(project?.translations)
+        setTranslations(project.translations);
     }
+
     const user = useMemo(
-        () => state?.auth?.user ?? { id: state?.auth?.userId, orgId: state?.organization?.id },
+        () =>
+            state?.auth?.user ?? {
+                id: state?.auth?.userId,
+                orgId: state?.organization?.id,
+            },
         [state?.auth?.user, state?.auth?.userId, state?.organization?.id]
     );
 
     if (loading) {
-        return <Loader />
+        return <Loader />;
     }
 
-    const requiresAuth = !!project?.routeList?.routes?.some(r => r.requiresAuth) || !project?.screenConfigList?.some(r => r.requiresAuth);
-    const navType = isMobile
-        ? project.routeList?.responsiveNavType
-        : project.routeList?.desktopNavType;
-    const layoutClass = project.routeList ? (navType === 'side' ? 'flex' : 'flex flex-col') : 'flex'
+    const requiresAuth =
+        !!project?.routeList?.routes?.some((r) => r.requiresAuth) ||
+        !project?.screenConfigList?.some((r) => r.requiresAuth);
+
 
     return (
         <GlobalThemeProvider project={project}>
@@ -58,31 +128,16 @@ export const ProjectLayout = React.memo(function ProjectLayout({
                             setState={setState}
                             nav={nav}
                         >
-                            <div className={clsx('min-h-screen', layoutClass)}>
-                                {project.navigation && <ElementResolver
-                                    state={state}
-                                    setState={setState}
-                                    t={t}
-                                    element={project.navigation}
-                                />}
-                                {!project.navigation && project.routeList?.routes && <NavRenderer
-                                    project={project}
-                                    nav={nav}
-                                    state={state}
-                                    setState={setState}
-                                    clearState={clearState}
-                                    t={t} />}
-                                <main className="flex-1">{children}</main>
-                                <CookieBannerRenderer setState={setState} project={project} state={state} t={t} />
-                                {project.footer && (
-                                    <ElementResolver
-                                        state={state}
-                                        setState={setState}
-                                        t={t}
-                                        element={project.footer}
-                                    />
-                                )}
-                            </div>
+                            <RenderWithContexts
+                                project={project}
+                                nav={nav}
+                                state={state}
+                                t={t}
+                                setState={setState}
+                                clearState={clearState}
+                            >
+                                {children}
+                            </RenderWithContexts>
                         </AuthProvider>
                     </AnalyticsProvider>
                 </TelemetryProvider>

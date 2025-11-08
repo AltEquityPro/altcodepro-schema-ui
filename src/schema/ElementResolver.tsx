@@ -140,7 +140,6 @@ import {
 } from "../types";
 import { MarkdownRender } from "../components/ui/markdown-input";
 import { DynamicContentRenderer } from "../components/dynamic-content";
-import { jsx } from "react/jsx-runtime";
 import { ComposerRenderer } from "@/components/ui/composer";
 
 
@@ -794,8 +793,21 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             const el = element as DynamicElement;
             const url = resolveBinding(el.url, state, t)
             const content = resolveBinding(el.content, state, t)
+            const ext = resolveBinding(el.ext, state, t)
+            const embedPage = resolveBinding(el.embedPage, state, t)
+            const embedProjectSchema = resolveBinding(el.embedProjectSchema, state, t)
             return <LazyComponent>
-                <DynamicContentRenderer url={url} content={content} contentType={el.contentType} ext={el.ext} state={state} t={t} setState={setState} runEventHandler={runEventHandler} />
+                <DynamicContentRenderer
+                    url={url}
+                    content={content}
+                    embedPage={embedPage}
+                    embedProjectSchema={embedProjectSchema}
+                    contentType={el.contentType}
+                    ext={ext}
+                    state={state}
+                    t={t}
+                    setState={setState}
+                    runEventHandler={runEventHandler} />
             </LazyComponent>
         case ElementType.wallet:
             const wallet = element as WalletElement;

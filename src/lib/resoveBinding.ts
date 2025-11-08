@@ -88,10 +88,11 @@ function getPath(obj: AnyObj, path: string): any {
     }
 }
 
-function buildScope(state: AnyObj): AnyObj {
+export function buildScope(state: AnyObj, extra: AnyObj = {}): AnyObj {
     const scope: AnyObj = {
+        ...state,
         state,
-        form: state?.form ?? state?.forms ?? {},
+        form: { ...(extra || {}), ...(state?.form || {}) },
         props: state?.props ?? {},
         config: state?.config ?? {},
         data: state?.data ?? {},
@@ -102,11 +103,13 @@ function buildScope(state: AnyObj): AnyObj {
         query: state?.query ?? state?.router?.query ?? {},
         headers: state?.headers ?? {},
         request: state?.request ?? {},
+        organization: state.organization || state.org || {},
+        org: state.organization || state.org || {},
         url: state?.url ?? {},
-        location: state?.location ?? safeLocation(),
+        location: { ...safeLocation(), ...(state?.location || {}) },
         cookies: state?.cookies ?? {},
         session: state?.session ?? {},
-        profile: state?.profile ?? {}, // Added to support profile.* bindings
+        profile: state?.profile ?? {},
     };
 
     if (state && typeof state === "object") {
@@ -148,10 +151,8 @@ export function resolveBindingWithDepth(
 ): any {
     try {
         if (val == null) return "";
-
         const key =
             typeof val === "object" && "binding" in val ? String(val.binding) : String(val);
-
         // Prevent infinite recursion
         if (depth > maxDepth) {
             if (process.env.NODE_ENV === 'development') {
@@ -160,7 +161,7 @@ export function resolveBindingWithDepth(
             return key;
         }
 
-        // Prevent cycles by tracking serialized keys
+        // Prevent cycles by tracking serialized keys avoid urls href
         const keyHash = hash(key);
         if (seen.has(keyHash)) {
             if (process.env.NODE_ENV === 'development') {
@@ -174,12 +175,16 @@ export function resolveBindingWithDepth(
 
         // Check cache for non-state/form/profile bindings
         const isDynamic = key.includes("state.") || key.includes("form.") || key.includes("profile.");
-        if (!isDynamic && bindingCache.has(keyHash)) {
+        if (!isDynamic && bindingCache.has(keyHash) && !key.includes('/')) { /// donot do for url href
             return bindingCache.get(keyHash);
         }
 
         if (!key) {
             return "";
+        }
+        if (key === "location.search") {
+            const val = scope?.location?.search;
+            return val ?? "";
         }
 
         // Handle state/form/profile.* explicit paths early

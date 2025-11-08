@@ -480,13 +480,15 @@ export function useActionHandler({
 
             switch (h.action) {
                 case ActionType.navigation: {
+                    const tmp = dataOverride ? { ...dataOverride, ...state } : state;
+                    const href = resolveBinding(h.params?.href, tmp, t) || '/'; // resolve params in href // do not seralize key href may vary
+                    if (!href) break;
                     analytics.trackEvent({
                         name: 'navigate',
                         category: 'navigation',
                         label: h.params?.href || '/',
                         metadata: { replace: !!h.params?.replace },
                     });
-                    const href = String(h.params?.href || "/"); if (!href) break;
                     const replace = !!h.successTransition?.replace;
                     if (runtime.nav) (replace ? runtime.nav.replace?.(href) : runtime.nav.push?.(href));
                     else (replace ? window.location.replace(href) : (window.location.href = href));

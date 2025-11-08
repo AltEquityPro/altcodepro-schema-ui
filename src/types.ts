@@ -1080,6 +1080,8 @@ export interface DynamicElement extends BaseElement {
     contentType?: string;
     ext?: string;
     content?: string | object | null;
+    embedPage?: boolean; // iframe to show differnt project
+    embedProjectSchema?: UIProject; // for projects to preview
 }
 export interface InputElement {
     accept?: string;
@@ -2424,6 +2426,7 @@ export interface UIProject {
         screenId: string;
         screenVersion?: string;
         href?: string;
+        label?: string;
         requiresAuth?: boolean;
         screenConfigUrl?: string;
     }>;

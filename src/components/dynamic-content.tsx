@@ -1,22 +1,56 @@
 "use client";
 
-import React, { memo, useEffect, useState } from "react";
-import { ElementType, UIElement, UIDefinition } from "../types";
+import React, {
+    memo,
+    Suspense,
+    useEffect,
+    useState,
+    useRef,
+} from "react";
+import { createRoot } from "react-dom/client";
+import {
+    ElementType,
+    UIDefinition,
+    UIElement,
+    UIProject,
+} from "../types";
 import { Skeleton } from "../components/ui/skeleton";
 import { RenderChildren } from "../schema/RenderChildren";
+import { toast } from "./ui/sonner";
+import { ProjectLayout } from "@/schema/ProjectLayout";
+import { StateProvider } from "@/schema/StateContext";
+import ScreenRenderer from "@/schema/ScreenRenderer";
+import Loader from "./ui/loader";
 
+const img_ext = ["png", "jpg", "jpeg", "gif", "webp"];
+const video_ext = ["mp4", "webm", "mov", "mkv"];
+
+/* ===========================================================
+   🧩 Props
+=========================================================== */
 export interface DynamicContentRendererProps {
     url?: string;
-    contentType?: string; // MIME type hint (e.g. text/markdown, application/json)
-    ext?: string;         // File extension hint (e.g. md, png, json)
+    contentType?: string;
+    ext?: string;
     content?: string | object | null;
+    embedPage?: boolean;
+    embedProjectSchema?: UIProject;
     state: Record<string, any>;
     setState: (path: string, value: any) => void;
     t: (key: string, defaultLabel?: string) => string;
-    runEventHandler?: (handler?: any, dataOverride?: any) => Promise<void>;
+    runEventHandler?: (
+        handler?: any,
+        dataOverride?: any
+    ) => Promise<void>;
 }
 
-export function convertContentToElements(data: any, idPrefix = "auto") {
+/* ===========================================================
+   🧩 Utility: Convert arbitrary data → UIElements
+=========================================================== */
+export function convertContentToElements(
+    data: any,
+    idPrefix = "auto"
+) {
     if (data == null) return [];
 
     if (typeof data === "string") {
@@ -156,13 +190,22 @@ export function convertContentToElements(data: any, idPrefix = "auto") {
                     id: `${idPrefix}_chart_obj`,
                     type: ElementType.chart,
                     chartType: "bar",
-                    data: Object.entries(data).map(([k, v]) => ({ key: k, value: v })),
-                    options: { xKey: "key", yKey: "value", tooltip: true, legend: false },
+                    data: Object.entries(data).map(([k, v]) => ({
+                        key: k,
+                        value: v,
+                    })),
+                    options: {
+                        xKey: "key",
+                        yKey: "value",
+                        tooltip: true,
+                        legend: false,
+                    },
                 },
             ];
         }
 
-        if ("elements" in data || "screens" in data) return [data as UIElement];
+        if ("elements" in data || "screens" in data)
+            return [data as UIElement];
 
         return Object.entries(data).map(([key, value], i) => ({
             id: `${idPrefix}_kv_${i}`,
@@ -189,27 +232,70 @@ export function convertContentToElements(data: any, idPrefix = "auto") {
     ];
 }
 
-export const DynamicContentRenderer: React.FC<DynamicContentRendererProps> = memo(
-    ({ url, contentType, ext, content, state, setState, t, runEventHandler }) => {
+/* ===========================================================
+   🧩 Standalone Preview Renderer (iframe runtime)
+=========================================================== */
+function PreviewApp({
+    project,
+    screen,
+}: {
+    project: UIProject;
+    screen: UIDefinition;
+}) {
+    return (
+        <Suspense fallback={<Loader text="Loading preview..." />}>
+            <StateProvider project={project}>
+                <ProjectLayout project={project} loading={false}>
+                    <ScreenRenderer uiDef={screen} project={project} />
+                </ProjectLayout>
+            </StateProvider>
+        </Suspense>
+    );
+}
+
+/* ===========================================================
+   🧩 Main Dynamic Content Renderer
+=========================================================== */
+export const DynamicContentRenderer: React.FC<
+    DynamicContentRendererProps
+> = memo(
+    ({
+        url,
+        content,
+        embedPage,
+        embedProjectSchema,
+        contentType,
+        ext,
+        state,
+        setState,
+        t,
+        runEventHandler,
+    }) => {
         const [loading, setLoading] = useState(false);
         const [data, setData] = useState<any>(null);
         const [fetchedUrl, setFetchedUrl] = useState<string | null>(null);
+        const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+        /* -------------------- Load Content -------------------- */
+        useEffect(() => {
+            setData(content);
+        }, [content]);
 
         useEffect(() => {
             if (!url || url === fetchedUrl) return;
             async function load() {
-                if (!url) {
-                    setData(content);
+                if (!url)
+                    return;
+                if (ext && (img_ext.includes(ext) || video_ext.includes(ext))) {
+                    setData(url);
+                    setFetchedUrl(url);
                     return;
                 }
-
                 setLoading(true);
                 try {
                     const res = await fetch(url);
                     const mime = res.headers.get("Content-Type") || contentType || "";
                     const text = await res.text();
-
-                    // Parse based on MIME or ext
                     if (mime.includes("application/json") || ext === "json") {
                         try {
                             setData(JSON.parse(text));
@@ -222,26 +308,94 @@ export const DynamicContentRenderer: React.FC<DynamicContentRendererProps> = mem
                         text.trim().startsWith("#")
                     ) {
                         setData(text);
-                    } else if (mime.startsWith("text/")) {
-                        setData(text);
                     } else {
                         setData(text);
                     }
                 } catch (err) {
                     console.error("Failed to load dynamic content:", err);
-                    setData("Error loading content");
+                    toast.error("Error loading content");
                 } finally {
                     setLoading(false);
+                    setFetchedUrl(url);
                 }
             }
-            setFetchedUrl(url);
-            setLoading(true);
             load();
-        }, [url, content, contentType, ext]);
+        }, [url]);
 
+        /* -------------------- Iframe Preview Renderer -------------------- */
+        useEffect(() => {
+            if (!embedPage || !iframeRef.current || !data || !embedProjectSchema)
+                return;
+
+            const iframeDoc = iframeRef.current.contentDocument;
+            if (!iframeDoc) return;
+
+            iframeDoc.open();
+            iframeDoc.write(`
+                        <!DOCTYPE html>
+                        <html><head>
+                        <style>
+                            html,body{margin:0;padding:0;height:100%;
+                            background:#000;color:#fff;
+                            font-family:Inter,system-ui,sans-serif;}
+                            #root{height:100%;}
+                        </style>
+                        </head>
+                        <body><div id="root"></div></body></html>
+                    `);
+            iframeDoc.close();
+
+            const mountNode = iframeDoc.getElementById("root");
+            let root: any;
+            if (mountNode) {
+                root = createRoot(mountNode);
+                root.render(
+                    <PreviewApp project={embedProjectSchema} screen={data} />
+                );
+            }
+
+            return () => {
+                root?.unmount();
+            };
+        }, [embedPage, iframeRef, data, embedProjectSchema]);
+
+        /* -------------------- Loading -------------------- */
         if (loading) return <Skeleton className="w-full h-48" />;
         if (data == null) return null;
 
+        /* -------------------- Schema-driven UI Preview -------------------- */
+        if (embedPage && data && embedProjectSchema) {
+            return (
+                <div className="flex flex-col w-full h-full">
+                    <div className="flex justify-end items-center p-2 border-b border-border/20">
+                        <button
+                            onClick={() => {
+                                const w = window.open("", "_blank", "width=1280,height=800");
+                                if (w) {
+                                    w.document.write(
+                                        iframeRef.current?.contentDocument?.documentElement
+                                            .outerHTML || ""
+                                    );
+                                }
+                            }}
+                            className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                        >
+                            Preview Full Page ↗
+                        </button>
+                    </div>
+
+                    <iframe
+                        ref={iframeRef}
+                        title="Client Site Preview"
+                        sandbox="allow-scripts allow-same-origin allow-modals allow-popups"
+                        referrerPolicy="no-referrer"
+                        className="flex-1 w-full h-[80vh] border-none bg-(--acp-background) rounded-md shadow-inner"
+                    />
+                </div>
+            );
+        }
+
+        /* -------------------- Object / String Renderers -------------------- */
         if (typeof data === "object") {
             if ("elements" in data) {
                 return (
@@ -290,9 +444,7 @@ export const DynamicContentRenderer: React.FC<DynamicContentRendererProps> = mem
                     content: trimmed,
                     contentFormat: "markdown",
                 };
-            } else if (
-                ["png", "jpg", "jpeg", "gif", "webp"].includes(effectiveExt)
-            ) {
+            } else if (img_ext.includes(effectiveExt)) {
                 element = {
                     id: "img_block",
                     type: ElementType.image,
@@ -300,17 +452,17 @@ export const DynamicContentRenderer: React.FC<DynamicContentRendererProps> = mem
                     alt: "Image",
                     styles: {
                         className:
-                            "max-w-full rounded-md shadow-md m-4 border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)]",
+                            "max-w-full max-h-[70vh] w-auto h-auto object-contain mx-auto my-6 rounded-md shadow-md border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)]",
                     },
                 };
-            } else if (["mp4", "webm", "mov", "mkv"].includes(effectiveExt)) {
+            } else if (video_ext.includes(effectiveExt)) {
                 element = {
                     id: "vid_block",
                     type: ElementType.video,
                     src: url!,
                     styles: {
                         className:
-                            "rounded-md shadow-md max-h-[75vh] w-full border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)]",
+                            "w-full max-w-4xl max-h-[75vh] mx-auto my-6 rounded-md shadow-md object-contain border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)]",
                     },
                 };
             } else {
@@ -333,6 +485,7 @@ export const DynamicContentRenderer: React.FC<DynamicContentRendererProps> = mem
             );
         }
 
+        /* -------------------- Fallback -------------------- */
         const elements = convertContentToElements(data, "dynamic");
         return (
             <RenderChildren
@@ -345,3 +498,5 @@ export const DynamicContentRenderer: React.FC<DynamicContentRendererProps> = mem
         );
     }
 );
+
+export default DynamicContentRenderer;
