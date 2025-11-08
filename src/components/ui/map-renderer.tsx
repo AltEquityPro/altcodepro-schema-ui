@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader } from "@googlemaps/js-api-loader";
+import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import mapboxgl from "mapbox-gl";
 import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -64,7 +64,7 @@ export function MapRenderer({ element, state, t }: MapRendererProps) {
     };
 
     /* -------------------------------------------------------
-       INITIALIZE MAP INSTANCE
+        INITIALIZE MAP INSTANCE
     ------------------------------------------------------- */
     useEffect(() => {
         if (!mapRef.current) return;
@@ -79,16 +79,14 @@ export function MapRenderer({ element, state, t }: MapRendererProps) {
                     const apiKey = resolveBinding(googleConfig.apiKey, state, t);
                     if (!apiKey) throw new Error("Google Maps API key required");
 
-                    const loader = new Loader({
-                        apiKey,
-                        version: "weekly",
+                    setOptions({
+                        key: apiKey,
+                        v: "weekly",
                         libraries: ["visualization"],
                     });
 
-                    const google = await loader.load();
-                    setGoogleApi(google);
-
-                    map = new google.maps.Map(mapRef.current!, {
+                    const { Map } = await importLibrary("maps");
+                    map = new Map(document.getElementById("map"), {
                         center: { lat: center[0], lng: center[1] },
                         zoom,
                         mapId: googleConfig.mapId,
@@ -97,44 +95,8 @@ export function MapRenderer({ element, state, t }: MapRendererProps) {
                         streetViewControl: controls.streetView,
                         scaleControl: controls.scale,
                     });
-
-                    // Add markers
-                    markers.forEach((m: any) => {
-                        const marker = new google.maps.Marker({
-                            position: { lat: m.lat, lng: m.lng },
-                            map,
-                            icon: m.iconUrl,
-                        });
-                        if (m.popup) {
-                            const info = new google.maps.InfoWindow({ content: m.popup });
-                            marker.addListener("click", () => info.open(map, marker));
-                        }
-                    });
-
-                    // Add routes
-                    routes.forEach((r: any) => {
-                        new google.maps.Polyline({
-                            path: r.coords.map(([lat, lng]: any) => ({ lat, lng })),
-                            map,
-                            strokeColor: "#3b82f6",
-                            strokeOpacity: 0.8,
-                            strokeWeight: 3,
-                        });
-                    });
-
-                    // Add heatmap
-                    if (heatmap.length) {
-                        new google.maps.visualization.HeatmapLayer({
-                            data: heatmap.map(([lat, lng, w]: any) => ({
-                                location: new google.maps.LatLng(lat, lng),
-                                weight: w ?? 1,
-                            })),
-                            map,
-                        });
-                    }
                 }
 
-                /* ---------- MAPBOX ---------- */
                 else if (provider === "mapbox") {
                     const mapboxConfig = element.mapbox ?? {};
                     const accessToken = resolveBinding(mapboxConfig.accessToken, state, t);
@@ -217,7 +179,6 @@ export function MapRenderer({ element, state, t }: MapRendererProps) {
                     });
                 }
 
-                /* ---------- LEAFLET / OSM ---------- */
                 else {
                     map = L.map(mapRef.current!).setView(center, zoom);
 

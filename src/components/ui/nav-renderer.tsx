@@ -216,14 +216,6 @@ function DesktopNavItem({
                 )}
                 inactiveClassName={"text-foreground/75 " + hoverSoftPrimary}
             />
-            {!active && !hasChildren && (
-                <a
-                    href={route.href}
-                    className={clsx(linkBase, "text-foreground/80", hoverSoftPrimary)}
-                >
-                    {resolveBinding(route.label, state, t)}
-                </a>
-            )}
 
             {hasChildren && open && (
                 <div
