@@ -25,9 +25,6 @@ import Loader from "./ui/loader";
 const img_ext = ["png", "jpg", "jpeg", "gif", "webp"];
 const video_ext = ["mp4", "webm", "mov", "mkv"];
 
-/* ===========================================================
-   🧩 Props
-=========================================================== */
 export interface DynamicContentRendererProps {
     url?: string;
     contentType?: string;
@@ -44,9 +41,6 @@ export interface DynamicContentRendererProps {
     ) => Promise<void>;
 }
 
-/* ===========================================================
-   🧩 Utility: Convert arbitrary data → UIElements
-=========================================================== */
 export function convertContentToElements(
     data: any,
     idPrefix = "auto"
@@ -232,30 +226,37 @@ export function convertContentToElements(
     ];
 }
 
-/* ===========================================================
-   🧩 Standalone Preview Renderer (iframe runtime)
-=========================================================== */
 function PreviewApp({
     project,
     screen,
 }: {
     project: UIProject;
-    screen: UIDefinition;
+    screen: any;
 }) {
+    const scr = screen?.elements
+        ? {
+            screens: [screen],
+            guard: screen.guard,
+            translations: screen.translations,
+            id: screen.id,
+            href: screen.route.href,
+            route: screen.route,
+            version: screen.version,
+            state: screen.state,
+            initialData: screen.initialData,
+        }
+        : screen;
     return (
         <Suspense fallback={<Loader text="Loading preview..." />}>
             <StateProvider project={project}>
                 <ProjectLayout project={project} loading={false}>
-                    <ScreenRenderer uiDef={screen} project={project} />
+                    <ScreenRenderer uiDef={scr} project={project} />
                 </ProjectLayout>
             </StateProvider>
         </Suspense>
     );
 }
 
-/* ===========================================================
-   🧩 Main Dynamic Content Renderer
-=========================================================== */
 export const DynamicContentRenderer: React.FC<
     DynamicContentRendererProps
 > = memo(
@@ -276,7 +277,6 @@ export const DynamicContentRenderer: React.FC<
         const [fetchedUrl, setFetchedUrl] = useState<string | null>(null);
         const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-        /* -------------------- Load Content -------------------- */
         useEffect(() => {
             setData(content);
         }, [content]);
@@ -322,7 +322,6 @@ export const DynamicContentRenderer: React.FC<
             load();
         }, [url]);
 
-        /* -------------------- Iframe Preview Renderer -------------------- */
         useEffect(() => {
             if (!embedPage || !iframeRef.current || !data || !embedProjectSchema)
                 return;
@@ -334,6 +333,8 @@ export const DynamicContentRenderer: React.FC<
             iframeDoc.write(`
                         <!DOCTYPE html>
                         <html><head>
+                        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+                        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
                         <style>
                             html,body{margin:0;padding:0;height:100%;
                             background:#000;color:#fff;
@@ -359,14 +360,15 @@ export const DynamicContentRenderer: React.FC<
             };
         }, [embedPage, iframeRef, data, embedProjectSchema]);
 
-        /* -------------------- Loading -------------------- */
         if (loading) return <Skeleton className="w-full h-48" />;
         if (data == null) return null;
 
-        /* -------------------- Schema-driven UI Preview -------------------- */
         if (embedPage && data && embedProjectSchema) {
             return (
-                <div className="flex flex-col w-full h-full">
+                <div className="flex flex-col w-full h-full" style={{
+                    minHeight: "calc(100vh - 200px)",
+                    maxHeight: "calc(100vh - 200px)",
+                }}>
                     <div className="flex justify-end items-center p-2 border-b border-border/20">
                         <button
                             onClick={() => {
@@ -389,13 +391,14 @@ export const DynamicContentRenderer: React.FC<
                         title="Client Site Preview"
                         sandbox="allow-scripts allow-same-origin allow-modals allow-popups"
                         referrerPolicy="no-referrer"
+                        width={'100%'}
+                        height={'80vh'}
                         className="flex-1 w-full h-[80vh] border-none bg-(--acp-background) rounded-md shadow-inner"
                     />
                 </div>
             );
         }
 
-        /* -------------------- Object / String Renderers -------------------- */
         if (typeof data === "object") {
             if ("elements" in data) {
                 return (
@@ -485,7 +488,6 @@ export const DynamicContentRenderer: React.FC<
             );
         }
 
-        /* -------------------- Fallback -------------------- */
         const elements = convertContentToElements(data, "dynamic");
         return (
             <RenderChildren
