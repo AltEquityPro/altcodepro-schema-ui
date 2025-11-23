@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { UIProject, AnyObj, EventHandler, ElementType } from "../../types";
+import { UIProject, AnyObj } from "../../types";
 import { resolveBinding } from "../../lib/utils";
-import { ElementResolver } from "../../schema/ElementResolver";
-import { ModalRenderer } from "./dialog";
 import { Button } from "./button";
 
 export function CookieBannerRenderer({
@@ -20,153 +18,204 @@ export function CookieBannerRenderer({
     t: (key: string) => string;
 }) {
     const c = project.cookie_banner;
-    const key = c?.persistKey || "consent.cookies";
-    const [open, setOpen] = useState(false);
-    const [preferences, setPreferences] = useState<Record<string, boolean>>({});
-    const [showModal, setShowModal] = useState(false);
+    if (!c) return null;
 
+    const consentKey = c.persistKey || "consent.cookies";
+
+    const [preferences, setPreferences] = useState<Record<string, boolean>>({});
+    const [modalOpen, setModalOpen] = useState(false);
+
+    // Check if user already accepted
+    const hasConsent =
+        typeof window !== "undefined" &&
+        (localStorage.getItem(consentKey + "_status") === "accepted" ||
+            localStorage.getItem(consentKey + "_status") === "customized");
+
+    // Load preferences
     useEffect(() => {
         if (!c) return;
         try {
-            const v = localStorage.getItem(key);
-            if (!v) {
-                // initialize defaults
+            const saved = localStorage.getItem(consentKey);
+            if (saved) {
+                setPreferences(JSON.parse(saved));
+            } else {
                 const defaults: Record<string, boolean> = {};
                 c.options?.forEach((opt) => {
                     defaults[opt.id] = opt.defaultValue ?? !!opt.required;
                 });
                 setPreferences(defaults);
-            } else {
-                setPreferences(JSON.parse(v));
             }
-            setOpen(v !== "accepted" && v !== "customized");
-        } catch {
-            /* ignore */
+        } catch (e) {
+            console.warn("Cookie pref load error", e);
         }
-    }, [c, key]);
+    }, [c]);
 
-    if (!c || !open) return null;
+    if (hasConsent) return null;
 
+    /** Accept all cookies */
     const onAcceptAll = () => {
-        try {
-            const allAccepted: Record<string, boolean> = {};
-            c.options?.forEach((opt) => (allAccepted[opt.id] = true));
-            localStorage.setItem(key, JSON.stringify(allAccepted));
-        } catch { }
-        setOpen(false);
+        const all: Record<string, boolean> = {};
+        c.options?.forEach((opt) => (all[opt.id] = true));
+        localStorage.setItem(consentKey, JSON.stringify(all));
+        localStorage.setItem(consentKey + "_status", "accepted");
+        window.location.reload();
     };
 
-    const onSavePreferences = () => {
-        try {
-            localStorage.setItem(key, JSON.stringify(preferences));
-            localStorage.setItem(key + "_status", "customized");
-        } catch { }
-        setOpen(false);
-        setShowModal(false);
+    /** Save custom preferences */
+    const onSave = () => {
+        localStorage.setItem(consentKey, JSON.stringify(preferences));
+        localStorage.setItem(consentKey + "_status", "customized");
+        setModalOpen(false);
+        window.location.reload();
     };
-    const localRunEventHandler = async (handler?: any, dataOverride?: AnyObj) => {
-        if (!handler) return;
-        if (handler.action === "update_state" && handler.params?.fn) {
-            handler.params.fn(dataOverride?.pressed);
-        }
-        if (handler.action === "ui_close_modal") {
-            setShowModal(false);
-        }
-        if (handler.action === "cookie_accept" && handler.params?.fn) {
-            handler.params.fn();
-        }
-    };
+
     return (
         <>
-            {/* Banner */}
+            {/* ==============================  
+                COOKIE BANNER 
+            =============================== */}
             <div
                 className={clsx(
-                    "fixed left-0 right-0 z-50",
-                    c.position === "bottom" ? "bottom-0" : "top-0"
+                    "fixed left-0 right-0 z-50 pointer-events-none",
+                    c.position === "bottom" ? "bottom-6" : "top-6"
                 )}
             >
                 <div
                     className={clsx(
-                        "mx-auto max-w-5xl rounded-md shadow-md p-4 flex flex-col gap-3",
-                        (c.styles?.className ||'bg-primary text-accent')
+                        "pointer-events-auto mx-auto max-w-5xl rounded-md shadow-md p-4 flex flex-col gap-3",
+                        c.styles?.className || "bg-white text-black"
                     )}
                 >
                     {c.description && (
-                        <p className="text-sm">{resolveBinding(c.description, state, t)}</p>
+                        <p className="text-sm text-muted-foreground">
+                            {resolveBinding(c.description, state, t)}
+                        </p>
                     )}
-                    <div className="flex items-center justify-end gap-3">
-                        {c.manageButton && (
-                            <ElementResolver
-                                state={state}
-                                t={t}
-                                setState={setState}
-                                element={{
-                                    ...c.manageButton,
-                                    onClick: {
-                                        action: "ui_open_modal" as any,
-                                        params: { fn: () => setShowModal(true) },
-                                    },
-                                }}
-                            />
-                        )}
-                        {c.acceptButton && (
-                            <Button onClick={onAcceptAll}>
-                                {resolveBinding(c.acceptButton.text, state, t)}
-                            </Button>
 
+                    <div className="flex flex-wrap items-center justify-end gap-3">
+                        {/* Manage Preferences */}
+                        {c.manageButton && (
+                            <Button
+                                variant={
+                                    c.manageButton.variant || "secondary"
+                                }
+                                onClick={() => setModalOpen(true)}
+                            >
+                                {resolveBinding(
+                                    c.manageButton.text ||
+                                    { binding: "cookie.manage" },
+                                    state,
+                                    t
+                                )}
+                            </Button>
+                        )}
+
+                        {/* Accept All */}
+                        {c.acceptButton && (
+                            <Button
+                                variant={c.acceptButton.variant || "primary"}
+                                onClick={onAcceptAll}
+                            >
+                                {resolveBinding(
+                                    c.acceptButton.text ||
+                                    { binding: "cookie.accept_all" },
+                                    state,
+                                    t
+                                )}
+                            </Button>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* Preferences Modal */}
-            {c.preferencesModal && (
-                <ModalRenderer
-                    state={state}
-                    t={t}
-                    setState={setState}
-                    element={{
-                        ...c.preferencesModal,
-                        isOpen: showModal,
-                        onClose: { action: "ui_close_modal" as any, params: { fn: () => setShowModal(false) } },
-                        content: [
-                            {
-                                id: "cookie-options",
-                                name: "Cookie Options",
-                                type: ElementType.container,
-                                children: c.options?.map((opt) => ({
-                                    id: opt.id,
-                                    name: opt.label as string,
-                                    type: "toggle",
-                                    label: opt.label,
-                                    pressed: preferences[opt.id],
-                                    onToggle: {
-                                        action: "update_state",
-                                        params: {
-                                            fn: (val: boolean) =>
-                                                setPreferences((prev) => ({
-                                                    ...prev,
-                                                    [opt.id]: opt.required ? true : val,
-                                                })),
-                                        },
+            {/* ==============================  
+                PREFERENCES MODAL  
+            =============================== */}
+            {modalOpen && (
+                <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60">
+                    <div className="bg-white dark:bg-neutral-900 rounded-xl max-w-lg w-full p-6 shadow-xl relative">
+                        {/* Close Button */}
+                        <button
+                            className="absolute top-3 right-3 text-gray-500 hover:text-black"
+                            onClick={() => setModalOpen(false)}
+                        >
+                            ✕
+                        </button>
+
+                        {/* Title */}
+                        <h2 className="text-xl font-semibold mb-4">
+                            {resolveBinding(
+                                c.preferencesModal?.title ||
+                                { binding: "cookie.preferences" },
+                                state,
+                                t
+                            )}
+                        </h2>
+
+                        {/* OPTIONS */}
+                        <div className="space-y-4">
+                            {c.options?.map((opt) => (
+                                <div
+                                    key={opt.id}
+                                    className="flex items-start gap-3 p-3 border rounded-lg"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        className="mt-1"
+                                        checked={preferences[opt.id]}
+                                        disabled={opt.required}
+                                        onChange={(e) =>
+                                            setPreferences((prev) => ({
+                                                ...prev,
+                                                [opt.id]: opt.required
+                                                    ? true
+                                                    : e.target.checked,
+                                            }))
+                                        }
+                                    />
+
+                                    <div>
+                                        <div className="font-medium">
+                                            {resolveBinding(
+                                                opt.label,
+                                                state,
+                                                t
+                                            )}
+                                        </div>
+
+                                        {opt.description && (
+                                            <p className="text-sm text-muted-foreground">
+                                                {resolveBinding(
+                                                    opt.description,
+                                                    state,
+                                                    t
+                                                )}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* SAVE BUTTON */}
+                        <div className="mt-6 flex justify-end">
+                            <Button
+                                variant={
+                                    c.saveButton?.variant || "primary"
+                                }
+                                onClick={onSave}
+                            >
+                                {resolveBinding(
+                                    c.saveButton?.text || {
+                                        binding: "cookie.save",
                                     },
-                                })) as any,
-                            },
-                            ...(c.saveButton
-                                ? [
-                                    {
-                                        ...c.saveButton,
-                                        onClick: {
-                                            action: "cookie_accept" as any,
-                                            params: { fn: onSavePreferences },
-                                        },
-                                    },
-                                ]
-                                : []),
-                        ],
-                    }}
-                    runEventHandler={localRunEventHandler}
-                />
+                                    state,
+                                    t
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
             )}
         </>
     );

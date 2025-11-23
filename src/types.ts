@@ -200,6 +200,7 @@ export enum ElementType {
     map = 'map',
     menu = 'menu',
     modal = 'modal',
+    navigation_menu = 'navigation_menu',
     pagination = 'pagination',
     payment = 'payment',
     popover = 'popover',
@@ -1435,17 +1436,23 @@ export interface SheetElement extends BaseElement {
 
 export interface SidebarElement extends BaseElement {
     type: ElementType.sidebar;
-    footer?: UIElement;
+    footer?: UIElement & {
+        requiresAuth?: boolean;
+    };
     groups: Array<{
         id: string;
-        items: UIElement[];
+        items: Array<UIElement & {
+            requiresAuth?: boolean;
+        }>;
         label: Binding;
         className?: string;
         headerClassName?: string;
         collapseContainerClassName?: string;
     }>;
     showSearch?: boolean;
-    header?: UIElement;
+    header?: UIElement & {
+        requiresAuth?: boolean;
+    };
 }
 export interface SignaturePadElement extends BaseElement {
     type: ElementType.signature_pad;
@@ -2032,7 +2039,56 @@ export interface EndpointEnvironments {
         headers?: Record<string, string>;
     }>;
 }
+export interface NavigationMenu extends BaseElement {
+    type: ElementType.navigation_menu;
+    id: string;
 
+    /** Where it renders */
+    placement: 'top' | 'side' | 'bottom' | 'drawer';
+
+    /** Mobile behavior */
+    mobile?: {
+        trigger?: 'burger' | 'none';
+        sheetDirection?: 'left' | 'right' | 'top' | 'bottom';
+    };
+
+    header?: UIElement[];
+    footer?: UIElement[];
+    showSearch?: boolean | { placeholder?: Binding; dataSourceId?: string };
+
+    items: NavigationItem[];
+    visibility?: VisibilityControl;
+}
+
+export type NavigationItem =
+    | NavigationLink
+    | NavigationGroup
+    | NavigationDivider
+    | NavigationCustom;
+
+export interface NavigationLink {
+    type: 'link';
+    id: string;
+    label: Binding;
+    href: string;
+    icon?: IconElement;
+    badge?: BadgeElement;
+    requiresAuth?: boolean;
+    visibility?: VisibilityControl;
+    onClick?: EventHandler;
+}
+
+export interface NavigationGroup {
+    type: 'group';
+    id: string;
+    label: Binding;
+    icon?: IconElement;
+    defaultCollapsed?: boolean;
+    items: NavigationItem[];
+}
+
+export interface NavigationDivider { type: 'divider'; }
+export interface NavigationCustom { type: 'custom'; element: UIElement; }
 export interface GuardRule {
     conditions?: ConditionExpr[];
     dataSourceId?: string;
@@ -2045,11 +2101,12 @@ export interface GuardRule {
 }
 
 export interface IRoute {
-    guard?: GuardRule;
     href: string;
-    icon: string;
-    isDynamic: boolean;
-    label: string;
+    screenId: string;
+    screenVersion?: string;
+    requiresAuth?: boolean;
+    guard?: GuardRule;
+    screenConfigUrl?: string;
     metadata: {
         title?: string;
         description?: string;
@@ -2076,51 +2133,10 @@ export interface IRoute {
             url?: boolean;
         };
     };
-    nested?: IRoute[];
-    requiresAuth: boolean;
-    screenConfigUrl?: string;
-    screenId?: string;
-    screenVersion?: string;
-    showInBottomBar: boolean;
-    showInNavigation: boolean;
-    visibility?: VisibilityControl;
-
 }
-
 export interface IRouteList {
-    desktopNavType?: 'top' | 'side';
-    layout?: string;
-    metadata: {
-        basePath: string;
-        generatedAt: string;
-        totalRoutes: number;
-        version?: string;
-    };
-    navStyle: NavStyle;
-    responsiveNavType?: 'bottom' | 'burger';
     routes: IRoute[];
-    autoHideNavigation?: Record<string, Array<"sidebar" | "topbar" | "bottombar" | "footer" | string>>;
-    visibility?: {
-        topbar?: VisibilityControl;
-        sidebar?: VisibilityControl;
-        bottombar?: VisibilityControl;
-        fullNav?: VisibilityControl;
-    };
-    sidebarConfig?: {
-        showSearch?: boolean;
-        customActions?: Array<{
-            id: string;
-            label: string;
-            icon?: string;
-            onClick?: string; // action id or URL
-        }>;
-    };
-}
-
-export interface NavStyle {
-    containerStyle?: StyleProps;
-    overlayStyle?: StyleProps;
-    sheetStyle?: StyleProps;
+    basePath?: string;
 }
 
 export interface RedirectSpec {
@@ -2281,18 +2297,12 @@ export interface SocialMediaLinks {
 
 
 export interface UIProject {
-    /** Brand & Navigation */
     brand: Brand;
     footer?: FooterElement;
-    navigation?: UIElement;
     search?: {
         enabled?: boolean;
         path?: string;
     };
-
-    /* ------------------------------------------------------
-     🌍 Global Configuration
-    ------------------------------------------------------ */
     globalConfig?: {
         projectId?: string;
         accessibilityConfig?: AccessibilityConfig;
@@ -2415,25 +2425,15 @@ export interface UIProject {
         };
     };
 
-    /* ------------------------------------------------------
-     💾 Initial State / Data
-    ------------------------------------------------------ */
     initialData?: Record<string, any>;
     routeBase?: string;
     routeList: IRouteList;
+    navigation?: {
+        primary?: NavigationMenu;     // main nav (usually top or side)
+        mobileBottom?: NavigationMenu;
+        secondary?: NavigationMenu;   // e.g. user menu
+    };
 
-    screenConfigList: Array<{
-        screenId: string;
-        screenVersion?: string;
-        href?: string;
-        label?: string;
-        requiresAuth?: boolean;
-        screenConfigUrl?: string;
-    }>;
-
-    /* ------------------------------------------------------
-     🧠 Reactive State Management
-    ------------------------------------------------------ */
     state?: {
         keys?: Record<
             string,
@@ -2498,6 +2498,7 @@ export interface UIProject {
         options?: Array<{
             id: string;
             label: Binding;
+            description?: Binding;
             required?: boolean;
             defaultValue?: boolean;
         }>;
@@ -2519,26 +2520,3 @@ export interface NavigationAPI {
     reload?: () => void;
     currentPath?: () => string;
 }
-
-
-export type ResolveScope = {
-    state?: AnyObj;
-    form?: AnyObj;
-    props?: AnyObj;
-    config?: AnyObj;
-    data?: AnyObj;
-    auth?: AnyObj;
-    user?: AnyObj;
-
-    router?: AnyObj;
-    params?: AnyObj;
-    query?: AnyObj;
-    headers?: AnyObj;
-    request?: AnyObj;
-    url?: AnyObj;
-    location?: AnyObj;
-    cookies?: AnyObj;
-    session?: AnyObj;
-
-    [k: string]: any;
-};

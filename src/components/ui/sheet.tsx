@@ -8,7 +8,15 @@ import wrapWithMotion from "./wrapWithMotion"
 import { ElementResolver } from "../../schema/ElementResolver"
 import { RenderChildren } from "../../schema/RenderChildren"
 import { XIcon } from "lucide-react"
-
+type SheetSide = "top" | "right" | "bottom" | "left";
+interface SheetContentProps
+  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+  /** Preferred: use `side` (standard pattern in shadcn) */
+  side?: SheetSide;
+  /** Legacy fallback — kept for backward compat */
+  direction?: SheetSide;
+  showCloseButton?: boolean;
+}
 function useSheetShortcuts(
   shortcuts: SheetElement["shortcuts"],
   onClose: () => void,
@@ -48,12 +56,11 @@ function SheetContent({
   className,
   children,
   direction = "right",
+  side = "right",
   showCloseButton = false,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content> & {
-  direction?: "left" | "right" | "top" | "bottom"
-  showCloseButton?: boolean
-}) {
+}: SheetContentProps) {
+  const effectiveSide = side || direction || "right";
   const base =
     "bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark) fixed z-50 flex flex-col shadow-lg border data-[state=open]:animate-in data-[state=closed]:animate-out"
 
@@ -62,7 +69,7 @@ function SheetContent({
     left: "inset-y-0 left-0 w-3/4 max-w-sm border-r data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left",
     top: "inset-x-0 top-0 h-1/3 max-h-[80vh] border-b data-[state=open]:slide-in-from-top data-[state=closed]:slide-out-to-top",
     bottom: "inset-x-0 bottom-0 h-1/3 max-h-[80vh] border-t data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom",
-  }[direction]
+  }[effectiveSide]
 
   return (
     <DialogPrimitive.Portal>

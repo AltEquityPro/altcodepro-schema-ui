@@ -36,9 +36,9 @@ export async function getMetaData(route: IRoute, project: UIProject, base_url: s
         let screenConfigUrl = route.screenConfigUrl;
         let screenJson: UIDefinition | null = screenDefinition || null;
         if (!screenJson) {
-            // If no screenConfigUrl is provided, construct default URL from route.label
-            if (!screenConfigUrl && route.label) {
-                const label = route.label.replace(/\s+/g, '_');
+            // If no screenConfigUrl is provided, construct default URL from route.screenId
+            if (!screenConfigUrl && route.screenId) {
+                const label = route.screenId.replace(/\s+/g, '_');
                 screenConfigUrl = `${base_url}/data/${label}_v1.json`; // e.g., /data/Home_v1.json
             }
             if (screenConfigUrl) {

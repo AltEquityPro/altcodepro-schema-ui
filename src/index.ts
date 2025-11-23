@@ -389,7 +389,6 @@ import { Slot } from "@radix-ui/react-slot";
 import { Toolbar, ToolbarButton, ToolbarToggleGroup, ToolbarSeparator } from "@radix-ui/react-toolbar";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
-import { NavLink } from "./components/ui/navLink";
 import { getJSONLD, getMetaData, applyPageMetadata } from "./lib/meta";
 import { ProjectLayout } from "./schema/ProjectLayout";
 import { HybridCache } from "./lib/hybridCache";
@@ -554,7 +553,6 @@ export {
     MenubarSubContent,
     ModalRenderer,
     Multiselect,
-    NavLink,
     NavigationMenu,
     NavigationMenuList,
     NavigationMenuItem,

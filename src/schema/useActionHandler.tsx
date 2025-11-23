@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useContext } from "react";
 import {
     ActionType,
     AnyObj,
@@ -18,6 +18,7 @@ import { useOffline } from "../hooks/OfflineContext";
 import { useAnalytics } from "../hooks/AnalyticsContext";
 import { decodeJwtExp, getStoredAuthToken } from "./authUtils";
 import { useAuth } from "./useAuth";
+import { ModalContext } from "./useModalState";
 
 function anySignal(signals: AbortSignal[]): AbortSignal {
     const controller = new AbortController();
@@ -105,7 +106,7 @@ export function useActionHandler({
     const offline = useOffline();
     const analytics = useAnalytics();
     const auth = useAuth();
-
+    const { openModal, closeModal } = useContext(ModalContext);
     useEffect(() => {
         if (!offline?.registerExecutor) return;
         offline.registerExecutor(async (evt) => {
@@ -501,7 +502,8 @@ export function useActionHandler({
                         label: h.params?.id || h.params?.modalId,
                     });
                     const id = String(h.params?.id || h.params?.modalId); if (!id) throw new Error("Modal ID required");
-                    runtime.openModal?.(id); break;
+                    openModal(id);
+                    break;
                 }
                 case ActionType.close_modal: {
                     analytics.trackEvent({
@@ -510,7 +512,8 @@ export function useActionHandler({
                         label: h.params?.id || h.params?.modalId,
                     });
                     const id = String(h.params?.id || h.params?.modalId); if (!id) throw new Error("Modal ID required");
-                    runtime.closeModal?.(id); break;
+                    closeModal(id);
+                    break;
                 }
                 case ActionType.update_state: {
                     const path = String(h.params?.path);

@@ -122,7 +122,7 @@ export function ComposerRenderer({
     return (
         <div
             className={cn(
-                "flex flex-col gap-3 w-full border border-border rounded-xl bg-background/70 backdrop-blur-sm p-3",
+                "flex flex-col gap-2 w-full",
                 element.styles?.className
             )}
             role="form"
@@ -132,7 +132,7 @@ export function ComposerRenderer({
             <div className="w-full">{Editor}</div>
 
             {/* 🎛️ Action Row (schema-managed) */}
-            {element.actions?.length ? (
+            {element.actions && element.actions?.length ? (
                 <div
                     className={
                         element.actionsContainerClassName || "flex flex-wrap items-center gap-3 w-full justify-between"
@@ -149,7 +149,7 @@ export function ComposerRenderer({
             ) : null}
 
             {/* 📎 Attachments */}
-            {attachments.length > 0 && (
+            {attachments && attachments.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                     {attachments.map((att) => (
                         <div

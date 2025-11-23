@@ -147,15 +147,39 @@ function CardRenderer({ element, setState, runEventHandler, state, t }: CardRend
   );
 
   // Clickable wrapper (smooth transition)
-  if (element.clickable && (element.href || element.onEvent)) {
-    const action = element.href ? { "action": "navigation", "params": { "href": element.href } } : element.onEvent?.onClick?.params?.href
+  if (element.clickable) {
+    const hasHref = !!element.href;
+    const hasOnClick = !!element.onEvent?.onClick;
+
+    const handleClick = async (e: React.MouseEvent) => {
+      if (hasHref) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (hasOnClick && runEventHandler) {
+        await runEventHandler(element.onEvent?.onClick);
+      }
+    };
+
+    if (hasHref) {
+      return (
+        <a
+          href={resolveBinding(element.href, state, t)}
+          className="block transition-colors duration-200 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-[var(--acp-primary)] rounded-xl"
+          onClick={handleClick}
+        >
+          {cardBody}
+        </a>
+      );
+    }
+
     return (
-      <a
-        href={String(resolveBinding(action, state, t))}
-        className="block transition-colors duration-200 hover:opacity-80"
+      <button
+        type="button"
+        onClick={handleClick}
+        className="w-full text-left block transition-colors duration-200 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-[var(--acp-primary)] rounded-xl"
       >
         {cardBody}
-      </a>
+      </button>
     );
   }
 

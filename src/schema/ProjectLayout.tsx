@@ -43,43 +43,20 @@ function RenderWithContexts({ project, nav, state, t, setState, clearState, chil
 
     return (
         <div className={clsx('min-h-screen', layoutClass)}>
-            {project.navigation && (
-                <ElementResolver
-                    state={state}
-                    setState={setState}
-                    t={t}
-                    element={project.navigation}
-                    runEventHandler={runEventHandler}
-                />
-            )}
-
-            {!project.navigation && project.routeList?.routes && (
-                <NavRenderer
-                    project={project}
-                    nav={nav}
-                    state={state}
-                    setState={setState}
-                    clearState={clearState}
-                    t={t}
-                />
-            )}
-
+            <NavRenderer project={project} state={state} t={t} setState={setState} runEventHandler={runEventHandler} />
             <main className="flex-1">{children}</main>
-
             <CookieBannerRenderer
                 setState={setState}
                 project={project}
                 state={state}
                 t={t}
             />
-
             {project.footer && (
                 <ElementResolver
                     state={state}
                     setState={setState}
                     t={t}
                     element={project.footer}
-                    runEventHandler={runEventHandler}
                 />
             )}
         </div>
@@ -112,10 +89,7 @@ export const ProjectLayout = React.memo(function ProjectLayout({
         return <Loader />;
     }
 
-    const requiresAuth =
-        !!project?.routeList?.routes?.some((r) => r.requiresAuth) ||
-        !project?.screenConfigList?.some((r) => r.requiresAuth);
-
+    const requiresAuth = project.routeList?.routes?.some(r => r.requiresAuth);
 
     return (
         <GlobalThemeProvider project={project}>

@@ -92,18 +92,21 @@ function Sidebar({
       style={{ "--sidebar-width": SIDEBAR_WIDTH } as React.CSSProperties}
       {...getAccessibilityProps(element.accessibility)}
     >
-      {/* Header */}
-      {element.header && (
-        <div className="p-4 border-b border-(--acp-border) dark:border-(--acp-border-dark)">
-          <RenderChildren
-            children={[element.header]}
-            t={t}
-            state={state}
-            setState={setState}
-            runEventHandler={runEventHandler}
-          />
-        </div>
-      )}
+      {element.header &&
+        (!element.header.requiresAuth ||
+          state?.isAuthenticated ||
+          state?.auth?.user) && (
+          <div className="p-4 border-b border-(--acp-border) dark:border-(--acp-border-dark)">
+            <RenderChildren
+              children={[element.header]}
+              t={t}
+              state={state}
+              setState={setState}
+              runEventHandler={runEventHandler}
+            />
+          </div>
+        )}
+
       {/* Search Bar */}
       {element.showSearch && <div className="sticky top-0 bg-(--acp-background) dark:bg-(--acp-background-dark) z-10 pb-2">
         <input
@@ -119,13 +122,17 @@ function Sidebar({
       <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-[var(--acp-border-dark)] scrollbar-thumb-rounded-md p-2 space-y-2">
         {element.groups?.map((group) => {
           const isExpanded = expandedGroups[group.id] ?? true;
-          const items = group.items?.filter((item) => {
+          let items = group.items?.filter((item) => {
             const label = resolveBinding(item.name, state, t)?.toLowerCase?.() || "";
             return !searchQuery || label.includes(searchQuery.toLowerCase());
           });
-
+          items = items.filter(item => {
+            if (item.requiresAuth && !(state?.isAuthenticated || state?.auth?.user)) {
+              return false;
+            }
+            return true;
+          })
           if (!items?.length) return null;
-
 
           return (
             <div

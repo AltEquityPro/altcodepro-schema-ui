@@ -8,6 +8,7 @@ import { ElementResolver } from "../../schema/ElementResolver"
 import { RenderChildren } from "../../schema/RenderChildren"
 import { ModalElement, AnyObj, EventHandler } from "../../types"
 import wrapWithMotion from "./wrapWithMotion"
+import { useModalState } from "../../schema/useModalState";
 
 function Dialog({
   ...props
@@ -143,20 +144,15 @@ function ModalRenderer({ element, setState, state, t, runEventHandler }: ModalRe
   const modal = element;
   const title = resolveBinding(modal.title, state, t);
   const description = resolveBinding(modal.description, state, t);
-
-  const [open, setOpen] = React.useState(
-    typeof modal.isOpen === "boolean"
-      ? modal.isOpen
-      : resolveBinding(modal.isOpen, state, t) ?? false
-  );
-
+  const { isOpen, close } = useModalState(modal.id);
   const handleClose = React.useCallback(async () => {
-    setOpen(false);
+    close();
     if (modal.onClose) {
       await runEventHandler?.(modal.onClose);
     }
-  }, [modal.onClose, runEventHandler]);
+  }, [modal.onClose, runEventHandler, close]);
 
+  // NEW – wrapper that also closes on success actions
   const handleActionWrapper = React.useCallback(
     async (handler?: EventHandler, dataOverride?: AnyObj) => {
       await runEventHandler?.(handler, dataOverride);
@@ -166,21 +162,15 @@ function ModalRenderer({ element, setState, state, t, runEventHandler }: ModalRe
         handler?.action === "crud_create" ||
         handler?.action === "crud_update"
       ) {
-        setOpen(false);
+        close();
       }
     },
-    [runEventHandler]
+    [runEventHandler, close]
   );
 
   return wrapWithMotion(
     element,
-    <Dialog
-      open={open}
-      onOpenChange={(isOpen) => {
-        if (!isOpen) handleClose();
-        else setOpen(true);
-      }}
-    >
+    <Dialog open={isOpen} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent
         className={cn(modal.styles?.className)}
         style={{ zIndex: modal.zIndex }}
