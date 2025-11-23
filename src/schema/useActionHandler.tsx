@@ -189,10 +189,10 @@ export function useActionHandler({
         delete wsCleanups.current[actionId];
     };
 
-    const runEventHandler = async (handler?: EventHandler, dataOverride?: AnyObj): Promise<void> => {
+    const runEventHandler = async (handler?: EventHandler, dataOverride?: AnyObj): Promise<any> => {
         if (!handler) return;
 
-
+        let result: any;
         const runSub = async (acts?: EventHandler[], ctx?: AnyObj) => {
             if (!acts?.length) return;
             for (const sub of acts) {
@@ -689,13 +689,10 @@ export function useActionHandler({
             await then(false, undefined, err);
             console.log('error', err)
             runtime.toast?.(err.message, "error");
-        } finally {
-            // controller.abort();
-            // delete abortControllers.current[actionId];
         }
     };
 
 
-    return { runEventHandler, cancel }; // expose auth if UI needs it
+    return { runEventHandler, cancel };
 }
 

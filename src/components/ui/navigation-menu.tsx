@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import clsx from "clsx";
 import { Sheet, SheetContent } from "./sheet";
 import { Button } from "./button";
 import { X, Menu, Search } from "lucide-react";
-import { NavigationMenu, AnyObj, EventHandler, NavigationItem, Binding } from "../../types";
+import { NavigationMenu, AnyObj, EventHandler, NavigationItem, Binding, ActionType } from "../../types";
 import { RenderChildren } from "../../schema/RenderChildren";
 import { useIsMobile } from "../../hooks/use-mobile";
 import { resolveBinding } from "../../lib/utils";
@@ -15,7 +15,7 @@ interface NavigationMenuRendererProps {
     menu: NavigationMenu;
     state: AnyObj;
     t: (key: string, defaultLabel?: string) => string;
-    runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<void>;
+    runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<any>;
     setState: (path: string, value: any) => void;
 }
 
@@ -29,40 +29,102 @@ export function NavigationMenuRenderer({
     const isMobile = useIsMobile();
     const [open, setOpen] = useState(false);
     const [searchValue, setSearchValue] = useState("");
+    const [searchResults, setSearchResults] = useState<AnyObj[]>([]);
 
     const isDrawer = isMobile && menu.mobile?.trigger === "burger";
 
-    // Resolve search
+    // Search config
     const searchConfig = typeof menu.showSearch === "object" ? menu.showSearch : {};
     const searchPlaceholder = searchConfig.placeholder
         ? resolveBinding(searchConfig.placeholder as Binding, state, t)
         : "Search...";
-    const placement = menu.placement;
 
-    const baseClasses = {
-        top: "fixed top-0 left-0 right-0 z-50 border-b",
-        side: "fixed inset-y-0 left-0 z-50 w-64 border-r",
-        bottom: "fixed bottom-0 left-0 right-0 z-50 border-t",
-        drawer: "w-80 h-full",
-    };
+    // Backend search
+    const searchDsId = typeof searchConfig === "object" ? searchConfig.dataSourceId : null;
+
+    // Deep search through all items (including tree/custom)
+    const filteredItems = useMemo(() => {
+        if (!searchValue.trim()) return menu.items;
+
+        const q = searchValue.toLowerCase().trim();
+
+        const searchInItem = (item: NavigationItem): boolean => {
+            // Text match
+            const label = resolveBinding((item as any).label, state, t) || "";
+            if (label.toLowerCase().includes(q)) return true;
+
+            // Badge
+            if ((item as any).badge) {
+                const badge = resolveBinding((item as any).badge, state, t) || "";
+                if (badge.toLowerCase().includes(q)) return true;
+            }
+
+            // Custom element text content
+            if (item.type === "custom" && item.element) {
+                const text = extractTextFromElement(item.element);
+                if (text.toLowerCase().includes(q)) return true;
+            }
+
+            // Tree node deep search
+            if (item.type === "custom" && (item.element as any).type === "tree") {
+                const treeData = resolveBinding((item.element as any).dataSourceId, state, t) || [];
+                if (Array.isArray(treeData)) {
+                    return treeData.some((node: any) =>
+                        String(node.name || node.label || "").toLowerCase().includes(q)
+                    );
+                }
+            }
+
+            // Recurse into group/custom children
+            if ((item as any).items) {
+                return (item as any).items.some(searchInItem);
+            }
+            if ((item as any).children) {
+                return (item as any).children.some(searchInItem);
+            }
+
+            return false;
+        };
+
+        return menu.items.filter(searchInItem);
+    }, [menu.items, searchValue, state, t]);
+
+    // Optional backend search
+    React.useEffect(() => {
+        if (!searchDsId || !searchValue.trim()) {
+            setSearchResults([]);
+            return;
+        }
+
+        let cancelled = false;
+
+        const doSearch = async () => {
+            try {
+                const result = await runEventHandler?.({
+                    action: ActionType.api_call,
+                    dataSourceId: searchDsId,
+                    params: { queryParams: { q: searchValue } }
+                }, { q: searchValue });
+
+                if (!cancelled) setSearchResults(result || []);
+            } catch (e) {
+                console.warn("Search failed:", e);
+            }
+        };
+
+        const timeout = setTimeout(doSearch, 300);
+        return () => {
+            cancelled = true;
+            clearTimeout(timeout);
+        };
+    }, [searchValue, searchDsId, runEventHandler]);
 
     const content = (
-        <div
-            className={clsx(
-                "flex flex-col h-full bg-background text-foreground",
-                menu.styles?.className
-            )}
-        >
+        <div className={clsx("flex flex-col h-full bg-background text-foreground", menu.styles?.className)}>
             {/* Header */}
             {menu.header && (
                 <div className={clsx("border-b border-border/50", menu.headerClassName)}>
-                    <RenderChildren
-                        children={menu.header}
-                        state={state}
-                        t={t}
-                        runEventHandler={runEventHandler}
-                        setState={setState}
-                    />
+                    <RenderChildren children={menu.header} state={state} t={t} runEventHandler={runEventHandler} setState={setState} />
                 </div>
             )}
 
@@ -85,40 +147,46 @@ export function NavigationMenuRenderer({
                             )}
                         />
                     </div>
+
+                    {/* Backend search results */}
+                    {searchResults.length > 0 && (
+                        <div className="mt-2 max-h-64 overflow-y-auto rounded-lg bg-muted/50 border border-border/50">
+                            {searchResults.map((result, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => {
+                                        setSearchValue("");
+                                        runEventHandler?.(result.onClick);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm hover:bg-accent/70 transition-colors"
+                                >
+                                    {result.title || result.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 
             {/* Items */}
             <nav className={clsx("flex-1 overflow-y-auto space-y-0.5", menu.navClassName || "px-3 py-2")}>
-                {menu.items
-                    .filter((item) => {
-                        if (!searchValue) return true;
-                        const label = resolveBinding((item as any).label, state, t) || "";
-                        return label.toLowerCase().includes(searchValue.toLowerCase());
-                    })
-                    .map((item, i) => (
-                        <NavigationItemRenderer
-                            key={i}
-                            item={item}
-                            state={state}
-                            t={t}
-                            runEventHandler={runEventHandler}
-                            setState={setState}
-                            depth={0}
-                        />
-                    ))}
+                {filteredItems.map((item, i) => (
+                    <NavigationItemRenderer
+                        key={i}
+                        item={item}
+                        state={state}
+                        t={t}
+                        runEventHandler={runEventHandler}
+                        setState={setState}
+                        depth={0}
+                    />
+                ))}
             </nav>
 
             {/* Footer */}
             {menu.footer && (
                 <div className={clsx("border-t border-border/50 mt-auto", menu.footerClassName)}>
-                    <RenderChildren
-                        children={menu.footer}
-                        state={state}
-                        t={t}
-                        runEventHandler={runEventHandler}
-                        setState={setState}
-                    />
+                    <RenderChildren children={menu.footer} state={state} t={t} runEventHandler={runEventHandler} setState={setState} />
                 </div>
             )}
         </div>
@@ -127,27 +195,14 @@ export function NavigationMenuRenderer({
     if (isDrawer) {
         return (
             <>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setOpen(true)}
-                    className={clsx("fixed top-4 left-4 z-50 lg:hidden", menu.triggerClassName)}
-                >
+                <Button variant="ghost" size="icon" onClick={() => setOpen(true)} className={clsx("fixed top-4 left-4 z-50 lg:hidden", menu.triggerClassName)}>
                     <Menu className="h-5 w-5" />
                 </Button>
 
                 <Sheet open={open} onOpenChange={setOpen}>
-                    <SheetContent
-                        side={menu.mobile?.sheetDirection || "left"}
-                        className={clsx("p-0", menu.sheetClassName)}
-                    >
+                    <SheetContent side={menu.mobile?.sheetDirection || "left"} className={clsx("p-0", menu.sheetClassName)}>
                         {content}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setOpen(false)}
-                            className={clsx("absolute top-4 right-4", menu.closeButtonClassName)}
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className={clsx("absolute top-4 right-4", menu.closeButtonClassName)}>
                             <X className="h-5 w-5" />
                         </Button>
                     </SheetContent>
@@ -156,7 +211,17 @@ export function NavigationMenuRenderer({
         );
     }
 
-    return <div className={clsx("bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60", baseClasses[placement])}>{content}</div>;
+    return content;
+}
+
+// Helper: extract visible text from any element (for search)
+function extractTextFromElement(el: any): string {
+    if (!el) return "";
+    if (typeof el === "string") return el;
+    if (el.content) return String(resolveBinding(el.content, {}, () => "") || "");
+    if (el.children) return el.children.map(extractTextFromElement).join(" ");
+    if (el.label) return String(resolveBinding(el.label, {}, () => "") || "");
+    return "";
 }
 
 // Fully schema-driven item renderer
