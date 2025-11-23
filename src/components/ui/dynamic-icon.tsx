@@ -27,7 +27,7 @@ export function DynamicIcon({
 
   // 🔄 Normalize to PascalCase (e.g., "layout-dashboard" → "LayoutDashboard")
   const normalized = name
-    .replace(/[_-]+/g, " ")
+    ?.replace(/[_-]+/g, " ")
     ?.split(" ")
     ?.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join("");
