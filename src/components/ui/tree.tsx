@@ -24,7 +24,6 @@ type TreeNodeResolved = Omit<
 
 type TriState = "checked" | "unchecked" | "indeterminate";
 
-/** Unified tree data mapper that also resolves bindings */
 function mapTreeNode(
     data: AnyObj,
     map?: TreeElement["mapping"],
@@ -447,10 +446,6 @@ const TreeRow = memo(function TreeRow({
         prev.loadingIds === next.loadingIds
 );
 
-
-/* -------------------------------------------------------------------------- */
-/* Small Components */
-/* -------------------------------------------------------------------------- */
 function Empty({ label }: { label: string }) {
     return <div className="py-8 text-center text-sm text-muted-foreground">{label}</div>;
 }

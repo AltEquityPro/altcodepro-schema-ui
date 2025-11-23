@@ -2051,11 +2051,17 @@ export interface NavigationMenu extends BaseElement {
         trigger?: 'burger' | 'none';
         sheetDirection?: 'left' | 'right' | 'top' | 'bottom';
     };
-
+    headerClassName?: string;
+    searchInputClassName?: string;
+    navClassName?: string;
+    footerClassName?: string;
+    triggerClassName?: string;
+    sheetClassName?: string;
+    closeButtonClassName?: string;
     header?: UIElement[];
     footer?: UIElement[];
     showSearch?: boolean | { placeholder?: Binding; dataSourceId?: string };
-
+    searchClassName?: string;
     items: NavigationItem[];
     visibility?: VisibilityControl;
 }
@@ -2074,6 +2080,8 @@ export interface NavigationLink {
     icon?: IconElement;
     badge?: BadgeElement;
     requiresAuth?: boolean;
+    className?: string;
+    target?: '_self' | '_blank' | '_parent' | '_top';
     visibility?: VisibilityControl;
     onClick?: EventHandler;
 }
@@ -2082,12 +2090,14 @@ export interface NavigationGroup {
     type: 'group';
     id: string;
     label: Binding;
+    className?: string;
+    childrenClassName?: string;
     icon?: IconElement;
     defaultCollapsed?: boolean;
     items: NavigationItem[];
 }
 
-export interface NavigationDivider { type: 'divider'; }
+export interface NavigationDivider { type: 'divider'; className?: string; }
 export interface NavigationCustom { type: 'custom'; element: UIElement; }
 export interface GuardRule {
     conditions?: ConditionExpr[];
