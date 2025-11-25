@@ -164,7 +164,7 @@ function CardRenderer({ element, setState, runEventHandler, state, t }: CardRend
       return (
         <a
           href={resolveBinding(element.href, state, t)}
-          className="block transition-colors duration-200 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-[var(--acp-primary)] rounded-xl"
+          className="block transition-colors duration-200 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-(--acp-primary) rounded-xl"
           onClick={handleClick}
         >
           {cardBody}
@@ -176,7 +176,7 @@ function CardRenderer({ element, setState, runEventHandler, state, t }: CardRend
       <button
         type="button"
         onClick={handleClick}
-        className="w-full text-left block transition-colors duration-200 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-[var(--acp-primary)] rounded-xl"
+        className="w-full text-left block transition-colors duration-200 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-(--acp-primary) rounded-xl"
       >
         {cardBody}
       </button>

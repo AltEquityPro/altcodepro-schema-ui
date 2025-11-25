@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useMemo, useRef, useEffect, useState } from "react";
-import { cn, resolveBinding } from "../../lib/utils";
+import { cleanDataSourceId, cn, resolveBinding } from "../../lib/utils";
 import type { AnyObj, EventHandler, TimelineElement } from "../../types";
 import { Button } from "./button";
 import { Loader2 } from "lucide-react";
@@ -59,7 +59,7 @@ export function TimelineRenderer({
 
     // Hydrate items
     const rawItems = useMemo(() => {
-        const ds = el.dataSourceId ? state[el.dataSourceId] : null;
+        const ds = el.dataSourceId ? state[cleanDataSourceId(el.dataSourceId)] : null;
         return Array.isArray(ds) ? ds : el.items || [];
     }, [el.dataSourceId, el.items, state]);
 

@@ -178,7 +178,7 @@ export function ButtonRenderer({
       data-i118key={element.text}
       data-variant={element.variant}
       disabled={disabled}
-      type="button"
+      type={element.isSubmit ? 'submit' : "button"}
       onClick={() => element.onClick && runEventHandler?.(element.onClick)}
       style={{ zIndex: element.zIndex }}
       {...accessibilityProps}

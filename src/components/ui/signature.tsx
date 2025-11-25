@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { jsPDF } from "jspdf"; // for PDF export
 import { Button } from "./button";
-import { cn } from "../../lib/utils";
+import { cleanDataSourceId, cn } from "../../lib/utils";
 import { AnyObj, SignaturePadElement, EventHandler } from "../../types";
 
 interface SignaturePadRendererProps {
@@ -36,7 +36,7 @@ export function SignaturePadRenderer({
 
     const multiSignatures = element.multiSignatures ?? false;
     const participants: AnyObj[] = element.participantsDataSourceId
-        ? state[element.participantsDataSourceId] || []
+        ? state[cleanDataSourceId(element.participantsDataSourceId)] || []
         : [];
 
     const [activeParticipant, setActiveParticipant] = useState<string | null>(
@@ -52,7 +52,7 @@ export function SignaturePadRenderer({
     /* ====== Persistence: hydrate & resume ====== */
     useEffect(() => {
         if (!element.signatureDataSourceId) return;
-        const stored = state[element.signatureDataSourceId];
+        const stored = state[cleanDataSourceId(element.signatureDataSourceId)];
         if (!stored) return;
 
         if (multiSignatures && typeof stored === "object") {
@@ -103,7 +103,7 @@ export function SignaturePadRenderer({
         setSignatures(updated);
 
         if (element.signatureDataSourceId) {
-            state[element.signatureDataSourceId] = multiSignatures ? updated : dataUrl;
+            state[cleanDataSourceId(element.signatureDataSourceId)] = multiSignatures ? updated : dataUrl;
         }
 
         const handler = trigger === "save" ? element.onSave : element.onChange;
@@ -123,7 +123,7 @@ export function SignaturePadRenderer({
         setSignatures(updated);
 
         if (element.signatureDataSourceId) {
-            state[element.signatureDataSourceId] = multiSignatures ? updated : "";
+            state[cleanDataSourceId(element.signatureDataSourceId)] = multiSignatures ? updated : "";
         }
 
         await runEventHandler?.(element.onClear, { id: element.id });

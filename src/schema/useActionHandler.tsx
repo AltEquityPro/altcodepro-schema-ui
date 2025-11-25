@@ -233,25 +233,18 @@ export function useActionHandler({
                 }
                 if (h.params?.successMessage) runtime.toast?.(t(h.params.successMessage), "success");
 
-                // auth routes (login/register) — use auth.login(..)
                 if (payload) {
-                    const isAuthRoute = (h.dataSourceId?.toLowerCase()?.includes("login")
+                    const isAuthRoute = (h.params?.isAuthRoute || h.dataSourceId?.toLowerCase()?.includes("login")
                         || h.dataSourceId?.toLowerCase()?.includes("register")
-                        || h.params?.isAuthRoute) && typeof payload === "object";
+                    ) && typeof payload === "object";
                     if (isAuthRoute) {
                         const token = payload.access_token || payload.token || payload.jwt || payload.data?.token;
                         const refreshToken = payload.refresh_token || payload.data?.refresh_token;
                         const expiresIn = payload.expires_in || decodeJwtExp(token) || 3600;
                         if (token) {
-                            auth.login(token, refreshToken, typeof expiresIn === 'number' ? expiresIn : 3600);
                             setState('authToken', token);
-                            try {
-                                const pl = JSON.parse(atob(token.split('.')[1]));
-                                setState("user", payload);
-                            } catch {
-                                setState("user", null);
-                            }
                             runtime.toast?.("Login successful", "success");
+                            auth.login(token, refreshToken, typeof expiresIn === 'number' ? expiresIn : 3600);
                             const redirect = globalConfig?.auth?.postLoginHref || "/";
                             if (redirect) runtime.nav?.push?.(redirect);
                         }
@@ -679,7 +672,10 @@ export function useActionHandler({
                     const msg = String(h.params?.msg || ""); const variant = h.params?.variant || "info";
                     runtime.toast?.(msg, variant); break;
                 }
-                default: throw new Error(`Unsupported action: ${h.action}`);
+                default: {
+                    console.error('unsupported action', h);
+                    throw new Error(`Unsupported action: ${h.action}`);
+                }
             }
 
             await then(true, result);

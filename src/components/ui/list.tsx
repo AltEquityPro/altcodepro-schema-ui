@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useCallback } from "react";
-import { cn, resolveBinding } from "../../lib/utils";
+import { cleanDataSourceId, cn, resolveBinding } from "../../lib/utils";
 import { RenderChildren } from "../../schema/RenderChildren";
 import type { AnyObj, EventHandler, ListElement, UIElement } from "../../types";
 import { List, useDynamicRowHeight, useListRef, RowComponentProps } from "react-window";
@@ -28,7 +28,7 @@ export function ListRenderer({
     const isHorizontal = orientation === "horizontal";
 
     const items = useMemo<any[]>(
-        () => (element.dataSourceId ? state[element.dataSourceId] || [] : element.items || []),
+        () => (element.dataSourceId ? state[cleanDataSourceId(element.dataSourceId)] || [] : element.items || []),
         [element.dataSourceId, element.items, state]
     );
 
@@ -66,10 +66,10 @@ export function ListRenderer({
                     key={index}
                     style={style}
                     className={cn(
-                        "flex items-center border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] cursor-pointer select-none",
+                        "flex items-center border-(--acp-border) dark:border-(--acp-border-dark) cursor-pointer select-none",
                         isHorizontal
-                            ? "px-3 py-2 border-r hover:bg-[var(--acp-hover)]"
-                            : "px-3 py-2 border-b hover:bg-[var(--acp-hover)]",
+                            ? "px-3 py-2 border-r hover:bg-(--acp-hover)"
+                            : "px-3 py-2 border-b hover:bg-(--acp-hover)",
                         element.styles?.className
                     )}
                     onClick={() => handleRowClick(item, index)}
@@ -99,7 +99,7 @@ export function ListRenderer({
                 {items.map((item, index) => (
                     <div
                         key={index}
-                        className="flex-shrink-0 min-w-[300px]"
+                        className="shrink-0 min-w-[300px]"
                         onClick={() => handleRowClick(item, index)}
                     >
                         <RenderChildren
@@ -119,7 +119,7 @@ export function ListRenderer({
         <div
             role="list"
             className={cn(
-                "w-full rounded-md border border-[var(--acp-border)] dark:border-[var(--acp-border-dark)] bg-card overflow-hidden",
+                "w-full rounded-md border border-(--acp-border) dark:border-(--acp-border-dark) bg-card overflow-hidden",
                 element.styles?.className
             )}
             data-slot="list"

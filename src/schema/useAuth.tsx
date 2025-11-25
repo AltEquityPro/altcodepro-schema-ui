@@ -49,16 +49,17 @@ export function AuthProvider({
 
     const isLoggedIn = !!token && (!expiresAt || Date.now() < expiresAt - 5 * 60 * 1000);
 
-    /* --------------------------------------------------
-    Login / Logout / Refresh
-    -------------------------------------------------- */
     const login = useCallback(
         (tkn: string, rt?: string, expiresIn?: number) => {
-            const exp = decodeJwtExp(tkn) || Date.now() + (expiresIn || 3600) * 1000;
-            storeAuthToken(globalConfig, { token: tkn, refreshToken: rt, expiresAt: exp });
-            setToken(tkn);
-            setRefreshToken(rt || null);
-            setExpiresAt(exp);
+            try {
+                const exp = decodeJwtExp(tkn) || Date.now() + (expiresIn || 3600) * 1000;
+                storeAuthToken(globalConfig, { token: tkn, refreshToken: rt, expiresAt: exp });
+                setToken(tkn);
+                setRefreshToken(rt || null);
+                setExpiresAt(exp);
+            } catch (error) {
+                console.error("Login error:", error);
+            }
         },
         [globalConfig]
     );
@@ -102,35 +103,30 @@ export function AuthProvider({
         return null;
     }, [globalConfig, refreshToken, logout]);
 
-    const loadProfile = useCallback(async () => {
+    const loadProfile = useCallback(async (tkn?: string) => {
         const ds = globalConfig?.profile?.dataSources;
-        if (!token || !ds?.apiUrl) return;
-
-        const headers: Record<string, string> = {
-            ...(ds.headers || {}),
-            Authorization: `Bearer ${token}`,
-        };
+        const authToken = tkn || token;
+        if (!authToken || !ds?.apiUrl) return;
+        const headers: Record<string, string> = { ...(ds.headers || {}) };
+        headers["Authorization"] = `Bearer ${authToken}`;
 
         try {
             const res = await fetch(ds.apiUrl, { method: ds.method || "GET", headers });
             if (!res.ok) {
-                if (res.status === 401) logout();
                 return;
             }
             const profile = await res.json();
             setUser(profile);
             setState?.("profile", profile);
-            setState?.("auth.user", profile);
-            setState?.("user", profile);
+            setState?.("user", { ...profile, token: authToken });
             setState?.("isAuthenticated", true);
+            hasLoadedProfile.current = true;
         } catch (err) {
-            console.warn("Error fetching user profile:", err);
+            console.error("Error fetching user profile:", err);
         }
     }, [globalConfig, token, logout, setState]);
 
-    /* --------------------------------------------------
-    Initialize from stored token (fixed)
-    -------------------------------------------------- */
+
     useEffect(() => {
         if (typeof window === "undefined") return;
         const stored = getStoredAuthToken(globalConfig);
@@ -140,13 +136,9 @@ export function AuthProvider({
                 stored.refreshToken,
                 stored.expiresAt ? (stored.expiresAt - Date.now()) / 1000 : 3600
             );
-            if (!hasLoadedProfile.current) {
-                hasLoadedProfile.current = true;
-                loadProfile();
-            }
         }
         setInitialized(true);
-    }, [globalConfig, login, loadProfile]);
+    }, [globalConfig, login]);
 
     /* --------------------------------------------------
     Cross-tab sync
@@ -161,20 +153,18 @@ export function AuthProvider({
                         updated.refreshToken,
                         updated.expiresAt ? (updated.expiresAt - Date.now()) / 1000 : 3600
                     );
-                    loadProfile();
                 } else logout();
             }
         };
         window.addEventListener("storage", onStorage);
         return () => window.removeEventListener("storage", onStorage);
-    }, [globalConfig, login, logout, loadProfile]);
+    }, [globalConfig, login, logout]);
 
     /* --------------------------------------------------
     Auto-load user when token changes
     -------------------------------------------------- */
     useEffect(() => {
         if (initialized && token && !hasLoadedProfile.current) {
-            hasLoadedProfile.current = true;
             loadProfile();
         }
     }, [initialized, token, loadProfile]);
@@ -215,9 +205,6 @@ export function AuthProvider({
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-/* --------------------------------------------------
- 💡 Hook: useAuth({ requiresAuth })
--------------------------------------------------- */
 export function useAuth(options?: { requiresAuth?: boolean; nav?: NavigationAPI }) {
     const ctx = useContext(AuthContext);
     if (!ctx) throw new Error("useAuth must be used within <AuthProvider>");

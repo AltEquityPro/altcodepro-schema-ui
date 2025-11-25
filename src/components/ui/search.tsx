@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Search, X, Mic, Loader2 } from "lucide-react";
-import { cn, resolveBinding } from "../../lib/utils";
+import { cleanDataSourceId, cn, resolveBinding } from "../../lib/utils";
 import type { AnyObj, EventHandler, SearchElement } from "../../types";
 import { Input } from "./input";
 import { Button } from "./button";
@@ -50,7 +50,7 @@ export function SearchRenderer({
     // Static suggestions
     React.useEffect(() => {
         if (!element.suggestionsDataSourceId) return;
-        const v = state[element.suggestionsDataSourceId];
+        const v = state[cleanDataSourceId(element.suggestionsDataSourceId)];
         if (Array.isArray(v)) {
             const arr = v?.map((s: any) =>
                 typeof s === "string" ? s : s.text || ""
@@ -62,7 +62,7 @@ export function SearchRenderer({
     // History
     React.useEffect(() => {
         if (!element.historyDataSourceId) return;
-        const v = state[element.historyDataSourceId];
+        const v = state[cleanDataSourceId(element.historyDataSourceId)];
         if (Array.isArray(v)) {
             const arr = v?.map((s: any) =>
                 typeof s === "string" ? s : s.text || ""

@@ -96,7 +96,7 @@ export function LottieRenderer({
                 .catch((err: any) => {
                     if (abort.signal.aborted) return
                     setAnimationData(null)
-                    setDataError("Failed to load animation.")
+                    // setDataError("Failed to load animation.")
                     runEventHandler?.(element.onError, {
                         error: "Fetch failed",
                         detail: String(err?.message || err),

@@ -107,6 +107,17 @@ export function resolveAnimation(animation?: any) {
     }
 }
 
+function evalJS(expr: string, ctx: Record<string, any>) {
+    try {
+        const fn = new Function(...Object.keys(ctx), `return (${expr});`);
+        return fn(...Object.values(ctx));
+    } catch (err) {
+        console.warn("JS eval error:", expr, err);
+        return undefined;
+    }
+}
+
+
 export function isVisible(
     visibility: VisibilityControl | undefined,
     state: AnyObj,
@@ -409,22 +420,30 @@ export function resolveDataSourceValue(val: any, state: AnyObj, extra?: AnyObj):
 
     const context = buildScope(state, (extra || {}))
 
-    /**
-     * 🔄 Internal function to resolve a binding expression like "user.org_id" or "state.project.id"
-     */
     const resolveExpr = (expr: string): string => {
         const trimmed = expr.trim().replace(/^state\./, "");
         const value = getPath(context, trimmed);
         return value == null ? "" : sanitizeValue(value);
     };
 
-    // ✅ Handle {{key}} template syntax
-    str = str.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_m, expr) => resolveExpr(expr));
+    str = str.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_m, rawExpr) => {
+        const expr = rawExpr.trim();
 
-    // ✅ Handle {key} syntax
+        // If it looks like JavaScript logic (heuristic)
+        const looksLikeJs =
+            /[=!><\|\&\?]/.test(expr) || expr.includes(".") || expr.includes("length");
+
+        if (looksLikeJs) {
+            const value = evalJS(expr, { state, ...state });
+            return value === undefined ? "" : String(value);
+        }
+
+        return resolveExpr(expr);
+    });
+
+
     str = str.replace(/\{([^}]+?)\}/g, (_m, expr) => resolveExpr(expr));
 
-    // ✅ Handle legacy direct "state.xxx"
     if (str.startsWith("state.")) {
         return sanitizeValue(getPath(state, str.slice(6)));
     }
@@ -625,4 +644,14 @@ export function getIconColor(iconName: string): string {
     }
 
     return "";
+}
+
+export function cleanDataSourceId(id: string): string {
+    if (!id || typeof id !== "string") return id;
+
+    if (id.startsWith("state.")) {
+        return id.replace(/^state\./, "");
+    }
+
+    return id;
 }

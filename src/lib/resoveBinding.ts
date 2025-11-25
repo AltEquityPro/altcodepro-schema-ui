@@ -274,7 +274,7 @@ export function resolveBindingWithDepth(
                 const result = (fn(scope, Math, Date));
                 return result;
             } catch {
-                return expr; // Return the inner expression
+                return expr;
             }
         }
 
@@ -372,11 +372,6 @@ export function resolveBindingWithDepth(
             }
         }
 
-        // Try as direct scope path
-        const maybe = getFromScope(key, scope);
-        if (maybe !== undefined && maybe !== null)
-            return sanitizeValue(typeof maybe === "string" ? expandEnvTemplates(maybe) : maybe);
-
         // Simple translation dictionary fallback
         if (key && state?.translations) {
             const locale = state?.locale || state?.language || "en";
@@ -390,6 +385,10 @@ export function resolveBindingWithDepth(
                 return result;
             }
         }
+        // Try as direct scope path
+        const maybe = getFromScope(key, scope);
+        if (maybe !== undefined && maybe !== null)
+            return sanitizeValue(typeof maybe === "string" ? expandEnvTemplates(maybe) : maybe);
 
         // Fallback literal
         const result = sanitizeValue(key);

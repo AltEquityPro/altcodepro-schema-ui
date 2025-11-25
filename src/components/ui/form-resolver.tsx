@@ -1112,7 +1112,7 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
                 >
                     {element.formGroupType !== "step_wizard" && element.submit && (
                         <ButtonRenderer
-                            element={{ ...element.submit, disabled: isSubmitting }}
+                            element={{ ...element.submit, isSubmit: true, disabled: isSubmitting }}
                             runEventHandler={runEventHandler}
                             state={state}
                             t={t}

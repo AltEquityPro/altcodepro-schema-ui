@@ -42,12 +42,56 @@ async function withRetry<T>(
     }
     throw lastError;
 }
+type TransformContext = {
+    state: AnyObj;
+    params?: Record<string, any>;
+    globalConfig?: UIProject['globalConfig'];
+    screen?: any;
+    ds?: DataSource;
+};
+
+function runTransform(
+    code: string,
+    data: any,
+    ctx: TransformContext
+): any {
+    try {
+        // Build a generic context – schema-driven, no hardcoded keys
+        const fullCtx: Record<string, any> = {
+            data,              // primary payload
+            state: ctx.state,  // full state object
+            params: ctx.params,
+            globalConfig: ctx.globalConfig,
+            screen: ctx.screen,
+            ds: ctx.ds,
+            // flatten state so `profile`, `user`, etc. are directly usable
+            ...(ctx.state || {}),
+        };
+
+        const argNames = Object.keys(fullCtx);
+        const argValues = Object.values(fullCtx);
+
+        const fn = new Function(
+            ...argNames,
+            `"use strict"; ${code}`
+        );
+
+        return fn(...argValues);
+    } catch (e) {
+        console.error("Transform execution error", e);
+        return {
+            ok: false,
+            error: `Transform error: ${String(e)}`,
+        };
+    }
+}
 
 function applyDataMappings(
     out: any,
     ds: DataSource,
     mappings: DataMapping[] | undefined,
-    setState: (path: string, value: any) => void
+    setState: (path: string, value: any) => void,
+    ctx: TransformContext
 ): any {
     if (!mappings) return out;
     let result = out;
@@ -55,8 +99,7 @@ function applyDataMappings(
         if (m.sourceIds.includes(ds.id)) {
             if (m.transform) {
                 try {
-                    const fn = new Function("data", m.transform);
-                    result = fn(result);
+                    result = runTransform(m.transform, result, { ...ctx, ds });
                 } catch (e) {
                     console.error("Mapping transform error", e);
                     result = { ok: false, error: `Transform error: ${String(e)}` };
@@ -288,18 +331,25 @@ export function useDataSources({
     const loadedGlobals = useRef(false);
 
     useEffect(() => {
-        if (loadedGlobals.current) return; // skip if already done
+        if (loadedGlobals.current) return;
         loadedGlobals.current = true;
 
         (async () => {
             for (const ds of globalSources) {
                 try {
+                    if (ds.method === "POST" || ds.trigger === 'action') continue;
+                    if (ds.auth?.type === 'bearer' && !token) continue;
                     if (!ds.auth) {
                         ds.auth = globalConfig?.endpoints?.auth
                     }
                     const rds = resolveDataSource(ds, globalConfig, state);
                     const out = await defaultFetcher(rds, globalConfig);
-                    const mapped = applyDataMappings(out, rds, mappings, setState);
+                    const mapped = applyDataMappings(out, rds, mappings, setState, {
+                        state,
+                        params: routeParams || state.params,
+                        globalConfig,
+                        screen,
+                    });
                     setData((prev) => ({ ...prev, [rds.id]: mapped }));
                 } catch (error) {
                     console.error(error);
@@ -330,7 +380,12 @@ export function useDataSources({
                                 controller.signal
                             )
                             : await defaultFetcher(ds, globalConfig, controller.signal);
-                        const mapped = applyDataMappings(out, ds, mappings, setState);
+                        const mapped = applyDataMappings(out, ds, mappings, setState, {
+                            state,
+                            params: routeParams || state.params,
+                            globalConfig,
+                            screen,
+                        });
                         if (mounted) {
                             setData(prev => ({ ...prev, [ds.id]: mapped }));
                         }
@@ -369,7 +424,12 @@ export function useDataSources({
                                 out.variables,
                                 (newData) => {
                                     if (mounted) {
-                                        const mapped = applyDataMappings(newData, ds, mappings, setState);
+                                        const mapped = applyDataMappings(newData, ds, mappings, setState, {
+                                            state,
+                                            params: routeParams || state.params,
+                                            globalConfig,
+                                            screen,
+                                        });
                                         setData((prev) => ({ ...prev, [ds.id]: mapped }));
                                     }
                                 },
@@ -380,7 +440,12 @@ export function useDataSources({
                                 out.url,
                                 (msg) => {
                                     if (mounted) {
-                                        const mapped = applyDataMappings({ _ws: true, last: msg }, ds, mappings, setState);
+                                        const mapped = applyDataMappings({ _ws: true, last: msg }, ds, mappings, setState, {
+                                            state,
+                                            params: routeParams || state.params,
+                                            globalConfig,
+                                            screen,
+                                        });
                                         setData((prev) => ({ ...prev, [ds.id]: mapped }));
                                     }
                                 },

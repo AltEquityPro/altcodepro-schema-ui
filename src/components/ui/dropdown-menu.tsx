@@ -3,11 +3,12 @@ import * as React from "react"
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
 
-import { cn, resolveBinding } from "../../lib/utils"
+import { cleanDataSourceId, cn, resolveBinding } from "../../lib/utils"
 import wrapWithMotion from "./wrapWithMotion"
 import { RenderChildren } from "../../schema/RenderChildren"
 import { AnyObj, DropdownElement, DropdownItem, EventHandler } from "../../types"
 import { DynamicIcon } from "./dynamic-icon"
+import { el } from "date-fns/locale";
 
 function DropdownMenu({
   ...props
@@ -45,12 +46,12 @@ function DropdownMenuContent({
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         className={cn(
-          "z-[9999] min-w-[10rem] overflow-hidden rounded-lg bg-[var(--acp-background)] dark:bg-[var(--acp-background-dark)] text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)]",
-          "shadow-lg ring-1 ring-[var(--acp-border)] ring-opacity-20",
+          "z-9999 min-w-40 overflow-hidden rounded-lg bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark)",
+          "shadow-lg ring-1 ring-(--acp-border) ring-opacity-20",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
           "data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2",
-          "max-h-[var(--radix-dropdown-menu-content-available-height)] origin-[var(--radix-dropdown-menu-content-transform-origin)] overflow-y-auto p-1",
+          "max-h-(--radix-dropdown-menu-content-available-height) origin-(--radix-dropdown-menu-content-transform-origin) overflow-y-auto p-1",
           className
         )}
         {...props}
@@ -82,7 +83,7 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:*:[svg]:!text-destructive [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "focus:bg-accent focus:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:*:[svg]:text-destructive! [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-inset:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
@@ -100,7 +101,7 @@ function DropdownMenuCheckboxItem({
     <DropdownMenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       checked={checked}
@@ -136,7 +137,7 @@ function DropdownMenuRadioItem({
     <DropdownMenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
@@ -163,7 +164,7 @@ function DropdownMenuLabel({
       data-slot="dropdown-menu-label"
       data-inset={inset}
       className={cn(
-        "px-2 py-1.5 text-sm font-medium data-[inset]:pl-8",
+        "px-2 py-1.5 text-sm font-medium data-inset:pl-8",
         className
       )}
       {...props}
@@ -219,7 +220,7 @@ function DropdownMenuSubTrigger({
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[inset]:pl-8",
+        "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-inset:pl-8",
         className
       )}
       {...props}
@@ -243,12 +244,12 @@ function DropdownMenuSubContent({
       sideOffset={sideOffset}
       alignOffset={alignOffset}
       className={cn(
-        "z-[9999] min-w-[10rem] rounded-lg bg-[var(--acp-background)] dark:bg-[var(--acp-background-dark)] text-[var(--acp-foreground)] dark:text-[var(--acp-foreground-dark)]",
-        "shadow-lg ring-1 ring-[var(--acp-border)] ring-opacity-20 backdrop-blur-sm",
+        "z-9999 min-w-40 rounded-lg bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark)",
+        "shadow-lg ring-1 ring-(--acp-border) ring-opacity-20 backdrop-blur-sm",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
         "data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2",
-        "origin-[var(--radix-dropdown-menu-content-transform-origin)] overflow-hidden p-1",
+        "origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden p-1",
         className
       )}
     />
@@ -399,24 +400,53 @@ function DropdownRenderer({
   t: (key: string) => string
   runEventHandler?: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }) {
+  const items = React.useMemo<any[]>(() => {
+    console.log('dropdown in dropdown menu renderer', dropdown.dataSourceId);
+    const raw =
+      (dropdown.dataSourceId
+        ? state[cleanDataSourceId(dropdown.dataSourceId)]
+        : dropdown.items) || [];
+    console.log('raw items in dropdown menu renderer', raw);
+    if (dropdown.idFeild && dropdown.labelField) {
+      return raw.map((item: any) => ({
+        value: item?.[dropdown.idFeild!],
+        label: item?.[dropdown.labelField!],
+        raw: item,
+      }));
+    }
+
+    return raw;
+  }, [dropdown.dataSourceId, dropdown.items, dropdown.idFeild, dropdown.labelField, state]);
+  console.log('processed items in dropdown menu renderer', items);
+  const triggerContent = dropdown.trigger
+    ? (
+      <RenderChildren
+        children={[dropdown.trigger]}
+        state={state}
+        t={t}
+        setState={setState}
+      />
+    )
+    : (
+      <span className="flex items-center gap-2 text-sm">
+        {resolveBinding((dropdown.placeholder || dropdown.name), state, t) || "Select"}
+        <ChevronRightIcon className="size-4 opacity-70" />
+      </span>
+    );
+
   return wrapWithMotion(dropdown,
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           aria-label="Open menu"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent"
+          className={dropdown.triggerButtonClassName || "inline-flex h-8  px-2 items-center justify-center rounded-md hover:bg-accent"}
         >
-          <RenderChildren
-            children={[dropdown.trigger]}
-            state={state}
-            t={t}
-            setState={setState}
-          />
+          {triggerContent}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        {renderDropdownItems(dropdown.items, state, t, runEventHandler)}
+        {renderDropdownItems(items, state, t, runEventHandler)}
       </DropdownMenuContent>
     </DropdownMenu>
   )

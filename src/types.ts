@@ -961,8 +961,12 @@ export type DropdownItem = {
 
 export interface DropdownElement extends BaseElement {
     type: ElementType.dropdown;
-    items: DropdownItem[];
+    items?: DropdownItem[];
+    idFeild?: string;
+    labelField?: string;
+    triggerButtonClassName?: string;
     trigger: UIElement;
+    placeholder?: Binding;
 }
 
 export interface EditorElement extends BaseElement {
@@ -1449,7 +1453,7 @@ export interface SidebarElement extends BaseElement {
         headerClassName?: string;
         collapseContainerClassName?: string;
     }>;
-    showSearch?: boolean;
+    search?: SearchElement
     header?: UIElement & {
         requiresAuth?: boolean;
     };
@@ -2183,6 +2187,7 @@ export interface EventHandler {
     action: ActionType;
     aiPrompt?: string;
     dataSourceId?: string;
+    canRun?: VisibilityControl;
     errorAction?: EventHandler;
     streamHandler?: {
         /** Callback event name used by WebSocket/SSE messages */
@@ -2200,26 +2205,28 @@ export interface EventHandler {
     errorActions?: EventHandler[];       // actions if main fails
     finallyActions?: EventHandler[];     // always runs
 }
+
+export interface IScreen {
+    dataMappings?: DataMapping[];
+    dataSources?: DataSource[];
+    elements: UIElement[];
+    id: string;
+    layoutType: LayoutType;
+    lifecycle?: {
+        onEnter?: EventHandler;
+        onLeave?: EventHandler;
+    };
+    metadata: Record<string, string | number | boolean | Record<string, any>>;
+    name: Binding;
+    styles?: StyleProps;
+    transition?: { type: string; direction?: string; duration: number };
+    version: string;
+}
 export interface UIDefinition {
     id: string;
     initialData?: Record<string, any>;
     guard?: GuardRule;
-    screens: Array<{
-        dataMappings?: DataMapping[];
-        dataSources?: DataSource[];
-        elements: UIElement[];
-        id: string;
-        layoutType: LayoutType;
-        lifecycle?: {
-            onEnter?: EventHandler;
-            onLeave?: EventHandler;
-        };
-        metadata: Record<string, string | number | boolean | Record<string, any>>;
-        name: Binding;
-        styles?: StyleProps;
-        transition?: { type: string; direction?: string; duration: number };
-        version: string;
-    }>;
+    screens: Array<IScreen>;
     href: string;
     route: string;
     state?: {

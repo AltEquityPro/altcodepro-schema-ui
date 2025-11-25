@@ -38,7 +38,14 @@ export function NavigationMenuRenderer({
     const searchPlaceholder = searchConfig.placeholder
         ? resolveBinding(searchConfig.placeholder as Binding, state, t)
         : "Search...";
+    const placement = menu.placement;
 
+    const baseClasses = {
+        top: "fixed top-0 left-0 right-0 z-50 border-b",
+        side: "fixed inset-y-0 left-0 z-50 w-64 border-r",
+        bottom: "fixed bottom-0 left-0 right-0 z-50 border-t",
+        drawer: "w-80 h-full",
+    };
     // Backend search
     const searchDsId = typeof searchConfig === "object" ? searchConfig.dataSourceId : null;
 
@@ -211,7 +218,7 @@ export function NavigationMenuRenderer({
         );
     }
 
-    return content;
+    return <div className={clsx("bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60", baseClasses[placement])}>{content}</div>;
 }
 
 // Helper: extract visible text from any element (for search)

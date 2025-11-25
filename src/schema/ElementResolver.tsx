@@ -11,7 +11,6 @@ import {
     getAccessibilityProps
 } from "../lib/utils";
 
-// Lazy load shadcn components
 import { AccordionRenderer } from "../components/ui/accordion";
 import { AlertDialogRenderer } from "../components/ui/alert-dialog";
 import { Alert, AlertDescription } from "../components/ui/alert";
@@ -638,7 +637,6 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             const Tag = (text.tag as React.ElementType) || "div";
             let resolvedContent = deepResolveBindings(text.content, state, t);
 
-            // 🧩 Normalize undefined/null at root
             if (
                 resolvedContent === undefined ||
                 resolvedContent === null ||

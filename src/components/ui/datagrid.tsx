@@ -21,7 +21,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { ArrowUpDown, MoreHorizontal, ChevronDown } from "lucide-react";
 import { Calendar } from "../../components/ui/calendar";
 import { DataGridElement, DataGridCol, ElementType, InputType, DataSource, EventHandler, AnyObj } from "../../types";
-import { deepResolveBindings, cn, resolveBinding } from "../../lib/utils";
+import { deepResolveBindings, cn, resolveBinding, cleanDataSourceId } from "../../lib/utils";
 import { Checkbox } from "../../components/ui/checkbox";
 import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuCheckboxItem } from "../../components/ui/dropdown-menu";
@@ -80,7 +80,7 @@ export function DataGrid({ element, state, t, runEventHandler }: DataGridProps) 
     const [currentEditData, setCurrentEditData] = useState<any>(null);
 
     const data = useMemo(() => {
-        let raw = element.dataSourceId ? state?.[element.dataSourceId] ?? [] : resolveBinding(element.rows, state, t) || [];
+        let raw = element.dataSourceId ? state?.[cleanDataSourceId(element.dataSourceId)] ?? [] : resolveBinding(element.rows, state, t) || [];
         if (!raw) return [];
         if (typeof raw === "string") {
             return [];
