@@ -7,7 +7,7 @@ import {
     getAccessibilityProps,
 } from "../../lib/utils";
 
-const wrapWithMotion = (element: UIElement, children: React.ReactNode) => {
+const wrapWithClassName = (element: UIElement, children: React.ReactNode) => {
     const accessibilityProps = getAccessibilityProps(element.accessibility);
 
     let className = classesFromStyleProps(element.styles);
@@ -21,4 +21,4 @@ const wrapWithMotion = (element: UIElement, children: React.ReactNode) => {
     );
 }
 
-export default wrapWithMotion;
+export default wrapWithClassName;

@@ -3,12 +3,11 @@ import * as React from "react"
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
 
-import { cleanDataSourceId, cn, resolveBinding } from "../../lib/utils"
-import wrapWithMotion from "./wrapWithMotion"
+import { cn, resolveBinding } from "../../lib/utils"
+import wrapWithClassName from "./wrapWithClassName"
 import { RenderChildren } from "../../schema/RenderChildren"
 import { AnyObj, DropdownElement, DropdownItem, EventHandler } from "../../types"
 import { DynamicIcon } from "./dynamic-icon"
-import { el } from "date-fns/locale";
 
 function DropdownMenu({
   ...props
@@ -258,6 +257,7 @@ function DropdownMenuSubContent({
 
 function renderDropdownItems(
   items: DropdownItem[],
+  onSelect: (item: DropdownItem) => void,
   state: AnyObj,
   t: (key: string) => string,
   runEventHandler?: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>,
@@ -270,7 +270,7 @@ function renderDropdownItems(
     return acc
   }, {})
 
-  return items?.map((item) => {
+  return items?.map((item: any) => {
     const label = item.label ? resolveBinding(item.label, state, t) : null
     const heading = item.heading ? resolveBinding(item.heading, state, t) : null
 
@@ -292,7 +292,7 @@ function renderDropdownItems(
               <DropdownMenuLabel inset>{heading}</DropdownMenuLabel>
             )}
             {item.children &&
-              renderDropdownItems(item.children, state, t, runEventHandler)}
+              renderDropdownItems(item.children, onSelect, state, t, runEventHandler)}
           </DropdownMenuGroup>
         )
 
@@ -304,7 +304,7 @@ function renderDropdownItems(
             checked={checked}
             disabled={item.disabled}
             onCheckedChange={(val) =>
-              runEventHandler?.(item.onSelect, { checked: val })
+              onSelect?.(item)
             }
           >
             {item.icon && <DynamicIcon name={item.icon} className="size-4" />}
@@ -322,13 +322,13 @@ function renderDropdownItems(
           <DropdownMenuRadioGroup
             key={item.group}
             value={
-              groups[item.group].find((r) =>
+              groups?.[item?.group]?.find((r) =>
                 resolveBinding(r.checked, state, t)
               )?.value
             }
             onValueChange={(val) => {
-              const selected = item.group ? groups[item.group].find((r) => r.value === val) : null
-              if (selected?.onSelect) runEventHandler?.(selected.onSelect)
+              const selected = item.group ? groups?.[item?.group]?.find((r) => r.value === val) : null
+              onSelect?.(selected!);
             }}
           >
             {groups[item.group]?.map((radio) => (
@@ -359,7 +359,7 @@ function renderDropdownItems(
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
               {item.children &&
-                renderDropdownItems(item.children, state, t, runEventHandler)}
+                renderDropdownItems(item.children, onSelect, state, t, runEventHandler)}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         )
@@ -371,7 +371,7 @@ function renderDropdownItems(
             key={item.id}
             disabled={item.disabled}
             onSelect={() =>
-              item.onSelect ? runEventHandler?.(item.onSelect) : undefined
+              onSelect?.(item)
             }
             className={item.variant === "destructive" ? "text-red-600" : ""}
           >
@@ -386,7 +386,6 @@ function renderDropdownItems(
   })
 }
 
-
 function DropdownRenderer({
   dropdown,
   setState,
@@ -400,56 +399,103 @@ function DropdownRenderer({
   t: (key: string) => string
   runEventHandler?: (h?: EventHandler, dataOverride?: AnyObj) => Promise<void>
 }) {
+
+  const [localSelected, setLocalSelected] = React.useState<any>(null);
+
+  const globalSelectedValue =
+    state[dropdown.onEvent?.params?.path || `selected_${dropdown.id}`];
+
+
   const items = React.useMemo<any[]>(() => {
-    console.log('dropdown in dropdown menu renderer', dropdown.dataSourceId);
     const raw =
       (dropdown.dataSourceId
-        ? state[cleanDataSourceId(dropdown.dataSourceId)]
+        ? resolveBinding(dropdown.dataSourceId, state, t)
         : dropdown.items) || [];
-    console.log('raw items in dropdown menu renderer', raw);
+
     if (dropdown.idFeild && dropdown.labelField) {
-      return raw.map((item: any) => ({
-        value: item?.[dropdown.idFeild!],
-        label: item?.[dropdown.labelField!],
-        raw: item,
+      return raw?.map?.((r: any) => ({
+        value: dropdown.idFeild ? r[dropdown.idFeild] : 'id',
+        label: dropdown.labelField ? r[dropdown.labelField] : 'label',
+        raw: r,
+        type: "item",
       }));
     }
 
     return raw;
-  }, [dropdown.dataSourceId, dropdown.items, dropdown.idFeild, dropdown.labelField, state]);
-  console.log('processed items in dropdown menu renderer', items);
-  const triggerContent = dropdown.trigger
-    ? (
-      <RenderChildren
-        children={[dropdown.trigger]}
-        state={state}
-        t={t}
-        setState={setState}
-      />
-    )
-    : (
-      <span className="flex items-center gap-2 text-sm">
-        {resolveBinding((dropdown.placeholder || dropdown.name), state, t) || "Select"}
-        <ChevronRightIcon className="size-4 opacity-70" />
-      </span>
-    );
+  }, [
+    dropdown.dataSourceId,
+    dropdown.items,
+    dropdown.idFeild,
+    dropdown.labelField,
+    state,
+  ]);
 
-  return wrapWithMotion(dropdown,
+
+  const selectedItem =
+    localSelected ||
+    items?.find((it) => it.value === globalSelectedValue);
+
+  const selectedLabel =
+    selectedItem?.label ||
+    resolveBinding(dropdown.placeholder || dropdown.name, state, t) ||
+    "Select";
+
+
+  const onSelect = (item: DropdownItem) => {
+    setLocalSelected(item);
+
+    let ev: any = dropdown.onEvent
+      ? dropdown.onEvent
+      : {
+        action: "update_state",
+        params: {
+          path: `selected_${dropdown.id}`,
+          value: item.value,
+        },
+      };
+    if (ev.action === "update_state") {
+      setState(ev.params.path, item.value);
+    } else {
+      runEventHandler?.(ev, { selectedItem: item, selectedValue: item.value });
+    }
+  };
+
+  const triggerContent = dropdown.trigger ? (
+    <RenderChildren
+      children={[dropdown.trigger]}
+      state={state}
+      t={t}
+      setState={setState}
+    />
+  ) : (
+    <span className="flex items-center gap-2 text-sm">
+      {selectedLabel}
+      <ChevronRightIcon className="size-4 opacity-70" />
+    </span>
+  );
+
+
+  return wrapWithClassName(
+    dropdown,
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           aria-label="Open menu"
-          className={dropdown.triggerButtonClassName || "inline-flex h-8  px-2 items-center justify-center rounded-md hover:bg-accent"}
+          className={
+            dropdown.triggerButtonClassName ||
+            "inline-flex h-8 px-2 items-center justify-center rounded-md hover:bg-accent"
+          }
         >
           {triggerContent}
         </button>
       </DropdownMenuTrigger>
+
       <DropdownMenuContent>
-        {renderDropdownItems(items, state, t, runEventHandler)}
+        {renderDropdownItems(items, onSelect, state, t, runEventHandler)}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
 
 

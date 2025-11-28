@@ -114,7 +114,7 @@ export function TimelineRenderer({
     /* ------------------------ Accessibility + Nav ------------------------ */
     const containerRef = useRef<HTMLDivElement>(null);
     const [focusIndex, setFocusIndex] = useState(-1);
-    const flatItems = useMemo(() => grouped.flatMap((g) => g.items), [grouped]);
+    const flatItems = useMemo(() => grouped?.flatMap((g) => g.items), [grouped]);
 
     useEffect(() => {
         if (focusIndex < 0) return;

@@ -3,7 +3,7 @@
 import * as React from "react"
 import * as ProgressPrimitive from "@radix-ui/react-progress"
 import { cn, resolveBinding } from "../../lib/utils"
-import wrapWithMotion from "./wrapWithMotion";
+import wrapWithClassName from "./wrapWithClassName";
 import { AnyObj, ProgressElement } from "../../types";
 function Progress({
   className,
@@ -79,7 +79,7 @@ function ProgressRenderer({
     resolveBinding(element.indeterminate, state, t) ?? value == null
   const label = element.label ? resolveBinding(element.label, state, t) : '%'
 
-  return wrapWithMotion(
+  return wrapWithClassName(
     element,
     <Progress
       value={value}

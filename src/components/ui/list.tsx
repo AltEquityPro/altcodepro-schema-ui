@@ -34,8 +34,8 @@ export function ListRenderer({
 
     const handleRowClick = useCallback(
         async (item: any, index: number) => {
-            if (element.onEvent?.onSelect && runEventHandler) {
-                await runEventHandler(element.onEvent.onSelect, { item, index });
+            if (element.onEvent && runEventHandler) {
+                await runEventHandler(element.onEvent, { item, index });
             }
         },
         [element, runEventHandler]

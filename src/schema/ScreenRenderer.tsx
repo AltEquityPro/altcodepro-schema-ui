@@ -14,6 +14,7 @@ import { useActionHandler } from "./useActionHandler";
 import { useDataSources } from "./useDataSources";
 import { GuardProvider, useGuardEvaluator } from "../hooks/useGuardEvaluator";
 import { useAnalytics } from "../hooks/AnalyticsContext";
+import { resolveBinding } from "@/lib/utils";
 
 let lastRedirect: string | null = null;
 function gotoRedirect(runtime: ActionRuntime, redirect?: RedirectSpec) {
@@ -52,19 +53,6 @@ export function ScreenRenderer({
     }, [uiDef.translations]);
     const { state, t, setState, setTranslations } = useAppState();
 
-    const screenDataSources = useMemo(() => {
-        const all: any[] = [];
-        if (uiDef.screens) {
-            for (const s of uiDef.screens) {
-                if (s.dataSources) all.push(...s.dataSources);
-            }
-        }
-        if ((uiDef as any).dataSources) {
-            all.push(...(uiDef as any).dataSources);
-        }
-
-        return all;
-    }, [uiDef.screens]);
     const patchState = useCallback((path: string, val: any) => setState(path, val), [setState]);
 
     const runtimeWithNav = useMemo(() => ({
@@ -78,7 +66,7 @@ export function ScreenRenderer({
     }), [runtime, nav, patchState]);
     const { runEventHandler } = useActionHandler({
         globalConfig: project.globalConfig,
-        dataSources: screenDataSources,
+        dataSources: uiDef.dataSources,
         runtime: {
             ...(runtime || {}),
             patchState: (path: string, val: any) => setState(path, val)
@@ -86,11 +74,13 @@ export function ScreenRenderer({
     });
 
     const dataMap = useDataSources({
-        dataSources: screenDataSources,
+        dataSources: uiDef.dataSources,
+        dataMappings: uiDef.dataMappings,
         globalConfig: project.globalConfig,
         state,
         setState,
-        routeParams
+        routeParams,
+        screen
     });
 
     useEffect(() => {
@@ -104,7 +94,103 @@ export function ScreenRenderer({
         }
     }, [routeParams, setState]);
 
-    // 🔹 Guard
+    useEffect(() => {
+        const def = uiDef?.state;
+        if (!def) return;
+        if (Array.isArray(def.data)) {
+            for (const item of def.data) {
+                try {
+                    const path = resolveBinding(item.path, state, t);
+                    let val = resolveBinding(item.value ?? item.defaultValue, state, t);
+
+                    switch (item.dataType) {
+                        case "number":
+                            val = val === "" ? null : Number(val);
+                            break;
+                        case "boolean":
+                            val = (val === "true" || val === true);
+                            break;
+                        case "object":
+                            if (typeof val === "string") {
+                                try { val = JSON.parse(val); } catch { }
+                            }
+                            break;
+                        case "array":
+                            if (typeof val === "string") {
+                                try { val = JSON.parse(val); } catch { val = [] }
+                            }
+                            if (!Array.isArray(val)) val = [];
+                            break;
+                        default: // string
+                            val = val ?? "";
+                    }
+
+                    const v = item.validation;
+                    if (v) {
+                        if (v.required && (val === null || val === "")) {
+                            console.warn(`Validation failed (required) for`, path);
+                            continue;
+                        }
+                        if (v.min !== undefined && Number(val) < v.min) continue;
+                        if (v.max !== undefined && Number(val) > v.max) continue;
+                        if (v.minLength !== undefined && String(val).length < v.minLength) continue;
+                        if (v.maxLength !== undefined && String(val).length > v.maxLength) continue;
+                        if (v.regex) {
+                            try {
+                                const re = new RegExp(v.regex);
+                                if (!re.test(String(val))) continue;
+                            } catch { }
+                        }
+                    }
+
+                    if (path) setState(path, val);
+
+                } catch (err) {
+                    console.error("uiDef.state.data apply error:", err, item);
+                }
+            }
+        }
+        if (def.persist) {
+            const storageKey = `ui_state_${uiDef.id || "screen"}`;
+            const save = () => {
+                const data = JSON.stringify(state);
+                try {
+                    if (def.persistStorage === "sessionStorage") {
+                        sessionStorage.setItem(storageKey, data);
+                    } else if (def.persistStorage === "cookie") {
+                        document.cookie = `${storageKey}=${encodeURIComponent(data)}; path=/`;
+                    } else {
+                        localStorage.setItem(storageKey, data);
+                    }
+                } catch (e) {
+                    console.warn("Persist failed:", e);
+                }
+            };
+            save();
+        }
+        if (def.webSocketEndpoint) {
+            try {
+                let url = resolveBinding(def.webSocketEndpoint.url, state, t);
+                let authHeaders: Record<string, string> = {};
+
+                if (def.webSocketEndpoint.auth) {
+                    const auth = def.webSocketEndpoint.auth;
+                    const value = resolveBinding(auth.value, state, t);
+                    if (auth.type === "bearer") {
+                        authHeaders["Authorization"] = `Bearer ${value}`;
+                    } else if (auth.type === "basic") {
+                        authHeaders["Authorization"] = `Basic ${btoa(value)}`;
+                    } else if (auth.type === "api_key") {
+                        authHeaders["X-Api-Key"] = value;
+                    }
+                }
+            } catch (e) {
+                console.error("WebSocket setup error:", e);
+            }
+        }
+
+    }, [uiDef.state]);
+
     const guardResult = useGuardEvaluator(uiDef.guard, state, t, project?.globalConfig);
     useEffect(() => {
         if (guardResult.ok) return;

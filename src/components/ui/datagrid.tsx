@@ -23,7 +23,7 @@ import { Calendar } from "../../components/ui/calendar";
 import { DataGridElement, DataGridCol, ElementType, InputType, DataSource, EventHandler, AnyObj } from "../../types";
 import { deepResolveBindings, cn, resolveBinding, cleanDataSourceId } from "../../lib/utils";
 import { Checkbox } from "../../components/ui/checkbox";
-import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
+import { Dialog } from "../../components/ui/dialog";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuCheckboxItem } from "../../components/ui/dropdown-menu";
 import { Popover, PopoverTrigger, PopoverContent } from "../../components/ui/popover";
 import { Progress } from "../../components/ui/progress";
@@ -36,14 +36,13 @@ import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { DynamicIcon } from "../../components/ui/dynamic-icon";
 import { FormResolver } from "../../components/ui/form-resolver";
-import { DialogHeader } from "../../components/ui/dialog";
 import { Chart } from "./chart";
 
 interface DataGridProps {
     element: DataGridElement;
     dataSources?: DataSource[];
     state: AnyObj;
-    t: (key: string) => string;
+    t: (key: string, defaultLabel?: string) => string;
     setState: (path: string, value: any) => void;
     runEventHandler?: (handler?: EventHandler | undefined, dataOverride?: AnyObj) => Promise<void>;
 }
@@ -689,7 +688,7 @@ export function DataGrid({ element, state, t, runEventHandler }: DataGridProps) 
                     {element.infinite && loading && (
                         <TableRow>
                             <TableCell colSpan={columns.length} className="text-center">
-                                Loading more...
+                                {t("loading", "Loading more...")}
                             </TableCell>
                         </TableRow>
                     )}
@@ -705,7 +704,7 @@ export function DataGrid({ element, state, t, runEventHandler }: DataGridProps) 
                         onClick={() => table.previousPage()}
                         disabled={!table.getCanPreviousPage()}
                     >
-                        Previous
+                        {t("previous", "Previous")}
                     </Button>
                     <Button
                         variant="outline"
@@ -713,26 +712,21 @@ export function DataGrid({ element, state, t, runEventHandler }: DataGridProps) 
                         onClick={() => table.nextPage()}
                         disabled={!table.getCanNextPage()}
                     >
-                        Next
+                        {t("next", "Next")}
                     </Button>
                 </div>
             )}
 
             {/* Edit Modal */}
             {element.editingMode === "modal" && element.editForm && (
-                <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Edit Row</DialogTitle>
-                        </DialogHeader>
-                        <FormResolver
-                            element={element.editForm}
-                            state={{ ...state, row: currentEditData }}
-                            t={t}
-                            onFormSubmit={handleModalSubmit}
-                            runEventHandler={runEventHandler}
-                        />
-                    </DialogContent>
+                <Dialog isOpen={modalOpen} onOpenChange={setModalOpen} title="Edit">
+                    <FormResolver
+                        element={element.editForm}
+                        state={{ ...state, row: currentEditData }}
+                        t={t}
+                        onFormSubmit={handleModalSubmit}
+                        runEventHandler={runEventHandler}
+                    />
                 </Dialog>
             )}
         </div>

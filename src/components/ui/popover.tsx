@@ -4,7 +4,7 @@ import * as React from "react"
 import * as PopoverPrimitive from "@radix-ui/react-popover"
 
 import { cn, resolveBinding } from "../../lib/utils"
-import wrapWithMotion from "./wrapWithMotion"
+import wrapWithClassName from "./wrapWithClassName"
 import { RenderChildren } from "../../schema/RenderChildren"
 import { AnyObj, EventHandler, PopoverElement } from "../../types"
 
@@ -67,7 +67,7 @@ function PopoverRenderer({
     runEventHandler?.(element.onOpenChange, { open: next })
   }
 
-  return wrapWithMotion(
+  return wrapWithClassName(
     element,
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>

@@ -5,7 +5,7 @@ import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 
 import { cn } from "../../lib/utils"
 import { AnyObj, ScrollAreaElement, UIElement } from "../../types"
-import wrapWithMotion from "./wrapWithMotion"
+import wrapWithClassName from "./wrapWithClassName"
 import { RenderChildren } from "../../schema/RenderChildren"
 
 function ScrollArea({
@@ -69,7 +69,7 @@ function ScrollAreaRenderer({
   setState: (path: string, value: any) => void;
   t: (key: string) => string
 }) {
-  return wrapWithMotion(
+  return wrapWithClassName(
     element,
     <ScrollArea>
       {element.children && <RenderChildren children={element.children} state={state} t={t} setState={setState} />}

@@ -6,7 +6,7 @@ import { Drawer as DrawerPrimitive } from "vaul"
 import { cn, resolveBinding } from "../../lib/utils"
 import { RenderChildren } from "../../schema/RenderChildren"
 import { AnyObj, DrawerElement, EventHandler } from "../../types"
-import wrapWithMotion from "./wrapWithMotion"
+import wrapWithClassName from "./wrapWithClassName"
 function Drawer({
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
@@ -150,7 +150,7 @@ function DrawerRenderer({ element, state, setState, t, runEventHandler }: Drawer
     lg: "sm:max-w-lg",
   }[drawer.size || ""] || (typeof drawer.size === "string" ? drawer.size : "")
 
-  return wrapWithMotion(element,
+  return wrapWithClassName(element,
     <DrawerPrimitive.Root
       data-slot="drawer"
       direction={drawer.direction || "right"}

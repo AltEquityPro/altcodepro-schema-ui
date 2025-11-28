@@ -116,7 +116,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const variantClass = className?.includes('bg-') && className?.includes('text-') ? "" : buttonVariants[variant] ?? "";
-  const sizeClass = sizeClasses[size] ?? "";
+  const sizeClass = variant !== 'link' ? sizeClasses[size] ?? "" : "";
 
   return (
     <button
@@ -168,18 +168,22 @@ export function ButtonRenderer({
   return (
     <button
       className={clsx(
-        "inline-flex items-center cursor-pointer justify-center rounded-md font-medium transition-colors focus:outline-none",
+        "inline-flex items-center  cursor-pointer   justify-center rounded-md font-medium transition-colors focus:outline-none",
         variantClass,
         sizeClass,
         styles,
         element.styles?.className
       )}
       id={element?.id}
+      title={element?.tooltip ? resolvedBinding(element.tooltip) : undefined}
       data-i118key={element.text}
       data-variant={element.variant}
       disabled={disabled}
       type={element.isSubmit ? 'submit' : "button"}
-      onClick={() => element.onClick && runEventHandler?.(element.onClick)}
+      onClick={() => {
+        const handler = element.onClick || element.onEvent;
+        handler && runEventHandler?.(handler);
+      }}
       style={{ zIndex: element.zIndex }}
       {...accessibilityProps}
     >

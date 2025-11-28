@@ -6,7 +6,7 @@ import * as ResizablePrimitive from "react-resizable-panels";
 import { cn, resolveBinding } from "../../lib/utils";
 import { RenderChildren } from "../../schema/RenderChildren";
 import { AnyObj, ResizableElement } from "../../types";
-import wrapWithMotion from "./wrapWithMotion";
+import wrapWithClassName from "./wrapWithClassName";
 
 /* ---------- Panel Group ---------- */
 function ResizablePanelGroup({
@@ -83,7 +83,7 @@ function ResizableRenderer({
     return undefined;
   };
 
-  return wrapWithMotion(
+  return wrapWithClassName(
     element,
     <ResizablePanelGroup direction={direction} className="h-full w-full">
       {element.panels?.map((panel, i) => {

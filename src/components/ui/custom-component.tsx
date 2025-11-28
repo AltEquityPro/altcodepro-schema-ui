@@ -2,7 +2,7 @@
 import { resolveBinding } from '../../lib/utils';
 import { RenderChildren } from '../../schema/RenderChildren';
 import { AnyObj, CustomElement, EventHandler } from '../../types';
-import wrapWithMotion from './wrapWithMotion';
+import wrapWithClassName from './wrapWithClassName';
 
 export default function CustomComponentRender({ element, runEventHandler, state, setState, t }: {
     element: CustomElement,
@@ -53,12 +53,12 @@ export default function CustomComponentRender({ element, runEventHandler, state,
 
     // Group handling
     if (element.groupLayout === "inline") {
-        return wrapWithMotion(element, <div className="flex flex-row gap-2">{children}</div>);
+        return wrapWithClassName(element, <div className="flex flex-row gap-2">{children}</div>);
     }
 
     if (element.groupLayout === "stack") {
-        return wrapWithMotion(element, <div className="flex flex-col gap-2">{children}</div>);
+        return wrapWithClassName(element, <div className="flex flex-col gap-2">{children}</div>);
     }
 
-    return wrapWithMotion(element, <>{children}</>);
+    return wrapWithClassName(element, <>{children}</>);
 }

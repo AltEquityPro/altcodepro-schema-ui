@@ -7,7 +7,7 @@ import { MenuIcon, ChevronRightIcon, ChevronDownIcon, XIcon } from "lucide-react
 import { cn, resolveBinding } from "../../lib/utils"
 import { RenderChildren } from "../../schema/RenderChildren"
 import { AnyObj, MenuElement, EventHandler, MenuItem, ActionRuntime } from "../../types"
-import wrapWithMotion from "./wrapWithMotion"
+import wrapWithClassName from "./wrapWithClassName"
 import { DynamicIcon } from "./dynamic-icon"
 
 function MenuShortcut({ children }: { children: React.ReactNode }) {
@@ -473,7 +473,7 @@ export function MenuRenderer({
 
   switch (element.variant || "navigation") {
     case "dropdown":
-      return wrapWithMotion(
+      return wrapWithClassName(
         element,
         <Dropdown.Root>
           <Dropdown.Trigger asChild>
@@ -486,7 +486,7 @@ export function MenuRenderer({
       )
 
     case "context":
-      return wrapWithMotion(
+      return wrapWithClassName(
         element,
         <Context.Root>
           <Context.Trigger asChild>
@@ -499,7 +499,7 @@ export function MenuRenderer({
       )
 
     case "menubar":
-      return wrapWithMotion(
+      return wrapWithClassName(
         element,
         <Menubar.Root className="bg-(--acp-background) dark:bg-(--acp-background-dark) text-(--acp-foreground) dark:text-(--acp-foreground-dark) flex h-9 items-center gap-1 rounded-md border p-1 shadow-xs">
           {element.menus?.map((menu) => (
@@ -517,7 +517,7 @@ export function MenuRenderer({
 
     case "navigation":
     default:
-      return wrapWithMotion(
+      return wrapWithClassName(
         element,
         <div className="w-full">
           {/* Desktop */}

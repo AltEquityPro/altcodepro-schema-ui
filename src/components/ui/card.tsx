@@ -149,14 +149,14 @@ function CardRenderer({ element, setState, runEventHandler, state, t }: CardRend
   // Clickable wrapper (smooth transition)
   if (element.clickable) {
     const hasHref = !!element.href;
-    const hasOnClick = !!element.onEvent?.onClick;
+    const hasOnClick = !!element.onEvent;
 
     const handleClick = async (e: React.MouseEvent) => {
       if (hasHref) return;
       e.preventDefault();
       e.stopPropagation();
       if (hasOnClick && runEventHandler) {
-        await runEventHandler(element.onEvent?.onClick);
+        await runEventHandler(element.onEvent);
       }
     };
 

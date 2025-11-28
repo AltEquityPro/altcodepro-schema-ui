@@ -8,7 +8,7 @@ import {
 
 import { cn, resolveBinding, variants } from "../../lib/utils"
 import { Button } from "./button"
-import wrapWithMotion from "./wrapWithMotion"
+import wrapWithClassName from "./wrapWithClassName"
 import { AnyObj, EventHandler, PaginationElement } from "../../types"
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
@@ -171,7 +171,7 @@ function PageRenderer({
     }
   };
 
-  return wrapWithMotion(
+  return wrapWithClassName(
     element,
     <Pagination>
       <PaginationContent ref={navRef} onKeyDown={handleKeyDown}>

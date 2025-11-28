@@ -11,7 +11,6 @@ import {
 } from "../lib/utils";
 import { ElementResolver } from "./ElementResolver";
 import { Toaster } from "../components/ui/sonner";
-import { useAppState } from "./StateContext";
 
 
 function layoutClasses(layout: any) {
@@ -73,16 +72,32 @@ export function ScreenView({
     // 🔹 Lifecycle
     useEffect(() => {
         const enter = screen.lifecycle?.onEnter;
-        if (enter && enter.action !== "navigation") {
-            const canRun = isVisible(enter.canRun, state, t);
-            if (canRun) {
-                runEventHandler(enter);
+        if (enter) {
+            if (Array.isArray(enter)) {
+                enter.forEach((handler) => {
+                    const canRun = isVisible(handler.canRun, state, t);
+                    if (canRun) {
+                        runEventHandler(handler);
+                    }
+                });
+            } else if (typeof enter === 'object') {
+                const canRun = isVisible((enter as any).canRun, state, t);
+                if (canRun) {
+                    runEventHandler(enter);
+                }
             }
         }
         return () => {
             const leave = screen.lifecycle?.onLeave;
-            if (leave) {
-                const canRun = isVisible(leave.canRun, state, t);
+            if (Array.isArray(leave)) {
+                leave.forEach((handler) => {
+                    const canRun = isVisible(handler.canRun, state, t);
+                    if (canRun) {
+                        runEventHandler(handler);
+                    }
+                });
+            } else if (typeof leave === 'object') {
+                const canRun = isVisible((leave as any).canRun, state, t);
                 if (canRun) {
                     runEventHandler(leave);
                 }
@@ -109,7 +124,6 @@ export function ScreenView({
                         element={el}
                         runEventHandler={runEventHandler}
                         globalConfig={project.globalConfig}
-                        dataSources={screen.dataSources}
                         CustomElementResolver={CustomElementResolver}
                     />
                 ) : null

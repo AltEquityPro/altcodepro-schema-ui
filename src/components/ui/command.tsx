@@ -5,16 +5,10 @@ import { Command as CommandPrimitive } from "cmdk"
 import { SearchIcon } from "lucide-react"
 
 import { cn } from "../../lib/utils"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "./dialog"
 import { AnyObj, CommandElement, EventHandler } from "../../types"
 import { RenderChildren } from "../../schema/RenderChildren"
 import { DynamicIcon } from "./dynamic-icon"
+import { Dialog } from "./dialog"
 
 /* ------------------------------------------------------------------
  * Base Command Wrapper
@@ -72,31 +66,25 @@ function CommandDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={setOpen} {...props}>
-        <DialogHeader className="sr-only">
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogContent
-          className={cn("overflow-hidden p-0", className)}
-          showCloseButton={showCloseButton}
-        >
-          <Command className="[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3">
-            {children}
-          </Command>
-        </DialogContent>
-      </Dialog>
+      <Dialog isOpen={open} onOpenChange={setOpen} className={cn("overflow-hidden p-0", className)}
+      >
+        <Command className="[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3">
+          {children}
+        </Command>
+      </Dialog >
 
       {/* Mobile Floating Action Button */}
-      {showMobileButton && (
-        <button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-4 right-4 z-50 rounded-full bg-accent p-3 shadow-lg lg:hidden"
-          aria-label="Open Command Palette"
-        >
-          <SearchIcon className="size-6 text-accent-foreground" />
-        </button>
-      )}
+      {
+        showMobileButton && (
+          <button
+            onClick={() => setOpen(true)}
+            className="fixed bottom-4 right-4 z-50 rounded-full bg-accent p-3 shadow-lg lg:hidden"
+            aria-label="Open Command Palette"
+          >
+            <SearchIcon className="size-6 text-accent-foreground" />
+          </button>
+        )
+      }
     </>
   )
 }
@@ -186,9 +174,6 @@ function CommandShortcut(props: React.ComponentProps<"span">) {
   )
 }
 
-/* ------------------------------------------------------------------
- * Renderer from schema
- * ------------------------------------------------------------------*/
 function CommandRenderer({
   element,
   runEventHandler,
@@ -230,92 +215,87 @@ function CommandRenderer({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogHeader className="sr-only">
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogContent
-          showCloseButton
-          className="overflow-hidden p-0"
+      <Dialog isOpen={open} onOpenChange={setOpen}
+        className="overflow-hidden p-0"
+      >
+        <CommandPrimitive
+          data-slot="command"
+          className={cn(
+            "bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-md"
+          )}
         >
-          <CommandPrimitive
-            data-slot="command"
-            className={cn(
-              "bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-md"
-            )}
+          {/* Input */}
+          <div
+            data-slot="command-input-wrapper"
+            className="flex h-9 items-center gap-2 border-b px-3"
           >
-            {/* Input */}
-            <div
-              data-slot="command-input-wrapper"
-              className="flex h-9 items-center gap-2 border-b px-3"
-            >
-              <SearchIcon className="size-4 shrink-0 opacity-50" />
-              <CommandPrimitive.Input
-                placeholder={placeholder}
-                data-slot="command-input"
-                className="placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </div>
+            <SearchIcon className="size-4 shrink-0 opacity-50" />
+            <CommandPrimitive.Input
+              placeholder={placeholder}
+              data-slot="command-input"
+              className="placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
 
-            {/* List */}
-            <CommandPrimitive.List
-              data-slot="command-list"
-              className="max-h-[300px] scroll-py-1 overflow-y-auto"
+          {/* List */}
+          <CommandPrimitive.List
+            data-slot="command-list"
+            className="max-h-[300px] scroll-py-1 overflow-y-auto"
+          >
+            <CommandPrimitive.Empty
+              data-slot="command-empty"
+              className="py-6 text-center text-sm"
             >
-              <CommandPrimitive.Empty
-                data-slot="command-empty"
-                className="py-6 text-center text-sm"
+              {emptyMessage}
+            </CommandPrimitive.Empty>
+
+            {groups?.map((group, i) => (
+              <CommandPrimitive.Group
+                key={i}
+                heading={group.heading}
+                data-slot="command-group"
+                className="text-foreground overflow-hidden p-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium"
               >
-                {emptyMessage}
-              </CommandPrimitive.Empty>
+                {group?.items?.map(item => (
+                  <CommandPrimitive.Item
+                    key={item.id}
+                    disabled={item.disabled}
+                    onSelect={() => runEventHandler?.(item.onSelect)}
+                    data-slot="command-item"
+                    className="data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:opacity-50"
+                  >
+                    {item.icon && <DynamicIcon name={item.icon} className="size-4" />}
+                    {item.label}
+                    {item.shortcut && (
+                      <span
+                        data-slot="command-shortcut"
+                        className="text-muted-foreground ml-auto text-xs tracking-widest"
+                      >
+                        {item.shortcut}
+                      </span>
+                    )}
+                  </CommandPrimitive.Item>
+                ))}
+              </CommandPrimitive.Group>
+            ))}
 
-              {groups?.map((group, i) => (
-                <CommandPrimitive.Group
-                  key={i}
-                  heading={group.heading}
-                  data-slot="command-group"
-                  className="text-foreground overflow-hidden p-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium"
-                >
-                  {group?.items?.map(item => (
-                    <CommandPrimitive.Item
-                      key={item.id}
-                      disabled={item.disabled}
-                      onSelect={() => runEventHandler?.(item.onSelect)}
-                      data-slot="command-item"
-                      className="data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:opacity-50"
-                    >
-                      {item.icon && <DynamicIcon name={item.icon} className="size-4" />}
-                      {item.label}
-                      {item.shortcut && (
-                        <span
-                          data-slot="command-shortcut"
-                          className="text-muted-foreground ml-auto text-xs tracking-widest"
-                        >
-                          {item.shortcut}
-                        </span>
-                      )}
-                    </CommandPrimitive.Item>
-                  ))}
-                </CommandPrimitive.Group>
-              ))}
-
-              {children && <RenderChildren children={children} state={state} setState={setState} t={t} />}
-            </CommandPrimitive.List>
-          </CommandPrimitive>
-        </DialogContent>
-      </Dialog>
+            {children && <RenderChildren children={children} state={state} setState={setState} t={t} />}
+          </CommandPrimitive.List>
+        </CommandPrimitive>
+      </Dialog >
 
       {/* Mobile Floating Button */}
-      {showMobileButton && (
-        <button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-4 right-4 z-50 rounded-full bg-accent p-3 shadow-lg lg:hidden"
-          aria-label="Open Command Palette"
-        >
-          <SearchIcon className="size-6 text-accent-foreground" />
-        </button>
-      )}
+      {
+        showMobileButton && (
+          <button
+            onClick={() => setOpen(true)}
+            className="fixed bottom-4 right-4 z-50 rounded-full bg-accent p-3 shadow-lg lg:hidden"
+            aria-label="Open Command Palette"
+          >
+            <SearchIcon className="size-6 text-accent-foreground" />
+          </button>
+        )
+      }
     </>
   )
 }

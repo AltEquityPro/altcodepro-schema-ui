@@ -6,7 +6,7 @@ import { CircleIcon } from "lucide-react"
 
 import { cn, resolveBinding } from "../../lib/utils"
 import { AnyObj, EventHandler, RadioGroupElement } from "../../types"
-import wrapWithMotion from "./wrapWithMotion"
+import wrapWithClassName from "./wrapWithClassName"
 import { Label } from "@radix-ui/react-label"
 
 function RadioGroup({
@@ -62,7 +62,7 @@ function RadioGroupRenderer({
   const value = resolveBinding(element.value, state, t)
   const options = resolveBinding(element.options, state, t) || []
 
-  return wrapWithMotion(
+  return wrapWithClassName(
     element,
     <RadioGroup
       value={value}

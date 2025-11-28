@@ -4,7 +4,7 @@ import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { cn, resolveBinding } from "../../lib/utils"
 import { AnyObj, EventHandler, SheetElement } from "../../types"
-import wrapWithMotion from "./wrapWithMotion"
+import wrapWithClassName from "./wrapWithClassName"
 import { ElementResolver } from "../../schema/ElementResolver"
 import { RenderChildren } from "../../schema/RenderChildren"
 import { XIcon } from "lucide-react"
@@ -132,7 +132,7 @@ function SheetRenderer({
     () => handleOpenChange(!open)
   )
 
-  return wrapWithMotion(
+  return wrapWithClassName(
     element,
     <Sheet open={open} onOpenChange={handleOpenChange}>
       {element.trigger && (

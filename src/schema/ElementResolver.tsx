@@ -130,22 +130,20 @@ import {
     TimelineElement,
     TreeElement,
     UIProject,
-    DataSource,
     FooterElement,
     HeaderElement,
     EventHandler,
     DynamicElement,
-    ComposerElement
+    ComposerElement,
+    ShareElement
 } from "../types";
 import { MarkdownRender } from "../components/ui/markdown-input";
 import { DynamicContentRenderer } from "../components/dynamic-content";
 import { ComposerRenderer } from "@/components/ui/composer";
-
-
+import { ShareRenderer } from "@/components/ui/share-button";
 interface ElementResolverProps {
     element: UIElement;
     globalConfig?: UIProject['globalConfig'];
-    dataSources?: DataSource[];
     state: AnyObj
     setState: (path: string, value: any) => void;
     t: (key: string, defaultLabel?: string) => string
@@ -233,6 +231,13 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
                 state={state}
                 t={t}
                 element={element as ButtonElement} runEventHandler={runEventHandler} />
+
+        case ElementType.share:
+            return <ShareRenderer
+                state={state}
+                t={t}
+                element={element as ShareElement}
+                runEventHandler={runEventHandler} />
 
         case ElementType.calendar:
             return <LazyComponent>

@@ -81,6 +81,7 @@ export interface ActionRuntime {
 export interface ActionParams {
     /** General controls */
     timeout?: number;
+    id?: string;
     retry?: {
         attempts: number;
         delay: number;
@@ -89,8 +90,13 @@ export interface ActionParams {
     optimisticState?: { path: string; value: any };
     resultMapping?: { jsonPath?: string; transform?: string };
 
+    successMessage?: string;
+    value?: Binding;
+    path?: string;
     /** API / network */
     queryParams?: Record<string, string | number | boolean>;
+    gqlQuery?: string;
+    gqlQueryOverrides?: AnyObj;
     body?: AnyObj | FormData;
     headers?: Record<string, string>;
     statePath?: string; // where to save result in state
@@ -151,6 +157,13 @@ export interface ActionParams {
     args?: any[];
     event?: string; // audit log / custom
     metadata?: AnyObj;
+
+    msg?: Binding;
+    variant?: "success" | "error" | "info" | "warning";
+    callType?: 'video' | 'audio';
+    peerId?: Binding;
+    signalingServer?: Binding;
+    isAuthRoute?: boolean;
 }
 
 export enum Alignment {
@@ -216,6 +229,7 @@ export enum ElementType {
     sidebar = 'sidebar',
     signature_pad = 'signature_pad',
     skeleton = 'skeleton',
+    share = 'share',
     step_wizard = 'step_wizard',
     table = 'table',
     tabs = 'tabs',
@@ -356,7 +370,7 @@ export interface BaseElement {
     accessibility?: AccessibilityProps;
     children?: UIElement[];
     dataSourceId?: string;
-    onEvent?: Record<string, EventHandler>;
+    onEvent?: EventHandler;
     styles?: StyleProps;
     type: ElementType;
     value?: Binding;
@@ -455,7 +469,25 @@ export interface BreadcrumbElement extends BaseElement {
     separator?: 'chevron' | 'slash' | 'dot' | 'custom';
     tooltip?: boolean;
 }
-
+export interface ShareElement extends BaseElement {
+    type: ElementType.share;
+    /** Text shown on the button */
+    label?: Binding;
+    /** Title used when sharing */
+    title?: Binding;
+    /** Text/body of the share */
+    text?: Binding;
+    /** URL to share */
+    url?: Binding;
+    /** Files to share (mobile only) */
+    files?: Binding<File[]>;
+    /** Custom icon */
+    icon?: IconElement;
+    /** Button variant */
+    variant?: ButtonVariant;
+    /** Sheet position */
+    sheetDirection?: 'bottom' | 'top' | 'left' | 'right';
+}
 export interface ButtonElement extends BaseElement {
     type: ElementType.button;
     htmlType: string;
@@ -466,6 +498,7 @@ export interface ButtonElement extends BaseElement {
     isSubmit?: boolean;
     size?: 'default' | 'sm' | 'lg' | 'icon';
     text: Binding;
+    tooltip?: Binding;
     variant: ButtonVariant;
 }
 
@@ -952,7 +985,6 @@ export type DropdownItem = {
     icon?: string;
     id: string;
     label: Binding;
-    onSelect?: EventHandler;
     shortcut?: string;
     type?: 'checkbox' | 'radio' | 'item' | 'submenu' | 'separator' | 'label' | 'group';
     value?: string;
@@ -962,6 +994,8 @@ export type DropdownItem = {
 export interface DropdownElement extends BaseElement {
     type: ElementType.dropdown;
     items?: DropdownItem[];
+    value?: string;
+    onSelect?: EventHandler;
     idFeild?: string;
     labelField?: string;
     triggerButtonClassName?: string;
@@ -1899,6 +1933,7 @@ export type UIElement =
     | SearchElement
     | SheetElement
     | SidebarElement
+    | ShareElement
     | SignaturePadElement
     | SkeletonElement
     | StepWizardElement
@@ -2189,6 +2224,7 @@ export interface EventHandler {
     dataSourceId?: string;
     canRun?: VisibilityControl;
     errorAction?: EventHandler;
+    params?: ActionParams
     streamHandler?: {
         /** Callback event name used by WebSocket/SSE messages */
         eventKey?: string;
@@ -2197,7 +2233,6 @@ export interface EventHandler {
     };
     errorTransition?: TransitionSpec;
     exportConfig?: ExportConfig;
-    params?: Record<string, any | Binding>;
     responseType?: 'ui' | 'data' | 'none' | 'voice' | 'call';
     successTransition?: TransitionSpec;
     beforeActions?: EventHandler[];      // actions to run before main action
@@ -2207,16 +2242,13 @@ export interface EventHandler {
 }
 
 export interface IScreen {
-    dataMappings?: DataMapping[];
-    dataSources?: DataSource[];
     elements: UIElement[];
     id: string;
     layoutType: LayoutType;
     lifecycle?: {
-        onEnter?: EventHandler;
-        onLeave?: EventHandler;
+        onEnter?: EventHandler[];
+        onLeave?: EventHandler[];
     };
-    metadata: Record<string, string | number | boolean | Record<string, any>>;
     name: Binding;
     styles?: StyleProps;
     transition?: { type: string; direction?: string; duration: number };
@@ -2229,9 +2261,14 @@ export interface UIDefinition {
     screens: Array<IScreen>;
     href: string;
     route: string;
+    dataMappings?: DataMapping[];
+    dataSources?: DataSource[];
+    metadata: Record<string, string | number | boolean | Record<string, any>>;
     state?: {
-        keys?: Record<string, {
-            binding?: Binding;
+        data?: Array<{
+            dataSourceId?: string;
+            value?: Binding;
+            path?: Binding
             dataType: 'string' | 'number' | 'boolean' | 'object' | 'array';
             defaultValue: any;
             validation?: {
@@ -2522,7 +2559,7 @@ export interface UIProject {
     };
 
     /* ------------------------------------------------------
-     📱 Internal Screens / Routes
+        Internal Screens / Routes
     ------------------------------------------------------ */
     screens?: UIDefinition[];
 

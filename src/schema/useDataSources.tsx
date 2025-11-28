@@ -70,7 +70,8 @@ function runTransform(
 
         const argNames = Object.keys(fullCtx);
         const argValues = Object.values(fullCtx);
-
+        console.log("Running transform with code:", code);
+        console.log(argNames, argValues);
         const fn = new Function(
             ...argNames,
             `"use strict"; ${code}`
@@ -87,30 +88,26 @@ function runTransform(
 }
 
 function applyDataMappings(
-    out: any,
-    ds: DataSource,
     mappings: DataMapping[] | undefined,
     setState: (path: string, value: any) => void,
     ctx: TransformContext
-): any {
-    if (!mappings) return out;
-    let result = out;
+) {
+    if (!mappings)
+        return
     for (const m of mappings) {
-        if (m.sourceIds.includes(ds.id)) {
-            if (m.transform) {
-                try {
-                    result = runTransform(m.transform, result, { ...ctx, ds });
-                } catch (e) {
-                    console.error("Mapping transform error", e);
-                    result = { ok: false, error: `Transform error: ${String(e)}` };
-                }
-            }
-            if (m.outputKey) {
-                setState(m.outputKey, result);
+        let result;
+        if (m.transform) {
+            try {
+                result = runTransform(m.transform, result, { ...ctx });
+            } catch (e) {
+                console.error("Mapping transform error", e);
+                result = { ok: false, error: `Transform error: ${String(e)}` };
             }
         }
+        if (m.outputKey) {
+            setState(m.outputKey, result);
+        }
     }
-    return result;
 }
 
 const defaultFetcher: Fetcher = async (ds, globalConfig, signal) => {
@@ -280,13 +277,14 @@ function setupGraphQLSubscription(
 
 export function useDataSources({
     dataSources = [],
+    dataMappings = [],
     globalConfig,
-    screen,
     state,
     setState,
     routeParams,
 }: {
     dataSources?: DataSource[];
+    dataMappings?: DataMapping[];
     globalConfig?: UIProject['globalConfig'];
     screen?: any;
     state: AnyObj;
@@ -316,10 +314,9 @@ export function useDataSources({
             });
     }, [dataSources, globalConfig, state, routeParams, token]);
 
-
     const mappings = useMemo(() => {
         const globalMappings = globalConfig?.endpoints?.dataMappings || [];
-        const screenMappings = screen?.dataMappings || [];
+        const screenMappings = dataMappings || [];
         return [...globalMappings, ...screenMappings];
     }, [globalConfig, screen]);
 
@@ -344,13 +341,7 @@ export function useDataSources({
                     }
                     const rds = resolveDataSource(ds, globalConfig, state);
                     const out = await defaultFetcher(rds, globalConfig);
-                    const mapped = applyDataMappings(out, rds, mappings, setState, {
-                        state,
-                        params: routeParams || state.params,
-                        globalConfig,
-                        screen,
-                    });
-                    setData((prev) => ({ ...prev, [rds.id]: mapped }));
+                    setData((prev) => ({ ...prev, [rds.id]: out }));
                 } catch (error) {
                     console.error(error);
                 }
@@ -380,14 +371,9 @@ export function useDataSources({
                                 controller.signal
                             )
                             : await defaultFetcher(ds, globalConfig, controller.signal);
-                        const mapped = applyDataMappings(out, ds, mappings, setState, {
-                            state,
-                            params: routeParams || state.params,
-                            globalConfig,
-                            screen,
-                        });
+
                         if (mounted) {
-                            setData(prev => ({ ...prev, [ds.id]: mapped }));
+                            setData(prev => ({ ...prev, [ds.id]: out }));
                         }
                     } catch (e: any) {
                         if (e.name === "AbortError") return;
@@ -424,13 +410,13 @@ export function useDataSources({
                                 out.variables,
                                 (newData) => {
                                     if (mounted) {
-                                        const mapped = applyDataMappings(newData, ds, mappings, setState, {
+                                        applyDataMappings(mappings, setState, {
                                             state,
                                             params: routeParams || state.params,
                                             globalConfig,
                                             screen,
+                                            ...newData
                                         });
-                                        setData((prev) => ({ ...prev, [ds.id]: mapped }));
                                     }
                                 },
                                 out.headers,
@@ -440,13 +426,13 @@ export function useDataSources({
                                 out.url,
                                 (msg) => {
                                     if (mounted) {
-                                        const mapped = applyDataMappings({ _ws: true, last: msg }, ds, mappings, setState, {
+                                        applyDataMappings(mappings, setState, {
                                             state,
                                             params: routeParams || state.params,
                                             globalConfig,
                                             screen,
+                                            ...msg
                                         });
-                                        setData((prev) => ({ ...prev, [ds.id]: mapped }));
                                     }
                                 },
                                 out.initialMessage,
@@ -478,6 +464,15 @@ export function useDataSources({
         for (const [id, val] of Object.entries(data)) {
             setState(id, val);
         }
+        const globalMappings = globalConfig?.endpoints?.dataMappings || [];
+        const screenMappings = dataMappings || [];
+        const maps = [...globalMappings, ...screenMappings];
+        applyDataMappings(maps, setState, {
+            state,
+            params: routeParams || state.params,
+            globalConfig,
+            screen,
+        });
     }, [data]);
 
     return data;

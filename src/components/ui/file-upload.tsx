@@ -3,7 +3,7 @@
 import { resolveBinding } from "../../lib/utils"
 import * as React from "react"
 import { useDropzone } from "react-dropzone"
-import wrapWithMotion from "./wrapWithMotion"
+import wrapWithClassName from "./wrapWithClassName"
 import { EventHandler, FileUploadElement } from "../../types"
 
 type UploadStatus = "idle" | "queued" | "uploading" | "success" | "error" | "canceled"
@@ -652,7 +652,7 @@ export function FileUploadRenderer({
         runEventHandler?.(element.onQueueChange, { queue })
     }
 
-    return wrapWithMotion(element,
+    return wrapWithClassName(element,
         <FileUpload
             presignUrl={presignUrl}
             headers={headers}

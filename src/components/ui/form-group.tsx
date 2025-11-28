@@ -26,8 +26,8 @@ function namesForGroup(
 ): string[] {
     if (!formFields?.length) return [];
     return formFields
-        .filter((f) => getFieldGroupId(f as FormFieldUnion, kind) === groupId)
-        .flatMap((f) =>
+        ?.filter((f) => getFieldGroupId(f as FormFieldUnion, kind) === groupId)
+        ?.flatMap((f) =>
             f.fieldType === FieldType.input
                 ? [((f as any).input?.name as string)].filter(Boolean)
                 : []

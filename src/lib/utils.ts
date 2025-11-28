@@ -429,12 +429,12 @@ export function resolveDataSourceValue(val: any, state: AnyObj, extra?: AnyObj):
     str = str.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_m, rawExpr) => {
         const expr = rawExpr.trim();
 
-        // If it looks like JavaScript logic (heuristic)
         const looksLikeJs =
             /[=!><\|\&\?]/.test(expr) || expr.includes(".") || expr.includes("length");
 
         if (looksLikeJs) {
-            const value = evalJS(expr, { state, ...state });
+            const scope = buildScope(state, extra || {});
+            const value = evalJS(expr, scope);
             return value === undefined ? "" : String(value);
         }
 

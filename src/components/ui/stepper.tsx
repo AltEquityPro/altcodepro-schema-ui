@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn, resolveBinding } from "../../lib/utils";
 import { Button } from "./button";
 import { Progress } from "./progress";
-import wrapWithMotion from "./wrapWithMotion";
+import wrapWithClassName from "./wrapWithClassName";
 import { RenderChildren } from "../../schema/RenderChildren";
 import { ElementType, FormGroupType, type AnyObj, type EventHandler, type FormElement, type FormField, type StepWizardElement } from "../../types";
 import { ElementResolver } from "@/schema/ElementResolver";
@@ -169,7 +169,7 @@ export default function StepWizardRenderer({
     }, [handleNext, handlePrev]);
 
     if (!visibleSteps.length) {
-        return wrapWithMotion(
+        return wrapWithClassName(
             fixedElement,
             <div className="text-(--acp-secondary-500) text-sm italic">
                 {t("wizard.empty", "No steps configured")}
@@ -181,7 +181,7 @@ export default function StepWizardRenderer({
     }
 
     // --- Render ---
-    return wrapWithMotion(
+    return wrapWithClassName(
         fixedElement,
         <div
             style={{ zIndex: fixedElement.zIndex }}

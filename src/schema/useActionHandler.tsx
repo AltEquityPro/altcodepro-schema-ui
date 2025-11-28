@@ -8,7 +8,7 @@ import {
     DataSource,
     TransitionSpec,
     ActionRuntime,
-    ActionParams
+    ActionParams,
 } from "../types";
 import { deepResolveBindings, resolveDataSource, deepResolveDataSource, resolveDataSourceValue, hash, getAuthKey, resolveBinding } from "../lib/utils";
 import { JSONPath } from "jsonpath-plus";
@@ -192,7 +192,6 @@ export function useActionHandler({
     const runEventHandler = async (handler?: EventHandler, dataOverride?: AnyObj): Promise<any> => {
         if (!handler) return;
 
-        let result: any;
         const runSub = async (acts?: EventHandler[], ctx?: AnyObj) => {
             if (!acts?.length) return;
             for (const sub of acts) {
@@ -210,7 +209,7 @@ export function useActionHandler({
         };
 
         const then = async (ok: boolean, payload?: any, error?: { message: string; status?: number }) => {
-            const h = deepResolveBindings(handler, state, t) as EventHandler & { params?: ActionParams };
+            const h = deepResolveBindings(handler, state, t) as EventHandler;
             if (ok) {
                 const controller = new AbortController();
                 const actionId = `${h.action}-${Date.now()}`;
@@ -289,7 +288,6 @@ export function useActionHandler({
                 const hasNavInFinally = h.finallyActions.some(a => a.action === "navigation");
 
                 if (hasError) {
-                    // 🔔 Show toast (global handler)
                     const message = error?.message || t("Something went wrong. Please try again.");
                     console.error(message);
                     // ❌ Skip navigation if any exists in finally
@@ -511,7 +509,7 @@ export function useActionHandler({
                 case ActionType.update_state: {
                     const path = String(h.params?.path);
                     if (path) {
-                        let val = h.params?.value;
+                        let val = resolveBinding(h.params?.value, state, t);
                         if (typeof val === "object" && val !== null) {
                             const resolvedObj: AnyObj = {};
                             for (const [k, v] of Object.entries(val)) {
@@ -526,7 +524,7 @@ export function useActionHandler({
                     }
                 }
                 case ActionType.run_script: {
-                    const name = String(h.params?.name); if (!name) throw new Error("Script name required");
+                    const name = String(h.params?.id); if (!name) throw new Error("Script name required");
                     const args = h.params?.args ? (Array.isArray(h.params.args) ? h.params.args : [h.params.args]).map(a => resolveDataSourceValue(a, state, undefined)) : [];
                     result = await runtime.runScript?.(name, args);
                     if (h.responseType === "data" && h.params?.statePath) setState(h.params.statePath, applyMap(result, h.params.resultMapping));
@@ -539,7 +537,9 @@ export function useActionHandler({
                 case ActionType.crud_delete:
                 case ActionType.audit_log:
                 case ActionType.ai_generate: {
-                    const dsId = h.dataSourceId || h.params?.dataSourceId; if (!dsId) throw new Error(`dataSourceId required`);
+                    const dsId = h.dataSourceId;
+                    if (!dsId)
+                        throw new Error(`dataSourceId required`);
                     const ds = dataSources?.find(d => d.id === dsId) || (globalConfig?.endpoints?.registry || []).find((r: any) => r.id === dsId);
                     if (!ds) throw new Error(`DataSource ${dsId} not found`);
                     let body: AnyObj | FormData | undefined = undefined;
@@ -569,7 +569,6 @@ export function useActionHandler({
                             label: h.params?.type || 'text',
                             metadata: {
                                 prompt: h.params?.prompt?.slice?.(0, 200),
-                                model: h.params?.model,
                                 projectId: globalConfig?.projectId,
                             },
                         });
@@ -620,7 +619,7 @@ export function useActionHandler({
                     const dsId = h.dataSourceId; if (!dsId) throw new Error(`dataSourceId required`);
                     const ds = dataSources?.find(d => d.id === dsId) || (globalConfig?.endpoints?.registry || []).find((r: any) => r.id === dsId);
                     if (!ds) throw new Error(`DataSource ${dsId} not found`);
-                    result = await executeGql(ds, h.params?.query, h.params?.variables || dataOverride);
+                    result = await executeGql(ds, h.params?.gqlQuery, h.params?.gqlQueryOverrides || dataOverride);
                     if (h.responseType === "data" && h.params?.statePath) {
                         const resolvedPath = resolveBinding(h.params.statePath, { ...state, ...dataOverride }, t);
                         setState(resolvedPath, applyMap(result, h.params.resultMapping));
