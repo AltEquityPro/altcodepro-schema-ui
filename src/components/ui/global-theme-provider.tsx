@@ -31,7 +31,7 @@ function buildScaleCSS(varName: string) {
 }
 
 function buildUtilityClasses(name: "primary" | "secondary") {
-  const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+  const shades = [50,100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
   const cls: string[] = [];
 
   cls.push(`
@@ -45,8 +45,12 @@ function buildUtilityClasses(name: "primary" | "secondary") {
 .text-${name}-${s} { color: var(--acp-${name}-${s}); }
 .bg-${name}-${s} { background-color: var(--acp-${name}-${s}); }
 .border-${name}-${s} { border-color: var(--acp-${name}-${s}); }
-
+.bg-${name}-${s}\/40 { background-color: color-mix(in srgb, var(--acp-${name}-${s}) 40%, transparent); }
+.bg-${name}-${s}\/30 { background-color: color-mix(in srgb, var(--acp-${name}-${s}) 30%, transparent); }
+.bg-${name}-${s}\/20 { background-color: color-mix(in srgb, var(--acp-${name}-${s}) 20%, transparent); }
+.bg-${name}-${s}\/10 { background-color: color-mix(in srgb, var(--acp-${name}-${s}) 10%, transparent); }
 .bg-${name}-${s}\\/50 { background-color: color-mix(in srgb, var(--acp-${name}-${s}) 50%, transparent); }
+.bg-${name}-${s}\\/60 { background-color: color-mix(in srgb, var(--acp-${name}-${s}) 60%, transparent); }
 .bg-${name}-${s}\\/20 { background-color: color-mix(in srgb, var(--acp-${name}-${s}) 20%, transparent); }
 .bg-${name}-${s}\\/10 { background-color: color-mix(in srgb, var(--acp-${name}-${s}) 10%, transparent); }
 `);
@@ -55,9 +59,7 @@ function buildUtilityClasses(name: "primary" | "secondary") {
   return cls.join("\n");
 }
 
-/* =======================================================
-🌈 Global Theme Provider
-======================================================= */
+
 export function GlobalThemeProvider({
   project,
   children,
@@ -128,6 +130,12 @@ export function GlobalThemeProvider({
     color-scheme: ${colorScheme};
     ${buildScaleCSS("acp-primary")}
     ${buildScaleCSS("acp-secondary")}
+    --acp-opacity-95: 0.95;
+    --acp-opacity-80: 0.80;
+    --acp-opacity-60: 0.60;
+    --acp-opacity-40: 0.40;
+    --acp-opacity-20: 0.20;
+    --acp-opacity-10: 0.10;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -170,10 +178,25 @@ export function GlobalThemeProvider({
 
 /* --- Backgrounds --- */
 .bg-background { background-color: var(--acp-background) !important; }
+.bg-background\/95 { background-color: color-mix(in srgb, var(--acp-background) var(--acp-opacity-95)*100%, transparent) !important; }
+.bg-background\/80 { background-color: color-mix(in srgb, var(--acp-background) var(--acp-opacity-80)*100%, transparent) !important; }
+.bg-background\/60 { background-color: color-mix(in srgb, var(--acp-background) var(--acp-opacity-60)*100%, transparent) !important; }
+.bg-background\/40 { background-color: color-mix(in srgb, var(--acp-background) var(--acp-opacity-40)*100%, transparent) !important; }
+.bg-background\/20 { background-color: color-mix(in srgb, var(--acp-background) var(--acp-opacity-20)*100%, transparent) !important; }
+.bg-background\/10 { background-color: color-mix(in srgb, var(--acp-background) var(--acp-opacity-10)*100%, transparent) !important; }
+
+/* Foreground versions */
+.bg-foreground\/95 { background-color: color-mix(in srgb, var(--acp-foreground) 95%, transparent) !important; }
+.bg-foreground\/60 { background-color: color-mix(in srgb, var(--acp-foreground) 60%, transparent) !important; }
+
+/* Primary / Secondary opacity variants */
+.bg-primary\/60 { background-color: color-mix(in srgb, var(--acp-primary) 60%, transparent) !important; }
+.bg-primary\/20 { background-color: color-mix(in srgb, var(--acp-primary) 20%, transparent) !important; }
+
+.bg-secondary\/60 { background-color: color-mix(in srgb, var(--acp-secondary) 60%, transparent) !important; }
+.bg-secondary\/20 { background-color: color-mix(in srgb, var(--acp-secondary) 20%, transparent) !important; }
 .bg-foreground { background-color: var(--acp-foreground) !important; }
-.bg-card { background-color: var(--acp-background) !important; }
 .bg-muted { background-color: color-mix(in srgb, var(--acp-foreground) 6%, var(--acp-background)) !important; }
-.bg-popover { background-color: var(--acp-background) !important; }
 .bg-primary { background-color: var(--acp-primary) !important; }
 .bg-secondary { background-color: var(--acp-secondary) !important; }
 .bg-accent { background-color: var(--acp-accent) !important; }
@@ -295,7 +318,6 @@ export function GlobalThemeProvider({
   ${customCss}
 `, [colorScheme, customCss]);
 
-  /* 🧩 Inject computed CSS */
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: computedCss }} />

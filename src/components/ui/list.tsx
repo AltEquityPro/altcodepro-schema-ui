@@ -3,7 +3,7 @@
 import React, { useMemo, useCallback } from "react";
 import { cleanDataSourceId, cn, resolveBinding } from "../../lib/utils";
 import { RenderChildren } from "../../schema/RenderChildren";
-import type { AnyObj, EventHandler, ListElement, UIElement } from "../../types";
+import { ElementType, type AnyObj, type EventHandler, type ListElement, type UIElement } from "../../types";
 import { List, useDynamicRowHeight, useListRef, RowComponentProps } from "react-window";
 
 interface ListRendererProps {
@@ -40,52 +40,133 @@ export function ListRenderer({
         },
         [element, runEventHandler]
     );
-
     const Row = useCallback(
         ({ index, style }: RowComponentProps) => {
             const item = items[index];
-            const resolvedChildren =
-                (element.children as UIElement[])?.length > 0
-                    ? element.children
-                    : [
-                        {
-                            id: `row_${index}`,
-                            type: "text",
-                            name: `Row ${index}`,
-                            content:
-                                typeof item === "object"
-                                    ? resolveBinding(item.label || item.name || JSON.stringify(item), state, t)
-                                    : String(item),
-                            alignment: "left",
-                            tag: "div",
-                        },
-                    ];
+
+            const isFaq = !!item?.description;
+            const hasChildren = Array.isArray(item?.children) && item.children.length > 0;
+            const hasMedia = !!item?.media;
+            const iconEl: UIElement | null = item?.icon
+                ? {
+                    ...item.icon,
+                    id: `row_icon_${index}`,
+                    type: ElementType.icon, // ensure correct renderer
+                }
+                : null;
+            let resolvedChildren: UIElement[] = [];
+
+            /* ------------------------------------------------------
+               1️⃣ FAQ MODE
+            ------------------------------------------------------ */
+            if (isFaq) {
+                resolvedChildren = [
+                    {
+                        id: `faq_question_${index}`,
+                        type: ElementType.text,
+                        tag: "div",
+                        name: "FAQ Question",
+                        content: resolveBinding(
+                            item.label || item.name || item.title || item.text || item.question,
+                            state,
+                            t
+                        ),
+                        styles: {
+                            className: "font-semibold text-base mb-1"
+                        }
+                    },
+                    {
+                        id: `faq_answer_${index}`,
+                        type: ElementType.text,
+                        tag: "div",
+                        name: "FAQ Answer",
+                        content: resolveBinding(item.description, state, t),
+                        styles: {
+                            className: "text-muted-foreground text-sm leading-relaxed"
+                        }
+                    }
+                ] as any;
+            }
+
+            if (hasChildren) {
+                resolvedChildren.push(item.children);
+            }
+
+            /* ------------------------------------------------------
+               3️⃣ MEDIA SUPPORT (image, video, avatar, icon, etc.)
+               Example item.media:
+               {
+                   type: "image",
+                   src: "https://img...",
+                   alt: "Thumbnail"
+               }
+            ------------------------------------------------------ */
+            if (hasMedia) {
+                resolvedChildren.push(...[
+                    {
+                        id: `media_${index}`,
+                        type: ElementType.image,
+                        mediaType: item.media.type || "image",
+                        src: item.media.src,
+                        alt: item.media.alt,
+                        className: item.media.className || "w-16 h-16 rounded-md object-cover mb-2",
+                    } as any,
+                    {
+                        id: `media_text_${index}`,
+                        type: ElementType.text,
+                        tag: "div",
+                        content: resolveBinding(
+                            item.label || item.name || item.text || item.content,
+                            state,
+                            t
+                        ),
+                        styles: {
+                            className: "text-base font-medium"
+                        }
+                    }
+                ] as any);
+            }
+            if (iconEl) {
+                resolvedChildren.push(iconEl);
+            }
+
+            (element.children as UIElement[])?.length > 0
+                ? resolvedChildren.push(...element.children as any)
+                : resolvedChildren.push({
+                    id: `row_${index}`,
+                    type: ElementType.text,
+                    tag: "div",
+                    content: resolveBinding(
+                        item.label || item.name || item.text || item.content,
+                        state,
+                        t
+                    )
+                } as any)
 
             return (
                 <div
                     key={index}
                     style={style}
                     className={cn(
-                        "flex items-center border-(--acp-border) dark:border-(--acp-border-dark) cursor-pointer select-none",
-                        isHorizontal
-                            ? "px-3 py-2 border-r hover:bg-(--acp-hover)"
-                            : "px-3 py-2 border-b hover:bg-(--acp-hover)",
+                        "flex flex-col cursor-pointer px-4 py-3 border-b last:border-0",
+                        "hover:bg-muted/40 transition-colors",
                         element.styles?.className
                     )}
                     onClick={() => handleRowClick(item, index)}
                 >
                     <RenderChildren
-                        children={resolvedChildren as any}
-                        t={t}
+                        children={resolvedChildren}
                         state={{ ...state, currentItem: item }}
                         setState={setState}
                         runEventHandler={runEventHandler}
+                        t={t}
                     />
                 </div>
             );
         },
-        [items, element, state, t, setState, runEventHandler, handleRowClick, isHorizontal]
+        [items, element, state, t, setState, runEventHandler, handleRowClick]
     );
+
 
     if (isHorizontal) {
         return (

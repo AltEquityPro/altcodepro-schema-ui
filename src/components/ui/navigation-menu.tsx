@@ -5,15 +5,17 @@ import clsx from "clsx";
 import { Sheet, SheetContent } from "./sheet";
 import { Button } from "./button";
 import { X, Menu, Search } from "lucide-react";
-import { NavigationMenu, AnyObj, EventHandler, NavigationItem, Binding, ActionType } from "../../types";
+import { NavigationMenu, AnyObj, EventHandler, NavigationItem, Binding, ActionType, Brand } from "../../types";
 import { RenderChildren } from "../../schema/RenderChildren";
 import { useIsMobile } from "../../hooks/use-mobile";
 import { resolveBinding } from "../../lib/utils";
 import { DynamicIcon } from "./dynamic-icon";
-
+import { BrandBlock } from "./brand-block";
+import { createPortal } from "react-dom";
 interface NavigationMenuRendererProps {
     menu: NavigationMenu;
     state: AnyObj;
+    brand: Brand;
     t: (key: string, defaultLabel?: string) => string;
     runEventHandler: (handler?: EventHandler, dataOverride?: AnyObj) => Promise<any>;
     setState: (path: string, value: any) => void;
@@ -22,6 +24,7 @@ interface NavigationMenuRendererProps {
 export function NavigationMenuRenderer({
     menu,
     state,
+    brand,
     t,
     runEventHandler,
     setState,
@@ -31,7 +34,7 @@ export function NavigationMenuRenderer({
     const [searchValue, setSearchValue] = useState("");
     const [searchResults, setSearchResults] = useState<AnyObj[]>([]);
 
-    const isDrawer = isMobile && menu.mobile?.trigger === "burger";
+    const isDrawer = isMobile && menu.mobile?.trigger !== "none";
 
     // Search config
     const searchConfig = typeof menu.showSearch === "object" ? menu.showSearch : {};
@@ -41,7 +44,7 @@ export function NavigationMenuRenderer({
     const placement = menu.placement;
 
     const baseClasses = {
-        top: "fixed top-0 left-0 right-0 z-50 border-b",
+        top: "left-0 right-0 z-50 border-b",
         side: "fixed inset-y-0 left-0 z-50 w-64 border-r",
         bottom: "fixed bottom-0 left-0 right-0 z-50 border-t",
         drawer: "w-80 h-full",
@@ -128,67 +131,70 @@ export function NavigationMenuRenderer({
 
     const content = (
         <div className={clsx("flex flex-col h-full bg-background text-foreground", menu.styles?.className)}>
-            {/* Header */}
             {menu.header && (
                 <div className={clsx("border-b border-border/50", menu.headerClassName)}>
                     <RenderChildren children={menu.header} state={state} t={t} runEventHandler={runEventHandler} setState={setState} />
                 </div>
             )}
-
-            {/* Search */}
-            {menu.showSearch && (
-                <div className={clsx("px-4 pt-3 pb-2", menu.searchClassName)}>
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <input
-                            type="text"
-                            placeholder={searchPlaceholder}
-                            value={searchValue}
-                            onChange={(e) => setSearchValue(e.target.value)}
-                            className={clsx(
-                                "w-full pl-10 pr-4 py-2.5 text-sm rounded-lg",
-                                "bg-muted/50 border border-border/50",
-                                "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50",
-                                "placeholder:text-muted-foreground/70",
-                                menu.searchInputClassName
-                            )}
+            <div className="relative w-full overflow-visible">
+                <nav
+                    className={clsx(
+                        "flex items-center gap-2 whitespace-nowrap overflow-x-auto overflow-y-hidden",
+                        menu.navClassName || "px-3 py-2"
+                    )}
+                >
+                    {!menu.header && <BrandBlock brand={brand} placement="top" />}
+                    {filteredItems.map((item, i) => (
+                        <NavigationItemRenderer
+                            key={i}
+                            item={item}
+                            state={state}
+                            t={t}
+                            runEventHandler={runEventHandler}
+                            setState={setState}
+                            depth={0}
                         />
-                    </div>
+                    ))}
+                    {menu.showSearch && (
+                        <div className={clsx("px-4 pt-3 pb-2", menu.searchClassName)}>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <input
+                                    type="text"
+                                    placeholder={searchPlaceholder}
+                                    value={searchValue}
+                                    onChange={(e) => setSearchValue(e.target.value)}
+                                    className={clsx(
+                                        "w-full pl-10 pr-4 py-2.5 text-sm rounded-lg",
+                                        "bg-muted/50 border border-border/50",
+                                        "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50",
+                                        "placeholder:text-muted-foreground/70",
+                                        menu.searchInputClassName
+                                    )}
+                                />
+                            </div>
 
-                    {/* Backend search results */}
-                    {searchResults.length > 0 && (
-                        <div className="mt-2 max-h-64 overflow-y-auto rounded-lg bg-muted/50 border border-border/50">
-                            {searchResults.map((result, i) => (
-                                <button
-                                    key={i}
-                                    onClick={() => {
-                                        setSearchValue("");
-                                        runEventHandler?.(result.onClick);
-                                    }}
-                                    className="w-full px-3 py-2 text-left text-sm hover:bg-accent/70 transition-colors"
-                                >
-                                    {result.title || result.label}
-                                </button>
-                            ))}
+                            {/* Backend search results */}
+                            {searchResults.length > 0 && (
+                                <div className="mt-2 max-h-64 overflow-y-auto rounded-lg bg-muted/50 border border-border/50">
+                                    {searchResults.map((result, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => {
+                                                setSearchValue("");
+                                                runEventHandler?.(result.onClick);
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-sm hover:bg-accent/70 transition-colors"
+                                        >
+                                            {result.title || result.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
-                </div>
-            )}
-
-            {/* Items */}
-            <nav className={clsx("flex-1 overflow-y-auto space-y-0.5", menu.navClassName || "px-3 py-2")}>
-                {filteredItems.map((item, i) => (
-                    <NavigationItemRenderer
-                        key={i}
-                        item={item}
-                        state={state}
-                        t={t}
-                        runEventHandler={runEventHandler}
-                        setState={setState}
-                        depth={0}
-                    />
-                ))}
-            </nav>
+                </nav>
+            </div>
 
             {/* Footer */}
             {menu.footer && (
@@ -208,6 +214,7 @@ export function NavigationMenuRenderer({
 
                 <Sheet open={open} onOpenChange={setOpen}>
                     <SheetContent side={menu.mobile?.sheetDirection || "left"} className={clsx("p-0", menu.sheetClassName)}>
+                        <BrandBlock brand={brand} placement="drawer" />
                         {content}
                         <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className={clsx("absolute top-4 right-4", menu.closeButtonClassName)}>
                             <X className="h-5 w-5" />
@@ -218,7 +225,14 @@ export function NavigationMenuRenderer({
         );
     }
 
-    return <div className={clsx("bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60", baseClasses[placement])}>{content}</div>;
+    return <div
+        className={clsx(
+            "backdrop-blur supports-backdrop-filter:bg-background/60 overflow-visible z-100 relative",
+            baseClasses[placement]
+        )}>
+
+        {content}
+    </div>;
 }
 
 // Helper: extract visible text from any element (for search)
@@ -248,7 +262,7 @@ function NavigationItemRenderer({
     depth: number;
 }) {
     const indent = depth * 12;
-
+    const [open, setOpen] = useState(false);
     if (item.type === "link") {
         const label = resolveBinding(item.label, state, t);
 
@@ -277,6 +291,56 @@ function NavigationItemRenderer({
                     </span>
                 )}
             </a>
+        );
+    }
+    if (item.type === "submenu") {
+        const trigger = item.trigger ?? "hover";
+        const submenuPosition =
+            item.placement === "right"
+                ? "top-full left-0 mt-2"
+                : item.placement === "left"
+                    ? "top-full right-0 mt-2"
+                    : item.placement === "bottom"
+                        ? "top-full left-0 mt-2"
+                        : "top-full left-0 mt-2"; // default for top navbar
+
+        return (
+            <div
+                className={clsx("relative group inline-block", item.className)}
+                onMouseEnter={() => trigger === "hover" && setOpen(true)}
+                onMouseLeave={() => trigger === "hover" && setOpen(false)}
+            >
+                <button
+                    onClick={() => trigger === "click" && setOpen(!open)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg hover:bg-accent/30 transition"
+                    style={{ paddingLeft: `${indent + 12}px` }}
+                >
+                    <span>{resolveBinding(item.label, state, t)}</span>
+                    <span className="text-xs opacity-60">▸</span>
+                </button>
+
+                {/* SUBMENU PANEL */}
+                {open && (
+                    <div
+                        className={clsx(
+                            "absolute bg-background border border-border shadow-card rounded-lg p-2 w-56 z-9999",
+                            submenuPosition
+                        )}
+                    >
+                        {item.items.map((child, idx) => (
+                            <NavigationItemRenderer
+                                key={idx}
+                                item={child}
+                                state={state}
+                                t={t}
+                                runEventHandler={runEventHandler}
+                                setState={setState}
+                                depth={depth + 1}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
         );
     }
 

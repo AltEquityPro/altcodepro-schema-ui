@@ -1,6 +1,7 @@
 "use client";
 
 import { UIProject, AnyObj, NavigationMenu, EventHandler } from "../../types";
+import { BrandBlock } from "./brand-block";
 import { NavigationMenuRenderer } from "./navigation-menu";
 
 interface NavRendererProps {
@@ -13,16 +14,21 @@ interface NavRendererProps {
 
 export function NavRenderer({ project, state, setState, t, runEventHandler }: NavRendererProps) {
     const nav = project.navigation;
-
+    const brand = project.brand;
     if (!nav) return null;
-
     const renderMenu = (menu?: NavigationMenu) => {
         if (!menu) return null;
-
-        // Visibility control
         if (menu.visibility && !menu.visibility.show) return null;
 
-        return <NavigationMenuRenderer menu={menu} state={state} t={t} setState={setState} runEventHandler={runEventHandler} />;
+        return <NavigationMenuRenderer
+            menu={menu}
+            state={state}
+            brand={brand}
+            t={t}
+            setState={setState}
+            runEventHandler={runEventHandler}
+        />
+
     };
 
     return (

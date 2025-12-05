@@ -2104,12 +2104,24 @@ export interface NavigationMenu extends BaseElement {
     items: NavigationItem[];
     visibility?: VisibilityControl;
 }
+export interface NavigationSubmenu {
+    type: 'submenu';
+    id: string;
+    label: Binding;
+    trigger?: 'hover' | 'click';
+    placement?: 'right' | 'left' | 'bottom';  // where submenu opens
+    className?: string;
+
+    items: NavigationItem[];  // recursive!
+    visibility?: VisibilityControl;
+}
 
 export type NavigationItem =
     | NavigationLink
     | NavigationGroup
     | NavigationDivider
-    | NavigationCustom;
+    | NavigationCustom
+    | NavigationSubmenu;
 
 export interface NavigationLink {
     type: 'link';
@@ -2472,10 +2484,6 @@ export interface UIProject {
             borderDark?: string;
             accentLight?: string;
             accentDark?: string;
-        };
-        headerStyle?: {
-            className?: string;
-            customCss?: string;
         };
     };
 
