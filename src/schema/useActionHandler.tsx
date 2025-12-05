@@ -682,7 +682,6 @@ export function useActionHandler({
         } catch (e: any) {
             const err = { message: String(e.message || e), status: e.message?.includes('HTTP') ? parseInt(e.message.match(/HTTP (\d+)/)?.[1] || '0', 10) : undefined };
             await then(false, undefined, err);
-            console.log('error', err)
             runtime.toast?.(err.message, "error");
         }
     };

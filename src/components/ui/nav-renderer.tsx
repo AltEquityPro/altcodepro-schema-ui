@@ -1,7 +1,6 @@
 "use client";
 
 import { UIProject, AnyObj, NavigationMenu, EventHandler } from "../../types";
-import { BrandBlock } from "./brand-block";
 import { NavigationMenuRenderer } from "./navigation-menu";
 
 interface NavRendererProps {

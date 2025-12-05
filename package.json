@@ -1,6 +1,6 @@
 {
   "name": "altcodepro-schema-ui",
-  "version": "1.0.33",
+  "version": "1.0.34",
   "description": "AltcodePro Schema driven UI",
   "scripts": {
     "build": "rm -rf dist && tsup && cp dist/* /Users/sireeshpangaluri/Desktop/Projects/AltEquityPro/altcodepro-ai-studio/node_modules/altcodepro-schema-ui/dist",

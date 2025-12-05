@@ -70,8 +70,6 @@ function runTransform(
 
         const argNames = Object.keys(fullCtx);
         const argValues = Object.values(fullCtx);
-        console.log("Running transform with code:", code);
-        console.log(argNames, argValues);
         const fn = new Function(
             ...argNames,
             `"use strict"; ${code}`

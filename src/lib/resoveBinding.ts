@@ -397,9 +397,6 @@ export function resolveBindingWithDepth(
         }
         return result;
     } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-            console.log("Error resolving binding:", val, error);
-        }
         return String(val);
     }
 }
@@ -456,9 +453,6 @@ export function deepResolveBindingsDepth(value: any, state: AnyObj, t: (k: strin
 
         return value;
     } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-            console.log("Error resolving binding:", value, error);
-        }
         return value;
     }
 }

@@ -295,7 +295,6 @@ export function Chart({ element, state, t }: { element: ChartElement, state: Any
       </Recharts.ComposedChart> : null
     )
 
-  console.log('data', data)
   if (!data)
     return null
   if (typeof data === 'string') {

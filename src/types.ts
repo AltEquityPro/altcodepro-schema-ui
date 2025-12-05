@@ -2081,7 +2081,7 @@ export interface EndpointEnvironments {
 export interface NavigationMenu extends BaseElement {
     type: ElementType.navigation_menu;
     id: string;
-
+    topBarClassName?: string;
     /** Where it renders */
     placement: 'top' | 'side' | 'bottom' | 'drawer';
 
@@ -2107,11 +2107,12 @@ export interface NavigationMenu extends BaseElement {
 export interface NavigationSubmenu {
     type: 'submenu';
     id: string;
+    childrenClassName?: string;
     label: Binding;
     trigger?: 'hover' | 'click';
     placement?: 'right' | 'left' | 'bottom';  // where submenu opens
     className?: string;
-
+    icon?: IconElement;
     items: NavigationItem[];  // recursive!
     visibility?: VisibilityControl;
 }
