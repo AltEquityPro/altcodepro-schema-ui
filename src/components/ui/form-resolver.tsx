@@ -501,7 +501,7 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
 
     const renderField = (f: FormFieldType) => {
         const el = (f as any).element ?? (f as any).input ?? f;
-        if (el.visibility && !isVisible(el.visibility, state, t)) return null;
+        if (el.visibility && !isVisible(el.visibility, reactiveState, t)) return null;
         if (f.fieldType === FieldType.input) {
             return renderInputField(f.input);
         }
@@ -1037,7 +1037,7 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
     };
 
     const renderGroup = (group: FormElement) => {
-        if (group.visibility && !isVisible(group.visibility, state, t)) return null;
+        if (group.visibility && !isVisible(group.visibility, reactiveState, t)) return null;
         switch (group.formGroupType) {
             case FormGroupType.card:
                 return (
@@ -1082,7 +1082,9 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
                 return <div key={group.id} className="space-y-6">{group.formFields?.map(renderField)}</div>;
         }
     };
+
     const className = classesFromStyleProps(element.styles);
+
     const renderContent = () => {
 
         if (element.formGroupType) {
@@ -1099,6 +1101,15 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
 
         return null;
     };
+
+    const reactiveState = useMemo(() => {
+        return {
+            ...state,
+            form: form.watch(),        // LIVE form values
+            state: state,              // keep original namespace
+        };
+    }, [state, form.watch()]);
+
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className={className}>

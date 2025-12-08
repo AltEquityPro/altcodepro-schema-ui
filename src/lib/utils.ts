@@ -125,7 +125,8 @@ export function isVisible(
 ): boolean {
     try {
         if (!visibility || !visibility.condition) return true;
-
+        if (visibility.show == false)
+            return false;
         const coerce = (v: any): any => {
             if (typeof v === "string") {
                 const lower = v.trim().toLowerCase();
@@ -171,9 +172,8 @@ export function isVisible(
         };
 
         const result = evaluate(visibility.condition);
-        return visibility.show ? result : !result;
+        return result;
     } catch (error) {
-        console.error("Error in isVisible:", error, visibility?.condition);
         return false;
     }
 }
