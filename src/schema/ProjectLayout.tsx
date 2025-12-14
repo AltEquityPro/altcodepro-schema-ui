@@ -1,8 +1,7 @@
 'use client';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import clsx from 'clsx';
-import { UIProject, NavigationAPI } from '../types';
-import { useIsMobile } from '../hooks/use-mobile';
+import { UIProject, NavigationAPI, AnyObj } from '../types';
 import { NavRenderer } from '../components/ui/nav-renderer';
 import { CookieBannerRenderer } from '../components/ui/cookie_render';
 import { GlobalThemeProvider } from '../components/ui/global-theme-provider';
@@ -14,6 +13,7 @@ import { useAppState } from './StateContext';
 import Loader from '../components/ui/loader';
 import { ElementResolver } from './ElementResolver';
 import { useActionHandler } from './useActionHandler';
+import { RenderChildren } from './RenderChildren';
 
 export interface ProjectLayoutProps {
     project: UIProject;
@@ -21,7 +21,15 @@ export interface ProjectLayoutProps {
     nav?: NavigationAPI;
     children?: React.ReactNode;
 }
-function RenderWithContexts({ project, nav, state, t, setState, clearState, children }: any) {
+function RenderWithContexts({ project, nav, state, t, setState, clearState, children }: {
+    project: UIProject;
+    nav?: NavigationAPI;
+    state: AnyObj;
+    t: (key: string, defaultLabel?: string | undefined) => string;
+    setState: (path: string, value: any) => void;
+    clearState: () => void;
+    children?: React.ReactNode;
+}) {
     const { runEventHandler } = useActionHandler({
         globalConfig: project.globalConfig,
         runtime: {
@@ -29,17 +37,9 @@ function RenderWithContexts({ project, nav, state, t, setState, clearState, chil
             patchState: (path: string, val: any) => setState(path, val)
         }
     });
-    const isMobile = useIsMobile();
-
-    const navType = isMobile
-        ? project.routeList?.responsiveNavType
-        : project.routeList?.desktopNavType;
-
-    const layoutClass = project.routeList
-        ? navType === 'side'
-            ? 'flex'
-            : 'flex flex-col'
-        : 'flex';
+    const layoutClass = project.navigation?.primary?.placement == 'side'
+        ? 'flex'
+        : 'flex flex-col'
 
     return (
         <div className={clsx('min-h-screen', layoutClass)}>
@@ -52,12 +52,25 @@ function RenderWithContexts({ project, nav, state, t, setState, clearState, chil
                 t={t}
             />
             {project.footer && (
-                <ElementResolver
-                    state={state}
-                    setState={setState}
-                    t={t}
-                    element={project.footer}
-                />
+                <footer className={project.footer.styles?.className || "bg-background text-foreground border-t border-border"}>
+                    <div className="mx-auto max-w-7xl px-6 py-12">
+                        <div
+                            className="flex gap-4"
+                        >
+                            {project.footer.children ? <RenderChildren
+                                state={state}
+                                setState={setState}
+                                children={project.footer.children}
+                                t={t}
+                            /> : <ElementResolver
+                                state={state}
+                                setState={setState}
+                                t={t}
+                                element={project.footer}
+                            />}
+                        </div>
+                    </div>
+                </footer>
             )}
         </div>
     );
@@ -71,8 +84,7 @@ export const ProjectLayout = React.memo(function ProjectLayout({
     children,
 }: ProjectLayoutProps) {
     const { state, t, setState, clearState, setTranslations } = useAppState();
-
-    if (project?.translations) {
+    if (project.translations) {
         setTranslations(project.translations);
     }
 

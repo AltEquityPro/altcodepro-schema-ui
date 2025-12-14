@@ -149,10 +149,10 @@ export function ButtonRenderer({
   runEventHandler?: ((handler?: EventHandler | undefined, dataOverride?: AnyObj | undefined) => Promise<void>) | undefined
 }) {
 
-  const sizeClass = sizeClasses[element.size ?? "default"] ?? "";
+  const sizeClass = sizeClasses[element.size ?? "default"]
   const styles = classesFromStyleProps(element.styles);
   const accessibilityProps = getAccessibilityProps(element.accessibility);
-  const variantClass = styles?.includes('bg-') && styles?.includes('text-') ? "" : buttonVariants[(element.variant || 'primary')] ?? "";
+  const variantClass = buttonVariants[(element.variant || 'primary')]
 
   const resolvedBinding = useMemo(
     () => (binding: Binding) => resolveBinding(binding, state, t) || '',
@@ -164,19 +164,22 @@ export function ButtonRenderer({
       ? element.disabled
       : String(resolvedBinding(element.disabled as any)) === "true";
 
-
+  let label = resolvedBinding(element.text);
+  if (label === element.text) {
+    label = t(element.text as any) || label;
+  }
   return (
     <button
       className={clsx(
-        "inline-flex items-center  cursor-pointer   justify-center rounded-md font-medium transition-colors focus:outline-none",
+        "inline-flex items-center  cursor-pointer  justify-center rounded-md font-medium transition-colors focus:outline-none",
         variantClass,
         sizeClass,
         styles,
-        element.styles?.className
+        element.styles?.className || ' m-1'
       )}
       id={element?.id}
       title={element?.tooltip ? resolvedBinding(element.tooltip) : undefined}
-      data-i118key={element.text}
+      data-i118key={(element.text as any)?.binding || element.text}
       data-variant={element.variant}
       disabled={disabled}
       type={element.isSubmit ? 'submit' : "button"}
@@ -190,7 +193,7 @@ export function ButtonRenderer({
       {element.iconLeft?.name && (
         <DynamicIcon {...element.iconLeft} name={element.iconLeft.name} className="mr-1" />
       )}
-      {resolvedBinding(element.text)}
+      {label}
       {element.iconRight?.name && (
         <DynamicIcon {...element.iconRight} name={element.iconRight.name} className="ml-1" />
       )}

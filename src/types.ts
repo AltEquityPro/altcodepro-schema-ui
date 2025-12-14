@@ -2362,7 +2362,6 @@ export interface SocialMediaLinks {
     [platform: string]: string | undefined;
 }
 
-
 export interface UIProject {
     brand: Brand;
     footer?: FooterElement;
@@ -2457,10 +2456,6 @@ export interface UIProject {
             };
         };
     };
-
-    /* ------------------------------------------------------
-     🎨 Global Styles / Theme
-    ------------------------------------------------------ */
     globalStyles?: {
         customCss?: string;  // Injected CSS (inline or <style> tag)
         theme?: {
@@ -2487,16 +2482,14 @@ export interface UIProject {
             accentDark?: string;
         };
     };
-
     initialData?: Record<string, any>;
     routeBase?: string;
     routeList: IRouteList;
     navigation?: {
-        primary?: NavigationMenu;     // main nav (usually top or side)
+        primary?: NavigationMenu;
         mobileBottom?: NavigationMenu;
-        secondary?: NavigationMenu;   // e.g. user menu
+        secondary?: NavigationMenu;
     };
-
     state?: {
         keys?: Record<
             string,
@@ -2523,24 +2516,13 @@ export interface UIProject {
         };
         webSocketKeys?: string[];
     };
-
-    /* ------------------------------------------------------
-     📊 Telemetry & Observability
-    ------------------------------------------------------ */
     telemetry?: {
         errorUrl?: string;
         ingestUrl?: string;
         sampleRate?: number;
     };
-
-    /* ------------------------------------------------------
-     🌐 i18n / Translations
-    ------------------------------------------------------ */
+    translation_urls?: Array<string>;
     translations?: Record<string, Record<string, string>>;
-
-    /* ------------------------------------------------------
-     🍪 Cookie Consent Banner
-    ------------------------------------------------------ */
     cookie_banner?: {
         id: string;
         name: string;
@@ -2566,13 +2548,7 @@ export interface UIProject {
             defaultValue?: boolean;
         }>;
     };
-
-    /* ------------------------------------------------------
-        Internal Screens / Routes
-    ------------------------------------------------------ */
     screens?: UIDefinition[];
-
-    /** Project version */
     version: string;
 }
 

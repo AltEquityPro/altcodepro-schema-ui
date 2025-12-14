@@ -8,7 +8,6 @@ import {
     getAddress,
     isHexString,
 } from "ethers";
-import WalletConnectProvider from "@walletconnect/ethereum-provider";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { cn, classesFromStyleProps, resolveBinding } from "../../lib/utils";
@@ -103,6 +102,10 @@ export function WalletRenderer({
                     });
             }
             if (element.provider === "walletconnect") {
+                if (typeof window === "undefined") return;
+                const { default: WalletConnectProvider } = await import(
+                    "@walletconnect/ethereum-provider"
+                );
                 const wc = await WalletConnectProvider.init({
                     projectId: element.projectId!,
                     chains: [element.chainId],

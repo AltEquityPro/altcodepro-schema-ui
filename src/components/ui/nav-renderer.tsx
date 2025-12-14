@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsMobile } from "../../hooks/use-mobile";
 import { UIProject, AnyObj, NavigationMenu, EventHandler } from "../../types";
 import { NavigationMenuRenderer } from "./navigation-menu";
 
@@ -14,6 +15,8 @@ interface NavRendererProps {
 export function NavRenderer({ project, state, setState, t, runEventHandler }: NavRendererProps) {
     const nav = project.navigation;
     const brand = project.brand;
+    const isMobile = useIsMobile();
+
     if (!nav) return null;
     const renderMenu = (menu?: NavigationMenu) => {
         if (!menu) return null;
@@ -33,7 +36,7 @@ export function NavRenderer({ project, state, setState, t, runEventHandler }: Na
     return (
         <>
             {renderMenu(nav.primary)}
-            {renderMenu(nav.mobileBottom)}
+            {isMobile && renderMenu(nav.mobileBottom)}
             {renderMenu(nav.secondary)}
         </>
     );

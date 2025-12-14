@@ -44,15 +44,14 @@ export function ScreenRenderer({
 
     useAuth({ requiresAuth, nav });
     const analytics = useAnalytics();
-    const [loaded, setLoaded] = useState(false);
-    useEffect(() => {
-        setTranslations(uiDef.translations || {});
-        setTimeout(() => {
-            setLoaded(true);
-        }, 400)
-    }, [uiDef.translations]);
+    const [loaded, setLoaded] = useState(true);
     const { state, t, setState, setTranslations } = useAppState();
-
+    // useEffect(() => {
+    //     setTranslations(uiDef.translations || {});
+    //     setTimeout(() => {
+    //         setLoaded(true);
+    //     }, 400)
+    // }, [uiDef.translations]);
     const patchState = useCallback((path: string, val: any) => setState(path, val), [setState]);
 
     const runtimeWithNav = useMemo(() => ({

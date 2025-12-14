@@ -151,8 +151,8 @@ export function resolveBindingWithDepth(
 ): any {
     try {
         if (val == null) return "";
-        const key =
-            typeof val === "object" && "binding" in val ? String(val.binding) : String(val);
+        const key = val.binding ? String(val.binding) : (val.en ? val.en : String(val))
+
         // Prevent infinite recursion
         if (depth > maxDepth) {
             if (process.env.NODE_ENV === 'development') {
@@ -196,7 +196,7 @@ export function resolveBindingWithDepth(
         // Handle translation calls like {{t('key')}} or {t('key')}
         const tCallPattern = /\{\{\s*t\(['"`]([^'"`]+)['"`]\)\s*\}\}|\{t\(['"`]([^'"`]+)['"`]\)\}/g;
         if (tCallPattern.test(key)) {
-            const result = key.replace(tCallPattern, (_, k1, k2) => {
+            const result = key.replace(tCallPattern, (_: any, k1: any, k2: any): any => {
                 const transKey = k1 || k2;
                 if (state?.translations) {
                     const locale = state?.locale || state?.language || "en";
@@ -300,7 +300,7 @@ export function resolveBindingWithDepth(
         // Template placeholders {{...}} or {...}
         const templatePattern = /\{\{\s*([^{}]+?)\s*\}\}|\{([^{}]+?)\}/g;
         if (templatePattern.test(key)) {
-            const replaced = key.replace(templatePattern, (_, p1, p2) => {
+            const replaced = key.replace(templatePattern, (_: any, p1: any, p2: any) => {
                 const expr = (p1 || p2 || "").trim();
                 if (expr.startsWith("env.")) {
                     const result = readEnv(expr.slice(4)) ?? expr;
@@ -404,7 +404,9 @@ export function resolveBindingWithDepth(
 export function deepResolveBindingsDepth(value: any, state: AnyObj, t: (k: string) => string): any {
     try {
         if (value == null) return value;
-
+        if (value.binding) {
+            value = value.binding;
+        }
         // Primitive (string/number/etc.)
         if (typeof value === "string") {
             const isDynamic = value.includes("state.") || value.includes("form.") || value.includes("profile.");

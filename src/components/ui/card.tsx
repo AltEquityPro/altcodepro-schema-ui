@@ -112,22 +112,103 @@ function CardRenderer({ element, setState, runEventHandler, state, t }: CardRend
 
       {...acc}
     >
-      {/* Header */}
       {(element.media ||
         element.badge ||
         element.title ||
         element.description ||
         element.action ||
         element.header) && (
-          <CardHeader className="mb-4">
-            {element.media && <ElementResolver state={state} setState={setState} t={t} element={element.media} runEventHandler={runEventHandler} />}
-            {element.badge && <ElementResolver state={state} setState={setState} t={t} element={element.badge} runEventHandler={runEventHandler} />}
-            {element.title && <CardTitle><ElementResolver state={state} setState={setState} t={t} element={element.title} runEventHandler={runEventHandler} /></CardTitle>}
-            {element.description && (
-              <CardDescription><ElementResolver state={state} setState={setState} t={t} element={element.description} runEventHandler={runEventHandler} /></CardDescription>
+          <CardHeader className="flex flex-col gap-4">
+
+            {/* MEDIA / BADGE / HEADER */}
+            {element.media && (
+              <ElementResolver
+                state={state}
+                setState={setState}
+                t={t}
+                element={element.media}
+                runEventHandler={runEventHandler}
+              />
             )}
-            {element.action && <CardAction><ElementResolver state={state} setState={setState} t={t} element={element.action} runEventHandler={runEventHandler} /></CardAction>}
-            {element.header && <ElementResolver state={state} setState={setState} t={t} element={element.header} runEventHandler={runEventHandler} />}
+
+            {element.badge && (
+              <ElementResolver
+                state={state}
+                setState={setState}
+                t={t}
+                element={element.badge}
+                runEventHandler={runEventHandler}
+              />
+            )}
+
+            {element.header && (
+              <>
+                {(typeof element.header === "string" || (element.header as any)?.binding)
+                  ? resolveBinding(element.header, state, t)
+                  : (
+                    <ElementResolver
+                      state={state}
+                      setState={setState}
+                      t={t}
+                      element={element.header}
+                      runEventHandler={runEventHandler}
+                    />
+                  )}
+              </>
+            )}
+
+            {/* TEXT BLOCK */}
+            {(element.title || element.description) && (
+              <div className="flex flex-col gap-3">
+                {element.title && (
+                  <CardTitle>
+                    {(typeof element.title === "string" || (element.title as any)?.binding)
+                      ? resolveBinding(element.title, state, t)
+                      : (
+                        <ElementResolver
+                          state={state}
+                          setState={setState}
+                          t={t}
+                          element={element.title}
+                          runEventHandler={runEventHandler}
+                        />
+                      )}
+                  </CardTitle>
+                )}
+
+                {element.description && (
+                  <CardDescription>
+                    {(typeof element.description === "string" || (element.description as any)?.binding)
+                      ? resolveBinding(element.description, state, t)
+                      : (
+                        <ElementResolver
+                          state={state}
+                          setState={setState}
+                          t={t}
+                          element={element.description}
+                          runEventHandler={runEventHandler}
+                        />
+                      )}
+                  </CardDescription>
+                )}
+              </div>
+            )}
+
+            {/* ACTION — ALWAYS BELOW */}
+            {element.action && (
+              <div className="pt-4">
+                <CardAction className="w-fit">
+                  <ElementResolver
+                    state={state}
+                    setState={setState}
+                    t={t}
+                    element={element.action}
+                    runEventHandler={runEventHandler}
+                  />
+                </CardAction>
+              </div>
+            )}
+
           </CardHeader>
         )}
 

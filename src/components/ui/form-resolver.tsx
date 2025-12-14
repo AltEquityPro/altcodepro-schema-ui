@@ -502,9 +502,13 @@ export function FormResolver({ element, state, t, runEventHandler, onFormSubmit 
     const renderField = (f: FormFieldType) => {
         const el = (f as any).element ?? (f as any).input ?? f;
         if (el.visibility && !isVisible(el.visibility, reactiveState, t)) return null;
+        if ((f as any).input) {
+            return renderInputField({ ...f, ...(f as any).input });
+        }
         if (f.fieldType === FieldType.input) {
             return renderInputField(f.input);
         }
+
         if (!f.element) {
             return null;
         }

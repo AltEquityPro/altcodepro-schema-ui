@@ -221,17 +221,23 @@ export function Chart({ element, state, t }: { element: ChartElement, state: Any
         ))}
       </Recharts.RadarChart> : null
     ) : type === "radialBar" ? (
-      <Recharts.RadialBarChart data={data} innerRadius={donut ? "40%" : "0%"} outerRadius={radius || "80%"} >
+      <Recharts.RadialBarChart
+        data={data}
+        innerRadius={donut ? "40%" : "0%"}
+        outerRadius={radius || "80%"}
+        startAngle={90}
+        endAngle={-270}
+      >
         {maybeLegend}
+
         <Recharts.RadialBar
-          startAngle={90}
-          endAngle={-270}
-          background
+          background={true}
           dataKey={valueKey}
-          label
+          label={true}
           fill={colors[0]}
           isAnimationActive={!!animation}
         />
+
         {maybeTooltip}
       </Recharts.RadialBarChart>
     ) : type === "scatter" ? (
