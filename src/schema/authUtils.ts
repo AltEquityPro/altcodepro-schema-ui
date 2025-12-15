@@ -1,7 +1,7 @@
 import { getAuthKey } from "../lib/utils";
 import { UIProject } from "../types";
 
-type StoredAuth = {
+export type StoredAuth = {
     token?: string;
     refreshToken?: string;
     expiresAt?: number; // epoch in ms

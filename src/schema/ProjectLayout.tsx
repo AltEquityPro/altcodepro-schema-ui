@@ -19,6 +19,7 @@ export interface ProjectLayoutProps {
     project: UIProject;
     loading: boolean;
     nav?: NavigationAPI;
+    authToken?: string;
     children?: React.ReactNode;
 }
 function RenderWithContexts({ project, nav, state, t, setState, clearState, children }: {
@@ -82,6 +83,7 @@ export const ProjectLayout = React.memo(function ProjectLayout({
     loading,
     nav,
     children,
+    authToken,
 }: ProjectLayoutProps) {
     const { state, t, setState, clearState, setTranslations } = useAppState();
     if (project.translations) {
@@ -113,6 +115,7 @@ export const ProjectLayout = React.memo(function ProjectLayout({
                             globalConfig={project.globalConfig}
                             setState={setState}
                             nav={nav}
+                            authToken={authToken} // nextjs auth,  firebase auth
                         >
                             <RenderWithContexts
                                 project={project}

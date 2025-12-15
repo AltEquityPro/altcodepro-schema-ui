@@ -642,7 +642,11 @@ export function ElementResolver({ element, state, setState, t, runEventHandler, 
             const Tag = (text.tag as React.ElementType) || "div";
             let resolvedContent = deepResolveBindings(text.content, state, t);
             if (resolvedContent === text.content) {
-                resolvedContent = t(text.content as any) || resolvedContent;
+                if (typeof text.content == 'string') {
+                    resolvedContent = t(text.content as any) || resolvedContent;
+                } else if (text.content?.binding && typeof text.content.binding === 'string') {
+                    resolvedContent = t(text.content.binding as any) || resolvedContent;
+                }
             }
             if (
                 resolvedContent === undefined ||

@@ -33,12 +33,15 @@ export function AuthProvider({
     globalConfig,
     setState,
     nav,
+    authToken
 }: {
     requiresAuth?: boolean;
+    authToken?: string;
     children: React.ReactNode;
     globalConfig?: UIProject["globalConfig"];
     setState?: (path: string, value: any) => void;
     nav?: NavigationAPI;
+
 }) {
     const [token, setToken] = useState<string | undefined>();
     const [refreshToken, setRefreshToken] = useState<string | null>(null);
@@ -126,6 +129,11 @@ export function AuthProvider({
         }
     }, [globalConfig, token, logout, setState]);
 
+    useEffect(() => {
+        if (authToken) {
+            login(authToken);
+        }
+    }, [authToken]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
