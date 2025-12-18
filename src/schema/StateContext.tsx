@@ -17,29 +17,16 @@ import * as z from "zod";
 
 const globalTranslations: Record<string, Record<string, string>> = {};
 
-export function t(key: string, defaultLabel?: string): string {
-    if (!key) return "";
-    try {
-        const locale =
-            (typeof window !== "undefined" && localStorage.getItem("locale")) ||
-            "en";
-        const translations = globalTranslations[locale] || {};
-        return (
-            translations[key] ||
-            defaultLabel ||
-            key
-        );
-    } catch {
-        return defaultLabel || key;
-    }
+type Translations = Record<string, Record<string, string>>;
+
+function safeParse<T>(raw: string | null, fallback: T): T {
+    if (!raw) return fallback;
+    try { return JSON.parse(raw) as T; } catch { return fallback; }
 }
-export function setTranslations(translations: Record<string, Record<string, string>>) {
-    try {
-        deepMerge(globalTranslations, translations);
-        localStorage.setItem("translations", JSON.stringify(globalTranslations));
-    } catch {
-        /* ignore */
-    }
+
+function getLocale(): string {
+    if (typeof window === "undefined") return "en";
+    return localStorage.getItem("locale") || "en";
 }
 
 interface AppStateContextType {
@@ -67,6 +54,52 @@ export function StateProvider({
 }) {
     const wsRef = useRef<WebSocket | null>(null);
     const wsCleanupRef = useRef<(() => void) | null>(null);
+    const [translations, setTranslationsState] = useState<Translations>(() => {
+        if (typeof window === "undefined") return {};
+        return safeParse<Translations>(localStorage.getItem("translations"), {});
+    });
+
+    const [locale, setLocale] = useState<string>(() => getLocale());
+    // merge helper (no global mutation)
+    const mergeTranslations = useCallback((next: Translations) => {
+        setTranslationsState(prev => {
+            const merged = structuredClone(prev);
+            deepMerge(merged, next);
+            try { localStorage.setItem("translations", JSON.stringify(merged)); } catch { }
+            return merged;
+        });
+    }, []);
+
+    // load project translations once / when project changes
+    useEffect(() => {
+        if (project?.translations) mergeTranslations(project.translations);
+    }, [project, mergeTranslations]);
+
+    // keep locale in sync (your app can change locale)
+    useEffect(() => {
+        const onStorage = (e: StorageEvent) => {
+            if (e.key === "locale") setLocale(getLocale());
+            if (e.key === "translations") {
+                // if another tab updated translations, sync
+                setTranslationsState(safeParse<Translations>(e.newValue, {}));
+            }
+        };
+        window.addEventListener("storage", onStorage);
+        return () => window.removeEventListener("storage", onStorage);
+    }, []);
+
+    // stable t that always uses latest locale + translations
+    const t = useCallback((key: string, defaultLabel?: string) => {
+        if (!key) return "";
+        const dict = translations[locale] || translations["en"] || {};
+        return dict[key] ?? defaultLabel ?? key;
+    }, [translations, locale]);
+
+    // expose setTranslations that merges
+    const setTranslations = useCallback((next: Translations) => {
+        if (!next || typeof next !== "object") return;
+        mergeTranslations(next);
+    }, [mergeTranslations]);
 
     useLayoutEffect(() => {
         try {
@@ -173,7 +206,6 @@ export function StateProvider({
         form.reset(state);
     }, [form, state]);
 
-    /* --------------------------- State Persistence --------------------------- */
     useEffect(() => {
         if (project.state?.persist && project.state.persistStorage) {
             const storage =
@@ -211,7 +243,6 @@ export function StateProvider({
         }
     }, [project.state?.persist, project.state?.persistStorage]);
 
-    /* ----------------------------- WebSocket Sync ---------------------------- */
     useEffect(() => {
         if (project.state?.webSocketEndpoint && project.state.webSocketKeys?.length) {
             const wsUrl = resolveBinding(
@@ -322,9 +353,6 @@ export function StateProvider({
     );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Hook                                                                       */
-/* -------------------------------------------------------------------------- */
 export function useAppState() {
     const context = useContext(AppStateContext);
     if (!context) {

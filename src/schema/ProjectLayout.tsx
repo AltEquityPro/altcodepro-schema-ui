@@ -86,10 +86,6 @@ export const ProjectLayout = React.memo(function ProjectLayout({
     authToken,
 }: ProjectLayoutProps) {
     const { state, t, setState, clearState, setTranslations } = useAppState();
-    if (project.translations) {
-        setTranslations(project.translations);
-    }
-
     const user = useMemo(
         () =>
             state?.auth?.user ?? {
